@@ -68,6 +68,7 @@ scripts/
 shaders/            Shaders.
 tests/              Headless unit tests, scenarios and benchmark.
 tools/check.sh      Runs every headless check (what CI runs).
+tools/fetch_web_templates.py  Installs only the web export templates (CI).
 ```
 
 ## Frame order
@@ -108,6 +109,10 @@ run, except errors from the headless dummy renderer.
 
 - New logic gets a unit test in `tests/unit/` (extend `TestSuite`, name methods
   `test_*`). New player-facing behaviour gets a scenario in `tests/run_scenarios.gd`.
+- `.github/workflows/web.yml` exports the `Web` preset (`export_presets.cfg`)
+  on every push and publishes `main` to GitHub Pages. The web build uses the
+  Compatibility renderer and no threads, so keep features working there too,
+  but never tune performance against it.
 - The benchmark (`tests/benchmark.gd`) posts swarm tick times to the CI run
   summary. The runner's CPU is not a Steam Deck, but compare runs to catch
   regressions before they reach the Deck.
