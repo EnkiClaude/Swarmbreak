@@ -38,11 +38,11 @@ jobs:
 
       - name: Benchmark summary
         if: always()
-        run: cat .ci-logs/benchmark.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+        run: cat ci-logs/benchmark.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: godot-logs
-          path: .ci-logs/
+          path: ci-logs/

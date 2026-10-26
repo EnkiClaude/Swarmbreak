@@ -36,11 +36,13 @@ to the swarm or rendering.
 - Small single-purpose scripts. One class per file with a `class_name` and a `##`
   doc comment that says what it owns.
 - Hot loops (anything running per enemy per frame): pull packed arrays and
-  members into locals first, avoid function calls and Variant-typed values inside
-  the loop, and never index a packed array that is stored inside an `Array`
-  (each write would copy it). See `swarm_steering.gd` for the pattern.
-- Writing to a local copy of a packed array that is still referenced elsewhere
-  triggers copy-on-write. Assign the result back, or drop the other reference first.
+  members into locals first, and avoid function calls and Variant-typed values
+  inside the loop; function calls are the biggest cost in GDScript. See
+  `swarm_steering.gd` for the pattern.
+- Between GDScript variables, packed arrays alias: `var a := state.positions`
+  and writing `a[i]` changes `state.positions` (verified by
+  `tests/unit/test_packed_array_semantics.gd`). Arrays read from engine
+  properties, such as `MultiMesh.buffer`, are copies.
 - Systems are ticked explicitly in a fixed order from `scripts/core/main.gd`
   rather than each node relying on its own `_process`.
 
@@ -49,7 +51,9 @@ to the swarm or rendering.
 ```
 data/               Tuning resources (.tres). Edit these to tune the game.
   enemies/          One EnemyType per enemy kind.
-scenes/main.tscn    M0 arena scene.
+  abilities/        Nova and bolt tuning.
+  effects/          One EffectType per pooled visual effect.
+scenes/main.tscn    Arena scene.
 scripts/
   config/           Resource classes that define the shape of data/ files.
   core/main.gd      Wiring and per-frame tick order.
@@ -57,39 +61,67 @@ scripts/
   camera/           Angled orthographic follow camera.
   player/           Player and twin-stick input.
   swarm/            Swarm state, flow field, spatial hash, steering, rendering.
+  combat/           Damage queries, abilities, cooldowns, pooled bolts.
+  effects/          Pooled visual effects.
+  render/           InstanceBatch: MultiMesh helper for pooled things.
   debug/            Debug overlay.
 shaders/            Shaders.
+tests/              Headless unit tests, scenarios and benchmark.
+tools/check.sh      Runs every headless check (what CI runs).
 ```
 
-## Swarm architecture
+## Frame order
 
-`SwarmManager.tick()` runs once per frame:
+`main.gd` ticks everything in this order:
 
-1. `FlowField.update()`: rebuilds direction-to-player per 2 m cell, only when the
-   player enters a new cell. Costs come from a chamfer distance transform, so
-   blocked cells are supported once the arena has obstacles.
-2. `SpatialHash.build()`: counting sort of enemies into 1 m cells. No allocation.
-3. `SwarmSteering.step()`: flow-field seek (straight chase near the player),
-   separation from neighbours in the 3x3 hash cells, then integration, player
-   push-out and arena clamp.
-4. `SwarmRenderer.draw()`: packs positions per type into each MultiMesh buffer.
+1. `Player.tick()`: movement and aim.
+2. `SwarmManager.simulate()`:
+   - `FlowField.update()` rebuilds the direction-to-player per 2 m cell, only
+     when the player enters a new cell. Open ground points straight at the
+     player; blocked cells switch to a chamfer distance transform.
+   - `SpatialHash.build()` counting-sorts enemies into 1 m cells. No allocation.
+   - `SwarmSteering.step()`: flow-field seek (straight chase near the player),
+     separation from up to `max_separation_neighbours` neighbours, then
+     integration, player push-out and arena clamp.
+3. Damage: `PlayerCombat.tick()` (nova) and `ProjectileSystem.tick()` (bolts)
+   call `SwarmManager.damage_circle()` / `first_hit()`. Killed enemies stay in
+   place at health <= 0.
+4. `SwarmManager.resolve_deaths()` compacts dead enemies out and spawns their
+   death effects.
+5. `SwarmManager.draw()`, `EffectSystem.tick()`, `CameraRig.tick()`.
 
-Despawning swaps the last live enemy into the freed slot, so enemy indices are
-not stable across frames. Anything that needs to track a specific enemy must
-handle that.
+Damage must happen between `simulate()` and `resolve_deaths()`: only then do
+enemy indices match the spatial hash. Indices are not stable across frames, so
+anything that tracks a specific enemy must handle that.
 
 If profiling on Deck shows the GDScript hot loop is the bottleneck, port
 `SwarmSteering.step` and `SpatialHash.build` to a GDExtension. Keep their
 packed-array interfaces so nothing else has to change.
 
-## Controls (M0)
+## Testing
 
-| Action          | Controller          | Keyboard / mouse |
-|-----------------|---------------------|------------------|
-| Move            | Left stick          | WASD / arrows    |
-| Aim             | Right stick         | Mouse            |
-| Spawn 100       | View / Back         | `=` or keypad `+`|
-| Toggle overlay  | L3 (left stick)     | F3               |
+Run `GODOT=/path/to/godot tools/check.sh`; CI runs the same script on every
+push with Godot 4.3. It imports the project, then runs the unit tests
+(`tests/unit/`), the scenarios (the real main scene driven by scripted input)
+and the benchmark. Any `SCRIPT ERROR` or engine `ERROR:` in the logs fails the
+run, except errors from the headless dummy renderer.
+
+- New logic gets a unit test in `tests/unit/` (extend `TestSuite`, name methods
+  `test_*`). New player-facing behaviour gets a scenario in `tests/run_scenarios.gd`.
+- The benchmark (`tests/benchmark.gd`) posts swarm tick times to the CI run
+  summary. The runner's CPU is not a Steam Deck, but compare runs to catch
+  regressions before they reach the Deck.
+
+## Controls
+
+| Action          | Controller          | Keyboard / mouse  |
+|-----------------|---------------------|-------------------|
+| Move            | Left stick          | WASD / arrows     |
+| Aim             | Right stick         | Mouse             |
+| Fire bolts      | RT, or hold aim     | Left mouse        |
+| Nova            | RB                  | Space / right mouse |
+| Spawn 100       | View / Back         | `=` or keypad `+` |
+| Toggle overlay  | L3 (left stick)     | F3                |
 
 ## Git
 

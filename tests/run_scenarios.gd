@@ -9,6 +9,7 @@ var _failures: PackedStringArray = []
 var _main: Node
 var _swarm: SwarmManager
 var _player: Player
+var _effects: EffectSystem
 
 
 func _initialize() -> void:
@@ -20,17 +21,24 @@ func _run() -> void:
 	root.add_child(_main)
 	_swarm = _main.get_node("Swarm") as SwarmManager
 	_player = _main.get_node("Player") as Player
+	_effects = _main.get_node("Effects") as EffectSystem
 	await _frames(5)
 
 	_scenario("initial swarm spawns", _initial_swarm)
 	await _scenario_async("player moves with move_right", _player_moves)
 	await _scenario_async("debug_spawn adds a batch", _debug_spawn)
 	await _scenario_async("swarm keeps out of the player", _swarm_keeps_distance)
+	await _scenario_async("nova breaks a nearby pack", _nova_breaks_pack)
+	await _scenario_async("bolts burst on enemies ahead", _bolts_hit)
 
 	print("%d scenario checks failed" % _failures.size())
 	for failure in _failures:
 		print("FAIL " + failure)
-	quit(1 if not _failures.is_empty() else 0)
+	var code := 1 if not _failures.is_empty() else 0
+	# Free the scene before quitting so teardown happens in a normal frame.
+	_main.queue_free()
+	await _frames(2)
+	quit(code)
 
 
 func _frames(n: int) -> void:
@@ -92,3 +100,38 @@ func _swarm_keeps_distance() -> void:
 		if _swarm.state.positions[i].distance_to(player_xz) < min_d:
 			inside += 1
 	_check(inside == 0, "%d enemies overlap the player after 300 frames" % inside)
+
+
+## Clears the swarm and places a tight pack around a point.
+func _place_pack(center: Vector2, radius: float, amount: int) -> void:
+	_swarm.state.clear()
+	for i in amount:
+		var r := radius * sqrt(float(i + 1) / amount)
+		_swarm.spawn_at(center + Vector2.from_angle(i * 2.39996) * r)
+
+
+func _nova_breaks_pack() -> void:
+	await _frames(70)  # let any earlier cooldown run out
+	var nova: NovaConfig = _player.config.nova
+	_place_pack(_player.ground_position(), nova.radius * 0.8, 150)
+	var kills_before := _swarm.total_kills
+	Input.action_press("attack_nova")
+	await _frames(2)
+	Input.action_release("attack_nova")
+	var kills := _swarm.total_kills - kills_before
+	_check(kills >= 100, "nova killed only %d of a 150 pack inside its radius" % kills)
+	_check(_swarm.best_break >= kills, "best break recorded (%d)" % _swarm.best_break)
+	_check(_effects.active_count() > 0, "death and nova effects are showing")
+	await _frames(30)
+	_check(_effects.active_count() == 0, "effects expire (%d left)" % _effects.active_count())
+
+
+func _bolts_hit() -> void:
+	var aim := Vector2(_player.aim_direction.x, _player.aim_direction.z)
+	_place_pack(_player.ground_position() + aim * 8.0, 1.5, 40)
+	var kills_before := _swarm.total_kills
+	Input.action_press("attack_fire")
+	await _frames(90)
+	Input.action_release("attack_fire")
+	var kills := _swarm.total_kills - kills_before
+	_check(kills > 0, "bolts killed nothing in a pack 8 m ahead")

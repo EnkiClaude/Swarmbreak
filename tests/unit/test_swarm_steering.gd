@@ -18,7 +18,7 @@ class Rig:
 		state = SwarmState.new(64)
 		grid = SpatialHash.new(HALF, 1.0, 64)
 		flow = FlowField.new(HALF, 2.0)
-		steering = SwarmSteering.new(state, grid, flow, SwarmTypeTable.new(types), 3.0, HALF)
+		steering = SwarmSteering.new(state, grid, flow, SwarmTypeTable.new(types), 3.0, HALF, 8)
 
 	func run(player: Vector2, frames: int) -> void:
 		for f in frames:

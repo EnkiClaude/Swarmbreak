@@ -6,10 +6,13 @@ extends RefCounted
 ## Pass 2 integrates positions, keeps enemies out of the player's body and
 ## inside the arena.
 ##
-## Packed arrays are pulled into locals because local access is far cheaper
-## than member access in GDScript. Writing to a local that still shares its
-## buffer with SwarmState triggers one copy-on-write, so results are assigned
-## back at the end.
+## Packed arrays and members are pulled into locals because local access is
+## far cheaper than member access in GDScript. A local packed array aliases the
+## same storage, so writes land in SwarmState directly; the assignments at the
+## end only make that explicit.
+##
+## Separation scans just the hash cells its radius overlaps and stops after
+## max_neighbours, which bounds the cost per enemy inside dense packs.
 
 const OVERLAP_EPSILON := 0.000001
 
@@ -19,16 +22,18 @@ var _flow: FlowField
 var _types: SwarmTypeTable
 var _direct_chase_distance: float
 var _half_extent: float
+var _max_neighbours: int
 
 
 func _init(state: SwarmState, grid: SpatialHash, flow: FlowField, types: SwarmTypeTable,
-		direct_chase_distance: float, half_extent: float) -> void:
+		direct_chase_distance: float, half_extent: float, max_neighbours: int) -> void:
 	_state = state
 	_grid = grid
 	_flow = flow
 	_types = types
 	_direct_chase_distance = direct_chase_distance
 	_half_extent = half_extent
+	_max_neighbours = max_neighbours
 
 
 func step(player_pos: Vector2, player_radius: float, delta: float) -> void:
@@ -59,6 +64,9 @@ func step(player_pos: Vector2, player_radius: float, delta: float) -> void:
 	var f_origin := _flow.origin
 
 	var chase_sq := _direct_chase_distance * _direct_chase_distance
+	var max_neighbours := _max_neighbours
+	var g_last_col := g_cols - 1
+	var g_last_row := g_rows - 1
 
 	# Pass 1: velocities.
 	for i in count:
@@ -77,11 +85,18 @@ func step(player_pos: Vector2, player_radius: float, delta: float) -> void:
 		var r: float = sep_radius[t]
 		var r_sq: float = r * r
 		var sep := Vector2.ZERO
-		var gx: int = clampi(int((p.x - g_origin.x) * g_inv), 0, g_cols - 1)
-		var gz: int = clampi(int((p.y - g_origin.y) * g_inv), 0, g_rows - 1)
-		for z in range(maxi(gz - 1, 0), mini(gz + 2, g_rows)):
+		var found := 0
+		var x0: int = clampi(int((p.x - r - g_origin.x) * g_inv), 0, g_last_col)
+		var x1: int = clampi(int((p.x + r - g_origin.x) * g_inv), 0, g_last_col)
+		var z0: int = clampi(int((p.y - r - g_origin.y) * g_inv), 0, g_last_row)
+		var z1: int = clampi(int((p.y + r - g_origin.y) * g_inv), 0, g_last_row)
+		for z in range(z0, z1 + 1):
+			if found >= max_neighbours:
+				break
 			var row: int = z * g_cols
-			for x in range(maxi(gx - 1, 0), mini(gx + 2, g_cols)):
+			for x in range(x0, x1 + 1):
+				if found >= max_neighbours:
+					break
 				var cell: int = row + x
 				for k in range(cell_start[cell], cell_start[cell + 1]):
 					var j: int = sorted_ids[k]
@@ -91,6 +106,9 @@ func step(player_pos: Vector2, player_radius: float, delta: float) -> void:
 					var d_sq: float = away.length_squared()
 					if d_sq >= r_sq:
 						continue
+					found += 1
+					if found > max_neighbours:
+						break
 					if d_sq < OVERLAP_EPSILON:
 						# Exactly stacked: push the pair apart along opposite directions.
 						var nudge := Vector2.from_angle(float(mini(i, j) * 7 + maxi(i, j)))

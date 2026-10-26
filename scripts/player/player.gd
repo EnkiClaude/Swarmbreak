@@ -40,6 +40,12 @@ func tick(delta: float) -> void:
 	_update_aim(move, yaw)
 
 
+## True while the right stick is held outside its deadzone.
+func is_stick_aiming() -> bool:
+	return _input.aim_source == TwinStickInput.AimSource.STICK \
+			and _input.stick_aim() != Vector2.ZERO
+
+
 func ground_position() -> Vector2:
 	return Vector2(position.x, position.z)
 

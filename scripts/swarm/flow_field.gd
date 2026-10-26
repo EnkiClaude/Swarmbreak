@@ -1,10 +1,11 @@
 class_name FlowField
 extends RefCounted
-## Grid of unit vectors pointing downhill toward a goal (the player).
-## Costs come from a chamfer distance transform with 1 and sqrt(2) steps, which
-## routes around blocked cells; M0 has none yet. Each cell's direction is the
-## negative cost gradient, which reads smoother than stepping to the cheapest
-## neighbour. The field only rebuilds when the goal enters a new cell.
+## Grid of unit vectors pointing toward a goal (the player).
+## With no blocked cells, every cell points straight at the goal cell's center.
+## Once cells are blocked, costs come from a chamfer distance transform with 1
+## and sqrt(2) steps, and each cell's direction is the negative cost gradient,
+## which routes around obstacles and reads smoother than stepping to the
+## cheapest neighbour. The field only rebuilds when the goal enters a new cell.
 
 const UNREACHED := 1.0e9
 const DIAGONAL := 1.41421356
@@ -21,6 +22,7 @@ var directions: PackedVector2Array
 var blocked: PackedByteArray
 var _cost: PackedFloat32Array
 var _goal_cell: int = -1
+var _blocked_count: int = 0
 
 
 func _init(half_extent: float, p_cell_size: float) -> void:
@@ -45,7 +47,12 @@ func cell_index(p: Vector2) -> int:
 
 ## Marks a cell as impassable (or clears it). Forces a rebuild on the next update().
 func set_blocked(x: int, z: int, is_blocked: bool) -> void:
-	blocked[z * cols + x] = 1 if is_blocked else 0
+	var i := z * cols + x
+	var value := 1 if is_blocked else 0
+	if blocked[i] == value:
+		return
+	blocked[i] = value
+	_blocked_count += 1 if is_blocked else -1
 	_goal_cell = -1
 
 
@@ -55,9 +62,26 @@ func update(goal: Vector2) -> bool:
 	if goal_cell == _goal_cell:
 		return false
 	_goal_cell = goal_cell
-	_compute_costs(goal_cell)
-	_compute_directions()
+	if _blocked_count == 0:
+		_point_straight_at(goal_cell)
+	else:
+		_compute_costs(goal_cell)
+		_compute_directions()
 	return true
+
+
+func _point_straight_at(goal_cell: int) -> void:
+	var dirs := directions
+	var half := cell_size * 0.5
+	var gx := goal_cell % cols
+	@warning_ignore("integer_division")
+	var gz := goal_cell / cols
+	var target := origin + Vector2(gx * cell_size + half, gz * cell_size + half)
+	for z in rows:
+		var dz := target.y - (origin.y + z * cell_size + half)
+		var row := z * cols
+		for x in cols:
+			dirs[row + x] = Vector2(target.x - (origin.x + x * cell_size + half), dz).normalized()
 
 
 func _compute_costs(goal_cell: int) -> void:
@@ -115,21 +139,35 @@ func _sweep_backward() -> bool:
 
 
 func _compute_directions() -> void:
+	var cost := _cost
+	var dirs := directions
+	var last_col := cols - 1
+	var last_row := rows - 1
+	# Neighbour lookups are inlined: function calls dominate this loop otherwise.
+	# Out-of-bounds and unreachable neighbours count as flat ground.
 	for z in rows:
 		for x in cols:
 			var i := z * cols + x
-			var c: float = _cost[i]
+			var c: float = cost[i]
 			if c >= UNREACHED:
-				directions[i] = Vector2.ZERO
+				dirs[i] = Vector2.ZERO
 				continue
-			var left := _neighbour_cost(x - 1, z, c)
-			var right := _neighbour_cost(x + 1, z, c)
-			var up := _neighbour_cost(x, z - 1, c)
-			var down := _neighbour_cost(x, z + 1, c)
+			var left: float = cost[i - 1] if x > 0 else c
+			var right: float = cost[i + 1] if x < last_col else c
+			var up: float = cost[i - cols] if z > 0 else c
+			var down: float = cost[i + cols] if z < last_row else c
+			if left >= UNREACHED:
+				left = c
+			if right >= UNREACHED:
+				right = c
+			if up >= UNREACHED:
+				up = c
+			if down >= UNREACHED:
+				down = c
 			var downhill := Vector2(left - right, up - down)
 			if downhill.length_squared() < 0.0001:
 				downhill = _steepest_neighbour(x, z, c)
-			directions[i] = downhill.normalized()
+			dirs[i] = downhill.normalized()
 
 
 ## Out-of-bounds and unreachable neighbours count as flat ground.

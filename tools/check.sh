@@ -6,9 +6,9 @@ set -uo pipefail
 
 GODOT="${GODOT:-godot}"
 cd "$(dirname "$0")/.."
-LOG_DIR="${LOG_DIR:-.ci-logs}"
+LOG_DIR="${LOG_DIR:-ci-logs}"
 mkdir -p "$LOG_DIR"
-ERROR_PATTERN='SCRIPT ERROR|Parse Error|^ERROR:|^\s*ERROR:'
+ERROR_PATTERN='SCRIPT ERROR|Parse Error|ERROR:'
 status=0
 
 run_step() {
@@ -23,9 +23,17 @@ run_step() {
 		echo "::error::$name exited with code $code"
 		status=1
 	fi
-	if grep -Eq "$ERROR_PATTERN" "$log"; then
+	# Headless runs use the dummy renderer, which draws nothing and logs
+	# spurious errors from its own stubs; those are reported but not fatal.
+	local errors
+	errors=$(awk -v pat="$ERROR_PATTERN" '
+		$0 ~ pat { err = $0; getline nxt
+			if (nxt ~ /servers\/rendering\/dummy\//) { ignored++; next }
+			print err; print nxt }
+		END { if (ignored) printf "(ignored %d dummy-renderer errors)\n", ignored > "/dev/stderr" }' "$log")
+	if [ -n "$errors" ]; then
 		echo "::error::$name logged errors:"
-		grep -E -A3 "$ERROR_PATTERN" "$log"
+		echo "$errors"
 		status=1
 	fi
 }

@@ -1,16 +1,23 @@
 class_name DebugOverlay
 extends CanvasLayer
-## Top-left perf readout: fps, frame time, swarm tick time and enemy count.
+## Top-left perf readout: fps, frame time, swarm and total sim time, enemy
+## count, kills and the nova cooldown.
 
 const REFRESH_INTERVAL := 0.25
 const SMOOTHING := 0.1
 const TEMPLATE := """FPS %d
 Frame %.2f ms (worst %.2f)
-Swarm tick %.2f ms
+Swarm %.2f ms   Sim total %.2f ms
 Enemies %d / %d
-[+] or View: spawn %d    [F3] or L3: hide"""
+Kills %d   Best break %d
+Nova %s
+RB/Space nova   RT/LMB fire
+[+] or View: spawn %d   [F3] or L3: hide"""
 
 var swarm: SwarmManager
+var combat: PlayerCombat
+## Wall time of the whole simulation step, set by main each frame.
+var sim_usec: int = 0
 
 var _label: Label
 var _since_refresh := 0.0
@@ -38,16 +45,22 @@ func _process(delta: float) -> void:
 	_frame_ms_avg = lerpf(_frame_ms_avg, frame_ms, SMOOTHING)
 	_frame_ms_worst = maxf(_frame_ms_worst, frame_ms)
 	_since_refresh += delta
-	if _since_refresh < REFRESH_INTERVAL or not visible or swarm == null:
+	if _since_refresh < REFRESH_INTERVAL or not visible or swarm == null or combat == null:
 		return
 	_since_refresh = 0.0
+	var nova := "ready" if combat.nova_cooldown.is_ready() \
+			else "%d%%" % roundi(combat.nova_cooldown.progress() * 100.0)
 	_label.text = TEMPLATE % [
 		Engine.get_frames_per_second(),
 		_frame_ms_avg,
 		_frame_ms_worst,
 		swarm.last_tick_usec / 1000.0,
+		sim_usec / 1000.0,
 		swarm.enemy_count(),
 		swarm.config.capacity,
+		swarm.total_kills,
+		swarm.best_break,
+		nova,
 		swarm.config.debug_spawn_batch,
 	]
 	_frame_ms_worst = 0.0

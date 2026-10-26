@@ -4,6 +4,7 @@ extends Resource
 
 @export var display_name: String = "Enemy"
 @export var color: Color = Color(0.85, 0.25, 0.2)
+@export var max_health: float = 20.0
 @export var body_radius: float = 0.35
 @export var body_height: float = 1.0
 @export var max_speed: float = 4.0
@@ -15,3 +16,4 @@ extends Resource
 ## Meters per second of push at full overlap, summed over neighbours.
 @export var separation_strength: float = 6.0
 @export var cast_shadow: bool = false
+@export var death_effect: EffectType

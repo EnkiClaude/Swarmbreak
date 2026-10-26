@@ -29,3 +29,27 @@ func test_despawn_last_just_shrinks() -> void:
 	state.despawn(1)
 	check_eq(state.count, 1, "count")
 	check_eq(state.positions[0], Vector2(0, 0), "survivor kept")
+
+
+func test_remove_dead_compacts_and_reports() -> void:
+	var state := SwarmState.new(8)
+	for i in 5:
+		state.spawn(Vector2(i, 0), i % 2, 10.0)
+	state.health[1] = 0.0
+	state.health[3] = -4.0
+	var dead := state.remove_dead()
+	check_eq(dead, 2, "two died")
+	check_eq(state.count, 3, "three survive")
+	check_eq(state.positions[0], Vector2(0, 0), "survivor 0 in order")
+	check_eq(state.positions[1], Vector2(2, 0), "survivor 2 moved down")
+	check_eq(state.positions[2], Vector2(4, 0), "survivor 4 moved down")
+	check_eq(state.dead_positions[0], Vector2(1, 0), "first dead position")
+	check_eq(state.dead_positions[1], Vector2(3, 0), "second dead position")
+	check_eq(state.dead_types[0], 1, "dead type kept")
+
+
+func test_spawn_sets_health_and_clears_flash() -> void:
+	var state := SwarmState.new(2)
+	var i := state.spawn(Vector2.ZERO, 0, 35.0)
+	check_eq(state.health[i], 35.0, "health")
+	check_eq(state.flash_until[i], 0.0, "no flash")

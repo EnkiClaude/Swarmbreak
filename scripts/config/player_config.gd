@@ -9,3 +9,5 @@ extends Resource
 @export var radius: float = 0.45
 @export var height: float = 1.8
 @export var color: Color = Color(0.3, 0.75, 1.0)
+@export var nova: NovaConfig
+@export var bolt: BoltConfig
