@@ -89,6 +89,15 @@ await touch("touchStart", [{ x: 720, y: 360, id: 3 }]);
 await page.waitForTimeout(150);
 await shot("touch-nova");
 await touch("touchEnd", []);
+
+// Character screen: tap CHAR (top center), look, close with Tab.
+await page.waitForTimeout(1000);
+await touch("touchStart", [{ x: 480, y: 42, id: 4 }]);
+await touch("touchEnd", []);
+await page.waitForTimeout(800);
+await shot("menu");
+await page.keyboard.press("Tab");
+await page.waitForTimeout(500);
 await page.waitForTimeout(500);
 
 await browser.close();
