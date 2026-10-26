@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ArenaConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/arena_config.gd" id="1_arena"]
+
+[resource]
+script = ExtResource("1_arena")
+half_extent = 40.0
+floor_color = Color(0.15, 0.16, 0.18, 1)
+grid_line_color = Color(0.23, 0.25, 0.28, 1)
+grid_cell_size = 2.0
+border_color = Color(0.45, 0.32, 0.2, 1)
+border_height = 0.6

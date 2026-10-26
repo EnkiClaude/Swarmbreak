@@ -1,0 +1,26 @@
+# Godot 4+ editor cache and imported assets (regenerated on open)
+.godot/
+
+# Godot-generated Android build template
+/android/
+
+# Export output
+/build/
+/exports/
+*.pck
+*.x86_64
+*.exe
+
+# Mono / C# (in case it is ever enabled)
+.mono/
+data_*/
+mono_crash.*.json
+
+# OS and editor junk
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+ci-logs/
