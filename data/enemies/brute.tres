@@ -8,6 +8,7 @@ script = ExtResource("1_enemy_type")
 display_name = "Brute"
 color = Color(0.55, 0.3, 0.85, 1)
 max_health = 70.0
+xp = 6.0
 body_radius = 0.55
 body_height = 1.5
 max_speed = 3.2

@@ -10,6 +10,7 @@ bar_position = Vector2(0.5, 0.955)
 bar_gap = 6.0
 health_color = Color(0.85, 0.2, 0.2, 1)
 mana_color = Color(0.25, 0.5, 1, 1)
+xp_color = Color(0.6, 1, 0.5, 1)
 bar_back_color = Color(0, 0, 0, 0.55)
 minimap_size = 150.0
 minimap_margin = 10.0

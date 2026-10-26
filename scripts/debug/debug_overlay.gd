@@ -12,7 +12,7 @@ Enemies %d / %d
 Kills %d   Best break %d
 Nova %s
 RT/LMB fire  RB/Q nova  LB/E lure  A/Space dodge
-[+] or View: spawn %d   [F3] or L3: hide"""
+Tab/Start: character   [+] or View: spawn %d   [F3] or L3: hide"""
 
 var swarm: SwarmManager
 var combat: PlayerCombat

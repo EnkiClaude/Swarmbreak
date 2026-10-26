@@ -18,3 +18,5 @@ extends Resource
 ## Shortest gap between hurt sounds while being hit continuously.
 @export var hurt_interval: float = 0.3
 @export var denied_db: float = -10.0
+@export var level_up_db: float = -6.0
+@export var pickup_db: float = -9.0

@@ -5,6 +5,8 @@ extends Resource
 @export var display_name: String = "Enemy"
 @export var color: Color = Color(0.85, 0.25, 0.2)
 @export var max_health: float = 20.0
+## XP the player earns for killing one.
+@export var xp: float = 1.0
 @export var body_radius: float = 0.35
 @export var body_height: float = 1.0
 @export var max_speed: float = 4.0

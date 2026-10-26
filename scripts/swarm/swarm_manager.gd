@@ -16,6 +16,8 @@ var state: SwarmState
 ## Wall time of the last frame's swarm work in microseconds, for the debug overlay.
 var last_tick_usec: int = 0
 var total_kills: int = 0
+## XP earned from the enemies removed by the last resolve_deaths().
+var last_xp := 0.0
 ## Most kills from a single damage event: the biggest "break" so far.
 var best_break: int = 0
 
@@ -159,6 +161,10 @@ func resolve_deaths() -> int:
 	var dead := state.remove_dead()
 	var positions := state.dead_positions
 	var types := state.dead_types
+	var xp_table := _types.xp
+	last_xp = 0.0
+	for k in dead:
+		last_xp += xp_table[types[k]]
 	if _effects != null:
 		var body_radius := _types.body_radius
 		for k in dead:

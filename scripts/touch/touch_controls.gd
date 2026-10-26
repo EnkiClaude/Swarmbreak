@@ -101,6 +101,11 @@ func _end_touch(index: int) -> void:
 		_send_action("attack_fire", false)
 
 
+## Lets go of every stick and button, e.g. before the game pauses.
+func release_all() -> void:
+	_release_all()
+
+
 func _release_all() -> void:
 	for index in _held_buttons.keys():
 		_send_action(_held_buttons[index], false)
@@ -142,16 +147,17 @@ func _send_action(action: String, pressed: bool) -> void:
 
 
 func _button_at(at: Vector2) -> String:
-	if at.distance_to(_screen(config.nova_button_position)) <= config.nova_button_radius:
-		return "attack_nova"
-	if at.distance_to(_screen(config.lure_button_position)) <= config.lure_button_radius:
-		return "skill_lure"
-	if at.distance_to(_screen(config.dodge_button_position)) <= config.dodge_button_radius:
-		return "dodge"
-	if at.distance_to(_screen(config.spawn_button_position)) <= config.small_button_radius:
-		return "debug_spawn"
-	if at.distance_to(_screen(config.overlay_button_position)) <= config.small_button_radius:
-		return "debug_toggle_overlay"
+	var buttons := [
+		[config.nova_button_position, config.nova_button_radius, "attack_nova"],
+		[config.lure_button_position, config.lure_button_radius, "skill_lure"],
+		[config.dodge_button_position, config.dodge_button_radius, "dodge"],
+		[config.spawn_button_position, config.small_button_radius, "debug_spawn"],
+		[config.overlay_button_position, config.small_button_radius, "debug_toggle_overlay"],
+		[config.character_button_position, config.small_button_radius, "character_menu"],
+	]
+	for button in buttons:
+		if at.distance_to(_screen(button[0])) <= float(button[1]):
+			return button[2]
 	return ""
 
 
@@ -172,6 +178,8 @@ func _draw() -> void:
 			"debug_spawn", config.color)
 	_draw_button(config.overlay_button_position, config.small_button_radius, "HUD",
 			"debug_toggle_overlay", config.color)
+	_draw_button(config.character_button_position, config.small_button_radius, "CHAR",
+			"character_menu", config.lure_color)
 
 
 func _draw_stick(stick: VirtualStick, hint: Vector2, label: String) -> void:

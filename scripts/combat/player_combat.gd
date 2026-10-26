@@ -26,15 +26,17 @@ var _bolt: BoltConfig
 var _lure: LureConfig
 var _nova_effect := -1
 var _lure_effect := -1
+var _stats: PlayerStats
 
 
 func _init(player: Player, swarm: SwarmManager, projectiles: ProjectileSystem,
-		effects: EffectSystem, zone: ZoneDirector = null) -> void:
+		effects: EffectSystem, zone: ZoneDirector = null, stats: PlayerStats = null) -> void:
 	_player = player
 	_swarm = swarm
 	_projectiles = projectiles
 	_effects = effects
 	_zone = zone
+	_stats = stats
 	_nova = player.config.nova
 	_bolt = player.config.bolt
 	_lure = player.config.lure
@@ -49,6 +51,8 @@ func _init(player: Player, swarm: SwarmManager, projectiles: ProjectileSystem,
 
 ## Call between SwarmManager.simulate() and resolve_deaths().
 func tick(delta: float) -> void:
+	bolt_cooldown.duration = _bolt.fire_interval / _mult(PlayerStat.Id.FIRE_RATE)
+	_projectiles.damage_multiplier = _mult(PlayerStat.Id.BOLT_DAMAGE)
 	nova_cooldown.tick(delta)
 	lure_cooldown.tick(delta)
 	bolt_cooldown.tick(delta)
@@ -74,8 +78,10 @@ func _try_nova() -> void:
 	nova_cooldown.trigger()
 	var center := _player.ground_position()
 	nova_cast.emit(center)
-	_swarm.damage_circle(center, _nova.radius, _nova.damage, _nova.knockback)
-	_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), _nova.radius)
+	var radius := _nova.radius * _mult(PlayerStat.Id.NOVA_RADIUS)
+	_swarm.damage_circle(center, radius, _nova.damage * _mult(PlayerStat.Id.NOVA_DAMAGE),
+			_nova.knockback)
+	_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), radius)
 
 
 func _try_lure() -> void:
@@ -86,9 +92,10 @@ func _try_lure() -> void:
 		return
 	lure_cooldown.trigger()
 	var center := _player.ground_position()
-	var woken := _zone.lure(center, _lure.radius) if _zone != null else 0
-	_swarm.boost_within(center, _lure.radius, _lure.boost_duration)
-	_effects.spawn(_lure_effect, Vector3(center.x, 0.0, center.y), _lure.radius)
+	var radius := _lure.radius * _mult(PlayerStat.Id.LURE_RADIUS)
+	var woken := _zone.lure(center, radius) if _zone != null else 0
+	_swarm.boost_within(center, radius, _lure.boost_duration)
+	_effects.spawn(_lure_effect, Vector3(center.x, 0.0, center.y), radius)
 	lure_cast.emit(center, woken)
 
 
@@ -99,4 +106,11 @@ func _wants_to_fire() -> bool:
 
 
 func _on_enemies_killed(count: int, _center: Vector2) -> void:
-	_player.vitals.gain_mana(_player.config.mana_per_kill * count)
+	var per_kill := _player.config.mana_per_kill
+	if _stats != null:
+		per_kill += _stats.value(PlayerStat.Id.MANA_PER_KILL)
+	_player.vitals.gain_mana(per_kill * count)
+
+
+func _mult(stat: int) -> float:
+	return _stats.multiplier(stat) if _stats != null else 1.0

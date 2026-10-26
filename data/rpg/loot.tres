@@ -1,0 +1,130 @@
+[gd_resource type="Resource" script_class="LootConfig" load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/affix_def.gd" id="1_affix"]
+[ext_resource type="Script" path="res://scripts/config/loot_config.gd" id="2_loot"]
+
+[sub_resource type="Resource" id="Affix_0"]
+script = ExtResource("1_affix")
+stat = 5
+min_value = 0.08
+max_value = 0.2
+slots = Array[int]([0])
+weight = 3.0
+
+[sub_resource type="Resource" id="Affix_1"]
+script = ExtResource("1_affix")
+stat = 6
+min_value = 0.05
+max_value = 0.15
+slots = Array[int]([0])
+weight = 2.0
+
+[sub_resource type="Resource" id="Affix_2"]
+script = ExtResource("1_affix")
+stat = 7
+min_value = 0.08
+max_value = 0.2
+slots = Array[int]([0, 1])
+weight = 3.0
+
+[sub_resource type="Resource" id="Affix_3"]
+script = ExtResource("1_affix")
+stat = 8
+min_value = 0.04
+max_value = 0.1
+slots = Array[int]([1])
+weight = 2.0
+
+[sub_resource type="Resource" id="Affix_4"]
+script = ExtResource("1_affix")
+stat = 9
+min_value = 0.08
+max_value = 0.2
+slots = Array[int]([1])
+weight = 1.5
+
+[sub_resource type="Resource" id="Affix_5"]
+script = ExtResource("1_affix")
+stat = 10
+min_value = 0.05
+max_value = 0.2
+slots = Array[int]([1])
+weight = 2.0
+
+[sub_resource type="Resource" id="Affix_6"]
+script = ExtResource("1_affix")
+stat = 3
+min_value = 0.1
+max_value = 0.3
+slots = Array[int]([1, 2])
+weight = 2.0
+
+[sub_resource type="Resource" id="Affix_7"]
+script = ExtResource("1_affix")
+stat = 1
+min_value = 8.0
+max_value = 20.0
+slots = Array[int]([1])
+weight = 2.0
+
+[sub_resource type="Resource" id="Affix_8"]
+script = ExtResource("1_affix")
+stat = 0
+min_value = 10.0
+max_value = 30.0
+slots = Array[int]([2])
+weight = 3.0
+
+[sub_resource type="Resource" id="Affix_9"]
+script = ExtResource("1_affix")
+stat = 2
+min_value = 0.5
+max_value = 2.0
+slots = Array[int]([2])
+weight = 2.0
+
+[sub_resource type="Resource" id="Affix_10"]
+script = ExtResource("1_affix")
+stat = 12
+min_value = 0.03
+max_value = 0.08
+slots = Array[int]([2])
+weight = 2.0
+
+[sub_resource type="Resource" id="Affix_11"]
+script = ExtResource("1_affix")
+stat = 4
+min_value = 0.03
+max_value = 0.08
+slots = Array[int]([2])
+weight = 1.5
+
+[sub_resource type="Resource" id="Affix_12"]
+script = ExtResource("1_affix")
+stat = 11
+min_value = 0.05
+max_value = 0.15
+slots = Array[int]([2])
+weight = 1.0
+
+[resource]
+script = ExtResource("2_loot")
+camp_drop_min = 1
+camp_drop_max = 2
+zone_clear_bonus_drops = 2
+rarity_weights = PackedFloat32Array(60, 30, 10)
+rarity_affixes = PackedInt32Array(1, 2, 3)
+rarity_names = PackedStringArray("Common", "Magic", "Rare")
+rarity_colors = PackedColorArray(0.92, 0.92, 0.92, 1, 0.4, 0.6, 1, 1, 1, 0.85, 0.3, 1)
+value_growth_per_zone = 0.15
+slot_names = PackedStringArray("Wand", "Charm", "Vest")
+rare_prefixes = PackedStringArray("Grim", "Storm", "Hollow", "Ember", "Dread", "Bright", "Iron", "Wild")
+affixes = Array[ExtResource("1_affix")]([SubResource("Affix_0"), SubResource("Affix_1"), SubResource("Affix_2"), SubResource("Affix_3"), SubResource("Affix_4"), SubResource("Affix_5"), SubResource("Affix_6"), SubResource("Affix_7"), SubResource("Affix_8"), SubResource("Affix_9"), SubResource("Affix_10"), SubResource("Affix_11"), SubResource("Affix_12")])
+pickup_radius = 1.2
+magnet_radius = 4.0
+magnet_speed = 10.0
+drop_scatter = 1.5
+ground_capacity = 64
+backpack_size = 16
+gem_size = 0.32
+beam_height = 3.5

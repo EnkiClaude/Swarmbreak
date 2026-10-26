@@ -11,6 +11,8 @@ const MESH_RINGS := 4
 
 ## Bolts fired since setup, for tests and stats.
 var fired_total: int = 0
+## Scales bolt burst damage (from player stats).
+var damage_multiplier := 1.0
 
 var _config: BoltConfig
 var _pool: ProjectilePool
@@ -50,7 +52,8 @@ func tick(delta: float, swarm: SwarmManager) -> void:
 			_pool.remove(i)
 			continue
 		if _pool.ages[i] >= _config.lifetime or swarm.first_hit(p, _config.hit_radius) >= 0:
-			swarm.damage_circle(p, _config.burst_radius, _config.damage, _config.knockback)
+			swarm.damage_circle(p, _config.burst_radius, _config.damage * damage_multiplier,
+					_config.knockback)
 			_effects.spawn(_burst_effect, Vector3(p.x, 0.0, p.y), _config.burst_radius)
 			bolt_burst.emit(p)
 			_pool.remove(i)

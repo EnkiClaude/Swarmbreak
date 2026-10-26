@@ -17,6 +17,8 @@ var aim_direction := Vector3.FORWARD
 
 var vitals: PlayerVitals
 var dash_cooldown: Cooldown
+## Null until set_stats(); then movement and dodge read it.
+var stats: PlayerStats
 
 var _input := TwinStickInput.new()
 var _dash_left := 0.0
@@ -34,6 +36,19 @@ func _ready() -> void:
 func setup(camera_rig: CameraRig, arena_half_extent: float) -> void:
 	_camera_rig = camera_rig
 	_half_extent = arena_half_extent
+
+
+## Hooks up progression: vitals and movement then follow stat changes.
+func set_stats(p_stats: PlayerStats) -> void:
+	stats = p_stats
+	vitals = PlayerVitals.new(config, stats)
+	stats.changed.connect(_on_stats_changed)
+	_on_stats_changed()
+
+
+func _on_stats_changed() -> void:
+	vitals.refresh_maxima()
+	dash_cooldown.duration = config.dash_cooldown * (1.0 - stats.value(PlayerStat.Id.DODGE_COOLDOWN))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -63,7 +78,10 @@ func tick(delta: float, now: float = 0.0) -> void:
 		_dash_left -= delta
 		position += _dash_direction * (config.dash_distance / config.dash_duration) * delta
 	else:
-		var wish := _screen_to_world(move, yaw) * config.move_speed
+		var speed := config.move_speed
+		if stats != null:
+			speed *= stats.multiplier(PlayerStat.Id.MOVE_SPEED)
+		var wish := _screen_to_world(move, yaw) * speed
 		velocity = velocity.move_toward(wish, config.acceleration * delta)
 		position += velocity * delta
 	position.x = clampf(position.x, -_half_extent, _half_extent)
