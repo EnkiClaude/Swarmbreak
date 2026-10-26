@@ -9,7 +9,8 @@ func test_corpses_fly_land_and_expire() -> void:
 	check(pool.positions[0].y > 1.0, "still rising just after launch")
 	for i in 20:
 		pool.advance(0.02, 20.0, 0.3, 0.5, 0.35, 1.0)
-	check(pool.positions[0].y >= 0.35, "never sinks below the ground")
+	# Positions are stored as 32-bit floats, so allow for rounding.
+	check(pool.positions[0].y >= 0.35 - 0.0001, "never sinks below the ground")
 	check_eq(pool.count, 1, "alive before its lifetime")
 	pool.advance(0.6, 20.0, 0.3, 0.5, 0.35, 1.0)
 	check_eq(pool.count, 0, "expired after its lifetime")
