@@ -1,0 +1,78 @@
+name: Web build
+
+# Exports a browser build on every push. Pushes to main also publish it to
+# GitHub Pages (repo Settings -> Pages -> Source: GitHub Actions, once).
+# Browsers use Godot's Compatibility renderer, so this build looks a little
+# different from the Steam Deck one and its frame rate says little about the Deck.
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Export web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GODOT_VERSION: 4.3-stable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and web templates
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-web-${{ env.GODOT_VERSION }}-linux
+
+      - name: Download Godot and web templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -sSfL -o ~/godot/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -q ~/godot/godot.zip -d ~/godot
+          mv ~/godot/"Godot_v${GODOT_VERSION}_linux.x86_64" ~/godot/godot
+          rm ~/godot/godot.zip
+          python3 tools/fetch_web_templates.py "$GODOT_VERSION"
+
+      - name: Export
+        run: |
+          mkdir -p build/web
+          ~/godot/godot --headless --path . --import
+          ~/godot/godot --headless --path . --export-release "Web" build/web/index.html 2>&1 | tee export.log
+          test -s build/web/index.html
+          test -s build/web/index.wasm
+          test -s build/web/index.pck
+          ls -la build/web
+          if grep -E "SCRIPT ERROR|Parse Error|ERROR:" export.log; then
+            echo "::error::export logged errors"
+            exit 1
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    name: Publish to GitHub Pages
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
