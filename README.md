@@ -20,6 +20,6 @@ enemy count.
 | Move            | Left stick  | WASD / arrows     |
 | Aim             | Right stick | Mouse             |
 | Spawn 100 more  | View / Back | `=` or keypad `+` |
-| Toggle overlay  |             | F3                |
+| Toggle overlay  | L3          | F3                |
 
 Tuning lives in `data/`. See `CLAUDE.md` for project rules and architecture.

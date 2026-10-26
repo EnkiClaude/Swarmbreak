@@ -89,7 +89,7 @@ packed-array interfaces so nothing else has to change.
 | Move            | Left stick          | WASD / arrows    |
 | Aim             | Right stick         | Mouse            |
 | Spawn 100       | View / Back         | `=` or keypad `+`|
-| Toggle overlay  |                     | F3               |
+| Toggle overlay  | L3 (left stick)     | F3               |
 
 ## Git
 

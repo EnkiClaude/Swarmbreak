@@ -8,7 +8,7 @@ extends RefCounted
 
 const UNREACHED := 1.0e9
 const DIAGONAL := 1.41421356
-## Sweep pairs before giving up. Open ground settles after one; mazes need more.
+## Sweep pairs before giving up. Open ground settles in three; mazes need more.
 const MAX_SWEEPS := 8
 
 var cell_size: float

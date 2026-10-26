@@ -35,10 +35,12 @@ func _build_border() -> void:
 	var length := h * 2.0 + BORDER_THICKNESS * 2.0
 	var offset := h + BORDER_THICKNESS * 0.5
 	var y := config.border_height * 0.5
-	_add_wall("BorderNorth", Vector3(length, config.border_height, BORDER_THICKNESS), Vector3(0.0, y, -offset), material)
-	_add_wall("BorderSouth", Vector3(length, config.border_height, BORDER_THICKNESS), Vector3(0.0, y, offset), material)
-	_add_wall("BorderWest", Vector3(BORDER_THICKNESS, config.border_height, length), Vector3(-offset, y, 0.0), material)
-	_add_wall("BorderEast", Vector3(BORDER_THICKNESS, config.border_height, length), Vector3(offset, y, 0.0), material)
+	var ns_size := Vector3(length, config.border_height, BORDER_THICKNESS)
+	var we_size := Vector3(BORDER_THICKNESS, config.border_height, length)
+	_add_wall("BorderNorth", ns_size, Vector3(0.0, y, -offset), material)
+	_add_wall("BorderSouth", ns_size, Vector3(0.0, y, offset), material)
+	_add_wall("BorderWest", we_size, Vector3(-offset, y, 0.0), material)
+	_add_wall("BorderEast", we_size, Vector3(offset, y, 0.0), material)
 
 
 func _add_wall(wall_name: String, size: Vector3, at: Vector3, material: Material) -> void:

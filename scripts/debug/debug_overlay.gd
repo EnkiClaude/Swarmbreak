@@ -4,6 +4,11 @@ extends CanvasLayer
 
 const REFRESH_INTERVAL := 0.25
 const SMOOTHING := 0.1
+const TEMPLATE := """FPS %d
+Frame %.2f ms (worst %.2f)
+Swarm tick %.2f ms
+Enemies %d / %d
+[+] or View: spawn %d    [F3] or L3: hide"""
 
 var swarm: SwarmManager
 
@@ -36,7 +41,7 @@ func _process(delta: float) -> void:
 	if _since_refresh < REFRESH_INTERVAL or not visible or swarm == null:
 		return
 	_since_refresh = 0.0
-	_label.text = "FPS %d\nFrame %.2f ms (worst %.2f)\nSwarm tick %.2f ms\nEnemies %d / %d\n[+] or View: spawn %d    [F3] hide" % [
+	_label.text = TEMPLATE % [
 		Engine.get_frames_per_second(),
 		_frame_ms_avg,
 		_frame_ms_worst,
