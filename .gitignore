@@ -5,6 +5,7 @@
 /android/
 
 # Export output
+node_modules/
 /build/
 /exports/
 *.pck

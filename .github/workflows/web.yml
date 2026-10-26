@@ -57,6 +57,13 @@ jobs:
             exit 1
           fi
 
+      - name: Smoke test in headless Chrome
+        run: |
+          npm install --no-save --no-package-lock playwright-core@1.48.2
+          command -v google-chrome || npx playwright-core install chromium
+          node tools/web_smoke.mjs build/web
+          rm -f build/web/smoke-*.jpg
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
