@@ -7,6 +7,9 @@ extends Node3D
 ## Each frame: simulate(), then any damage (damage_circle / first_hit), then
 ## resolve_deaths(), then draw(). Or call tick() when nothing deals damage.
 
+## Emitted by every damage event that kills at least one enemy.
+signal enemies_killed(count: int, center: Vector2)
+
 @export var config: SwarmConfig
 
 var state: SwarmState
@@ -24,16 +27,19 @@ var _combat: SwarmCombat
 var _spawner := SwarmSpawner.new()
 var _renderer: SwarmRenderer
 var _effects: EffectSystem
+var _corpses: CorpseSystem
 var _death_effects: PackedInt32Array = []
 var _half_extent: float
 var _time := 0.0
 var _frame_usec := 0
 
 
-## effects may be null (benchmarks, tests): deaths then show no effect.
-func setup(arena_half_extent: float, effects: EffectSystem = null) -> void:
+## effects and corpses may be null (benchmarks, tests): deaths then show nothing.
+func setup(arena_half_extent: float, effects: EffectSystem = null,
+		corpses: CorpseSystem = null) -> void:
 	_half_extent = arena_half_extent
 	_effects = effects
+	_corpses = corpses
 	_types = SwarmTypeTable.new(config.enemy_types)
 	if _types.largest_separation_radius() > config.hash_cell_size:
 		push_warning("Swarm: a separation radius exceeds hash_cell_size; neighbours will be missed.")
@@ -85,6 +91,8 @@ func damage_circle(center: Vector2, radius: float, damage: float, knockback: flo
 			_time + config.hit_flash_duration)
 	total_kills += kills
 	best_break = maxi(best_break, kills)
+	if kills > 0:
+		enemies_killed.emit(kills, center)
 	return kills
 
 
@@ -93,18 +101,22 @@ func first_hit(point: Vector2, radius: float) -> int:
 	return _combat.first_hit(point, radius)
 
 
-## Removes enemies killed this frame and spawns their death effects.
+## Removes enemies killed this frame and spawns their death effects and corpses.
 func resolve_deaths() -> void:
 	var start := Time.get_ticks_usec()
 	var dead := state.remove_dead()
+	var positions := state.dead_positions
+	var types := state.dead_types
 	if _effects != null:
-		var positions := state.dead_positions
-		var types := state.dead_types
 		var body_radius := _types.body_radius
 		for k in dead:
 			var p: Vector2 = positions[k]
 			var t: int = types[k]
 			_effects.spawn(_death_effects[t], Vector3(p.x, 0.0, p.y), body_radius[t])
+	if _corpses != null:
+		var velocities := state.dead_velocities
+		for k in dead:
+			_corpses.spawn(types[k], positions[k], velocities[k])
 	_frame_usec += Time.get_ticks_usec() - start
 
 

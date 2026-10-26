@@ -7,6 +7,6 @@
 script = ExtResource("1_nova")
 radius = 6.0
 damage = 25.0
-knockback = 8.0
+knockback = 14.0
 cooldown = 1.2
 effect = ExtResource("2_ring")

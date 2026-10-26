@@ -4,6 +4,9 @@ extends RefCounted
 ## aimed bolts. Owns only the cooldowns; damage goes through SwarmManager and
 ## bolts through ProjectileSystem.
 
+signal nova_cast(center: Vector2)
+signal bolt_fired
+
 var nova_cooldown: Cooldown
 var bolt_cooldown: Cooldown
 
@@ -39,13 +42,15 @@ func tick(delta: float) -> void:
 	if _wants_to_fire() and bolt_cooldown.is_ready():
 		bolt_cooldown.trigger()
 		var aim := _player.aim_direction
-		_projectiles.fire(_player.ground_position(), Vector2(aim.x, aim.z))
+		if _projectiles.fire(_player.ground_position(), Vector2(aim.x, aim.z)):
+			bolt_fired.emit()
 
 
 func _cast_nova() -> void:
 	var center := _player.ground_position()
 	_swarm.damage_circle(center, _nova.radius, _nova.damage, _nova.knockback)
 	_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), _nova.radius)
+	nova_cast.emit(center)
 
 
 func _wants_to_fire() -> bool:

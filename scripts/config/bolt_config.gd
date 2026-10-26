@@ -19,5 +19,5 @@ extends Resource
 ## Pool size: the most bolts in flight at once.
 @export var capacity: int = 64
 ## Fire whenever the right stick is held, as twin-stick shooters do.
-@export var auto_fire_on_aim: bool = true
+@export var auto_fire_on_aim: bool = false
 @export var burst_effect: EffectType

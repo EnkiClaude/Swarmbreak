@@ -12,3 +12,9 @@ extends Resource
 @export var ortho_size: float = 30.0
 ## Higher is snappier. Used as an exponential decay rate per second.
 @export var follow_sharpness: float = 10.0
+## Camera offset in meters at full shake trauma.
+@export var shake_max_offset: float = 0.9
+## Trauma lost per second.
+@export var shake_decay: float = 2.2
+## How fast the shake wobbles.
+@export var shake_frequency: float = 28.0

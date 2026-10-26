@@ -18,6 +18,8 @@ var flash_until: PackedFloat32Array
 ## Filled by remove_dead(): where the enemies removed this frame died.
 var dead_positions: PackedVector2Array
 var dead_types: PackedInt32Array
+## Velocity at death, which includes the killing blow's knockback.
+var dead_velocities: PackedVector2Array
 
 
 func _init(p_capacity: int) -> void:
@@ -36,6 +38,8 @@ func _init(p_capacity: int) -> void:
 	dead_positions.fill(Vector2.ZERO)
 	dead_types.resize(capacity)
 	dead_types.fill(0)
+	dead_velocities.resize(capacity)
+	dead_velocities.fill(Vector2.ZERO)
 
 
 ## Returns the new enemy's index, or -1 if the pool is full.
@@ -61,7 +65,8 @@ func despawn(i: int) -> void:
 
 
 ## Removes every enemy with health <= 0, keeping survivors in order. Writes
-## the dead into dead_positions / dead_types and returns how many died.
+## the dead into dead_positions / dead_types / dead_velocities and returns
+## how many died.
 func remove_dead() -> int:
 	var write := 0
 	var dead := 0
@@ -73,6 +78,7 @@ func remove_dead() -> int:
 		else:
 			dead_positions[dead] = positions[read]
 			dead_types[dead] = type_ids[read]
+			dead_velocities[dead] = velocities[read]
 			dead += 1
 	count = write
 	return dead

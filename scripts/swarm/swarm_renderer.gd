@@ -23,7 +23,7 @@ func setup(types: Array[EnemyType], capacity: int, flash_color: Color) -> void:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
-		mm.mesh = _make_mesh(t)
+		mm.mesh = make_enemy_mesh(t)
 		mm.instance_count = capacity
 		var buffer := _make_buffer(capacity, t.body_height * 0.5, t.color)
 		mm.buffer = buffer
@@ -68,7 +68,8 @@ func draw(state: SwarmState, now: float) -> void:
 		mm.visible_instance_count = n
 
 
-func _make_mesh(t: EnemyType) -> Mesh:
+## The capsule used for an enemy type, colored per instance. Shared with CorpseSystem.
+static func make_enemy_mesh(t: EnemyType) -> Mesh:
 	var mesh := CapsuleMesh.new()
 	mesh.radius = t.body_radius
 	mesh.height = maxf(t.body_height, t.body_radius * 2.0)

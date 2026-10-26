@@ -10,7 +10,9 @@ extends Resource
 @export var knob_radius: float = 44.0
 ## Where the faint stick hints sit before a thumb lands.
 @export var move_hint_position: Vector2 = Vector2(0.14, 0.74)
-@export var aim_hint_position: Vector2 = Vector2(0.86, 0.74)
+## Hold to fire bolts; drag from it to aim while firing.
+@export var fire_button_position: Vector2 = Vector2(0.86, 0.74)
+@export var fire_button_radius: float = 80.0
 @export var nova_button_position: Vector2 = Vector2(0.9, 0.36)
 @export var nova_button_radius: float = 72.0
 @export var spawn_button_position: Vector2 = Vector2(0.6, 0.07)

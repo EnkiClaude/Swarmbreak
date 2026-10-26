@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="FeedbackConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/feedback_config.gd" id="1_feedback"]
+
+[resource]
+script = ExtResource("1_feedback")
+hitstop_min_kills = 6
+hitstop_base = 0.03
+hitstop_per_kill = 0.0012
+hitstop_max = 0.14
+shake_nova = 0.35
+shake_bolt_burst = 0.08
+shake_per_kill = 0.006
+shake_kills_max = 0.5
+popup_min_kills = 10
+popup_duration = 1.0
+popup_base_size = 44
+popup_size_per_doubling = 10
+popup_max_size = 110
+popup_color = Color(1, 0.82, 0.35, 1)
+popup_outline_color = Color(0.25, 0.08, 0.02, 1)
+corpse_fling_scale = 1.3
+corpse_up_speed_min = 3.0
+corpse_up_speed_max = 7.0
+corpse_spin_max = 14.0
+corpse_gravity = 22.0
+corpse_bounce = 0.3
+corpse_ground_friction = 0.55
+corpse_lifetime = 0.9
+corpse_shrink_start = 0.65
+corpse_darken = 0.45
+corpse_capacity = 800
+vibration_enabled = true
+vibration_nova = 0.35
+vibration_per_kill = 0.01
+vibration_max = 1.0
+vibration_duration = 0.18

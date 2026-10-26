@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AudioConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/audio_config.gd" id="1_audio"]
+
+[resource]
+script = ExtResource("1_audio")
+voices = 12
+pitch_variance = 0.08
+bolt_fire_db = -16.0
+bolt_burst_db = -10.0
+nova_db = -3.0
+kill_db = -14.0
+kill_db_per_doubling = 2.5
+kill_db_max = -2.0

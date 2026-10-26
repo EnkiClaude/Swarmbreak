@@ -1,8 +1,9 @@
 class_name TouchControls
 extends Control
 ## On-screen twin-stick controls for touchscreens. The left half of the screen
-## is a floating move stick, the right half a floating aim stick (aiming
-## auto-fires), plus Nova, spawn and overlay buttons.
+## is a floating move stick. On the right, the FIRE button is also a stick:
+## hold it to fire and drag from it to aim (no drag fires where the player
+## faces). Plus NOVA, spawn and overlay buttons.
 ##
 ## Everything is translated into the same input actions a controller presses,
 ## so gameplay code never knows the input came from touch.
@@ -15,6 +16,7 @@ const LABEL_SIZE := 22
 @export var config: TouchConfig
 
 var _move: VirtualStick
+## The FIRE button's stick: held means firing, deflection aims.
 var _aim: VirtualStick
 ## Touch index -> action name, for buttons currently held down.
 var _held_buttons: Dictionary = {}
@@ -59,14 +61,18 @@ func handle_touch(index: int, at: Vector2, pressed: bool) -> void:
 		queue_redraw()
 		return
 	var button := _button_at(at)
+	var fire_center := _screen(config.fire_button_position)
 	if button != "":
 		_held_buttons[index] = button
 		_send_action(button, true)
-	elif at.x < size.x * 0.5:
-		if not _move.is_held():
-			_move.press(index, at)
-	elif not _aim.is_held():
-		_aim.press(index, at)
+	elif at.distance_to(fire_center) <= config.fire_button_radius:
+		if not _aim.is_held():
+			_aim.press(index, fire_center)
+			_aim.drag(at)
+			_apply_stick(_aim, AIM_ACTIONS)
+			_send_action("attack_fire", true)
+	elif at.x < size.x * 0.5 and not _move.is_held():
+		_move.press(index, at)
 	queue_redraw()
 
 
@@ -92,6 +98,7 @@ func _end_touch(index: int) -> void:
 	if index == _aim.touch_index:
 		_aim.release()
 		_apply_stick(_aim, AIM_ACTIONS)
+		_send_action("attack_fire", false)
 
 
 func _release_all() -> void:
@@ -101,9 +108,10 @@ func _release_all() -> void:
 	if _move != null:
 		_move.release()
 		_apply_stick(_move, MOVE_ACTIONS)
-	if _aim != null:
+	if _aim != null and _aim.is_held():
 		_aim.release()
 		_apply_stick(_aim, AIM_ACTIONS)
+		_send_action("attack_fire", false)
 	queue_redraw()
 
 
@@ -149,7 +157,7 @@ func _screen(fraction: Vector2) -> Vector2:
 
 func _draw() -> void:
 	_draw_stick(_move, _screen(config.move_hint_position), "MOVE")
-	_draw_stick(_aim, _screen(config.aim_hint_position), "AIM")
+	_draw_fire_stick()
 	_draw_button(config.nova_button_position, config.nova_button_radius, "NOVA",
 			"attack_nova", config.nova_color)
 	_draw_button(config.spawn_button_position, config.small_button_radius, "+100",
@@ -166,6 +174,18 @@ func _draw_stick(stick: VirtualStick, hint: Vector2, label: String) -> void:
 	draw_arc(stick.origin, config.stick_radius, 0.0, TAU, 48, config.active_color, RING_WIDTH)
 	draw_circle(stick.origin + stick.vector * config.stick_radius, config.knob_radius,
 			config.active_color)
+
+
+func _draw_fire_stick() -> void:
+	var center := _screen(config.fire_button_position)
+	if not _aim.is_held():
+		draw_circle(center, config.fire_button_radius, config.color)
+		_draw_label(center, "FIRE", Color(1, 1, 1, 0.9))
+		return
+	draw_circle(center, config.fire_button_radius, config.active_color)
+	draw_arc(center, config.stick_radius, 0.0, TAU, 48, config.active_color, RING_WIDTH)
+	draw_circle(center + _aim.vector * config.stick_radius, config.knob_radius,
+			Color(1, 0.85, 0.4, 0.85))
 
 
 func _draw_button(fraction: Vector2, radius: float, label: String, action: String,

@@ -3,11 +3,18 @@ extends Node3D
 ## Angled orthographic camera that follows a target across the ground plane.
 ## The rig sits on the target and is rotated by yaw then pitch; the camera
 ## hangs back along the rig's +Z, looking at the rig origin.
+##
+## Shake uses a trauma value (0..1) that decays over time; the screen-space
+## offset grows with trauma squared, so small hits barely move the camera and
+## big ones jolt it.
 
 @export var config: CameraConfig
 
 var target: Node3D
+## 0..1. Add to it with add_trauma().
+var trauma := 0.0
 var _camera: Camera3D
+var _shake_time := 0.0
 
 
 func _ready() -> void:
@@ -34,6 +41,21 @@ func tick(delta: float) -> void:
 		return
 	var weight := 1.0 - exp(-config.follow_sharpness * delta)
 	global_position = global_position.lerp(target.global_position, weight)
+	_tick_shake(delta)
+
+
+func add_trauma(amount: float) -> void:
+	trauma = minf(trauma + amount, 1.0)
+
+
+func _tick_shake(delta: float) -> void:
+	trauma = maxf(trauma - config.shake_decay * delta, 0.0)
+	_shake_time += delta
+	var strength := trauma * trauma * config.shake_max_offset
+	var t := _shake_time * config.shake_frequency
+	# Two incommensurate sines per axis read as noise without a noise texture.
+	_camera.h_offset = strength * (sin(t * 1.0) * 0.6 + sin(t * 2.37) * 0.4)
+	_camera.v_offset = strength * (sin(t * 1.31 + 1.7) * 0.6 + sin(t * 2.91) * 0.4)
 
 
 func yaw() -> float:
