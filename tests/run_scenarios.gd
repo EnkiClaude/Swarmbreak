@@ -16,6 +16,7 @@ var _feedback: CombatFeedback
 var _popup: BreakPopup
 var _corpses: CorpseSystem
 var _camera: CameraRig
+var _zone: ZoneDirector
 
 
 func _initialize() -> void:
@@ -34,9 +35,13 @@ func _run() -> void:
 	_popup = _main.get_node("BreakPopup") as BreakPopup
 	_corpses = _main.get_node("Corpses") as CorpseSystem
 	_camera = _main.get_node("CameraRig") as CameraRig
-	await _frames(5)
+	await _frames(5)  # nodes finish _ready during the first frames
+	_zone = _main.get("zone") as ZoneDirector
+	_god_mode(true)
 
-	_scenario("initial swarm spawns", _initial_swarm)
+	_scenario("the zone starts with sleeping camps", _zone_starts_asleep)
+	await _scenario_async("a camp wakes when the player comes near", _camp_wakes_on_approach)
+	await _scenario_async("lure wakes camps in range and hurries them", _lure_wakes_camps)
 	await _scenario_async("player moves with move_right", _player_moves)
 	await _scenario_async("debug_spawn adds a batch", _debug_spawn)
 	await _scenario_async("swarm keeps out of the player", _swarm_keeps_distance)
@@ -46,6 +51,10 @@ func _run() -> void:
 	await _scenario_async("touch move stick moves the player", _touch_move)
 	await _scenario_async("touch FIRE stick fires and aims", _touch_fire)
 	await _scenario_async("touch nova button casts the nova", _touch_nova)
+	await _scenario_async("enemies hurt the player; dodging grants i-frames", _damage_and_dodge)
+	await _scenario_async("without mana the nova does not cast", _nova_needs_mana)
+	await _scenario_async("dying restarts the zone", _death_restarts_zone)
+	await _scenario_async("clearing every camp starts the next zone", _clear_advances_zone)
 
 	print("%d scenario checks failed" % _failures.size())
 	for failure in _failures:
@@ -77,9 +86,91 @@ func _scenario_async(title: String, body: Callable) -> void:
 	await body.call()
 
 
-func _initial_swarm() -> void:
-	_check(_swarm.enemy_count() == _swarm.config.initial_count,
-			"expected %d enemies, got %d" % [_swarm.config.initial_count, _swarm.enemy_count()])
+## Invulnerable so long scenarios can't kill the player by accident.
+func _god_mode(on: bool) -> void:
+	_player.vitals.invulnerable_until = 1.0e9 if on else 0.0
+
+
+func _refill() -> void:
+	_player.vitals.mana = _player.vitals.max_mana
+	_player.vitals.health = _player.vitals.max_health
+
+
+func _zone_starts_asleep() -> void:
+	_check(_zone.level == 1, "starts at zone 1")
+	_check(_zone.camp_centers.size() >= 10, "%d camps placed" % _zone.camp_centers.size())
+	_check(_swarm.enemy_count() == _zone.alive_total,
+			"%d enemies vs %d camp members" % [_swarm.enemy_count(), _zone.alive_total])
+	var awake := 0
+	for i in _swarm.state.count:
+		awake += _swarm.state.awake[i]
+	_check(awake == 0, "%d enemies awake at the start" % awake)
+	for c in _zone.camp_centers:
+		if c.length() < _zone_config().safe_start_radius:
+			_check(false, "camp at %s is inside the safe start area" % c)
+
+
+func _zone_config() -> ZoneConfig:
+	return _main.get("zone_config") as ZoneConfig
+
+
+func _teleport(to: Vector2) -> void:
+	_player.position = Vector3(to.x, 0.0, to.y)
+
+
+func _camp_awake_members(camp: int) -> int:
+	var n := 0
+	for i in _swarm.state.count:
+		if _swarm.state.camp_ids[i] == camp and _swarm.state.awake[i] != 0:
+			n += 1
+	return n
+
+
+func _camp_wakes_on_approach() -> void:
+	var center: Vector2 = _zone.camp_centers[0]
+	var away := (Vector2.ZERO - center).normalized()
+	var aggro := _zone_config().aggro_radius
+	_teleport(center + away * (aggro + 4.0))
+	await _frames(5)
+	_check(_zone.camp_awake[0] == 0, "camp 0 stays asleep outside aggro range")
+	_teleport(center + away * (aggro - 2.0))
+	await _frames(3)
+	_check(_zone.camp_awake[0] == 1, "camp 0 wakes inside aggro range")
+	_check(_camp_awake_members(0) == _zone.camp_alive[0],
+			"all %d members of camp 0 woke (%d)" % [_zone.camp_alive[0], _camp_awake_members(0)])
+	_teleport(Vector2.ZERO)
+
+
+func _lure_wakes_camps() -> void:
+	var target := -1
+	for camp in _zone.camp_centers.size():
+		if _zone.camp_awake[camp] == 0:
+			target = camp
+			break
+	_check(target >= 0, "a sleeping camp to lure")
+	if target < 0:
+		return
+	var lure: LureConfig = _player.config.lure
+	var center: Vector2 = _zone.camp_centers[target]
+	var spot := center + (Vector2.ZERO - center).normalized() * (_zone_config().aggro_radius + 6.0)
+	_teleport(spot)
+	await _frames(2)
+	_check(_zone.camp_awake[target] == 0, "camp still asleep before the lure")
+	_refill()
+	Input.action_press("skill_lure")
+	await _frames(1)
+	Input.action_release("skill_lure")
+	await _frames(1)
+	_check(_zone.camp_awake[target] == 1, "lure woke camp %d from %.0f m" % [
+			target, spot.distance_to(center)])
+	var spent := _player.vitals.max_mana - _player.vitals.mana
+	_check(spent > lure.mana_cost * 0.8, "lure cost mana (%.1f)" % spent)
+	var boosted := 0
+	for i in _swarm.state.count:
+		if _swarm.state.camp_ids[i] == target and _swarm.state.boost_until[i] > _swarm.now():
+			boosted += 1
+	_check(boosted > 0, "lured enemies are sped up")
+	_teleport(Vector2.ZERO)
 
 
 func _player_moves() -> void:
@@ -129,6 +220,7 @@ func _place_pack(center: Vector2, radius: float, amount: int) -> void:
 func _nova_breaks_pack() -> void:
 	await _frames(70)  # let any earlier cooldown run out
 	var nova: NovaConfig = _player.config.nova
+	_refill()
 	_place_pack(_player.ground_position(), nova.radius * 0.8, 150)
 	var kills_before := _swarm.total_kills
 	Input.action_press("attack_nova")
@@ -192,6 +284,7 @@ func _touch_fire() -> void:
 
 func _touch_nova() -> void:
 	await _frames(80)  # nova cooldown
+	_refill()
 	_place_pack(_player.ground_position(), 4.0, 60)
 	var kills_before := _swarm.total_kills
 	var button := _touch.size * _touch.config.nova_button_position
@@ -206,6 +299,7 @@ func _touch_nova() -> void:
 
 func _break_feedback() -> void:
 	await _frames(80)  # nova cooldown
+	_refill()
 	_place_pack(_player.ground_position(), 4.5, 120)
 	var trauma_before := _camera.trauma
 	Input.action_press("attack_nova")
@@ -225,3 +319,64 @@ func _break_feedback() -> void:
 	await _frames(70)
 	_check(_corpses.active_count() == 0, "corpses clear away (%d left)" % _corpses.active_count())
 	_check(not _popup.is_showing(), "the popup fades out")
+
+
+func _damage_and_dodge() -> void:
+	_refill()
+	_god_mode(false)
+	_place_pack(_player.ground_position(), 1.6, 24)
+	await _frames(30)
+	var vitals := _player.vitals
+	_check(vitals.health < vitals.max_health - 5.0, "touching enemies hurt (%.1f hp)" % vitals.health)
+	Input.action_press("dodge")
+	await _frames(1)
+	Input.action_release("dodge")
+	_check(_player.is_dashing(), "dodge starts a dash")
+	var during := vitals.health
+	await _frames(5)
+	_check(vitals.health >= during, "no damage during the dodge (%.2f -> %.2f)" % [
+			during, vitals.health])
+	_swarm.state.clear()
+	_refill()
+	_god_mode(true)
+
+
+func _nova_needs_mana() -> void:
+	await _frames(80)  # nova cooldown
+	_place_pack(_player.ground_position(), 4.0, 40)
+	_player.vitals.mana = 0.0
+	var kills_before := _swarm.total_kills
+	Input.action_press("attack_nova")
+	await _frames(2)
+	Input.action_release("attack_nova")
+	_check(_swarm.total_kills == kills_before, "no nova without mana")
+	_refill()
+
+
+func _death_restarts_zone() -> void:
+	var level := _zone.level
+	_god_mode(false)
+	_player.vitals.health = 1.0
+	_place_pack(_player.ground_position(), 1.6, 24)
+	await _frames(20)
+	_check(_player.vitals.is_dead(), "player died to the pack")
+	_check(_popup.is_showing(), "death message shows")
+	await _frames(roundi(_player.config.respawn_delay * 60.0) + 10)
+	_check(not _player.vitals.is_dead(), "player is back after the respawn delay")
+	_check(_zone.level == level, "same zone level after dying")
+	_check(_swarm.enemy_count() == _zone.alive_total and _zone.alive_total > 0,
+			"zone camps respawned (%d)" % _swarm.enemy_count())
+	_god_mode(true)
+
+
+func _clear_advances_zone() -> void:
+	var level := _zone.level
+	var camps := _zone.camp_centers.size()
+	for i in _swarm.state.count:
+		_swarm.state.health[i] = 0.0
+	await _frames(3)
+	_check(_zone.is_cleared(), "zone cleared once every camp member is dead")
+	await _frames(150)
+	_check(_zone.level == level + 1, "moved on to zone %d (at %d)" % [level + 1, _zone.level])
+	_check(_zone.camp_centers.size() > camps, "the next zone has more camps (%d > %d)" % [
+			_zone.camp_centers.size(), camps])

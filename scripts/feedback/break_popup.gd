@@ -1,7 +1,8 @@
 class_name BreakPopup
 extends CanvasLayer
-## The "x274 BREAK!" callout. A single reused label: a bigger break replaces
-## a smaller one still on screen. It pops in large, settles, then fades.
+## The "x274 BREAK!" callout, also used for zone messages. A single reused
+## label: a bigger break replaces a smaller one still on screen, and a
+## message is never replaced by a break. It pops in large, settles, then fades.
 
 const POP_IN_TIME := 0.12
 const POP_SCALE := 1.6
@@ -11,6 +12,7 @@ var _config: FeedbackConfig
 var _label: Label
 var _settings: LabelSettings
 var _age := 0.0
+var _duration := 1.0
 var _kills := 0
 
 
@@ -29,6 +31,7 @@ func setup(config: FeedbackConfig) -> void:
 	_label.visible = false
 	add_child(_label)
 	_age = config.popup_duration
+	_duration = config.popup_duration
 
 
 func show_break(kills: int) -> void:
@@ -38,10 +41,23 @@ func show_break(kills: int) -> void:
 		return
 	_kills = kills
 	_age = 0.0
+	_duration = _config.popup_duration
+	_settings.font_color = _config.popup_color
 	var doublings := log(float(kills) / _config.popup_min_kills) / log(2.0)
 	_settings.font_size = mini(_config.popup_max_size,
 			_config.popup_base_size + roundi(doublings * _config.popup_size_per_doubling))
 	_label.text = "x%d BREAK!" % kills
+	_label.visible = true
+
+
+## Shows text such as "ZONE 2" or "YOU DIED" for duration seconds.
+func show_message(text: String, color: Color, duration: float) -> void:
+	_kills = 1 << 30
+	_age = 0.0
+	_duration = duration
+	_settings.font_size = _config.popup_max_size
+	_settings.font_color = color
+	_label.text = text
 	_label.visible = true
 
 
@@ -53,14 +69,13 @@ func tick(delta: float) -> void:
 	if not _label.visible:
 		return
 	_age += delta
-	if _age >= _config.popup_duration:
+	if _age >= _duration:
 		_label.visible = false
 		return
 	var pop := clampf(_age / POP_IN_TIME, 0.0, 1.0)
 	var s := lerpf(POP_SCALE, 1.0, 1.0 - pow(1.0 - pop, 3.0))
-	var fade_start := _config.popup_duration * 0.6
-	var alpha := 1.0 if _age < fade_start \
-			else 1.0 - (_age - fade_start) / (_config.popup_duration - fade_start)
+	var fade_start := _duration * 0.6
+	var alpha := 1.0 if _age < fade_start else 1.0 - (_age - fade_start) / (_duration - fade_start)
 	var screen := _label.get_viewport_rect().size
 	_label.size = Vector2(screen.x, _settings.font_size * 2.0)
 	_label.pivot_offset = _label.size * 0.5

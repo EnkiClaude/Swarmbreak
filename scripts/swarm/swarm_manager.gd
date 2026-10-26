@@ -35,19 +35,21 @@ var _frame_usec := 0
 
 
 ## effects and corpses may be null (benchmarks, tests): deaths then show nothing.
+## max_camps sizes the camp alarm flags.
 func setup(arena_half_extent: float, effects: EffectSystem = null,
-		corpses: CorpseSystem = null) -> void:
+		corpses: CorpseSystem = null, max_camps: int = 1) -> void:
 	_half_extent = arena_half_extent
 	_effects = effects
 	_corpses = corpses
 	_types = SwarmTypeTable.new(config.enemy_types)
 	if _types.largest_separation_radius() > config.hash_cell_size:
 		push_warning("Swarm: a separation radius exceeds hash_cell_size; neighbours will be missed.")
-	state = SwarmState.new(config.capacity)
-	_grid = SpatialHash.new(arena_half_extent, config.hash_cell_size, config.capacity)
+	state = SwarmState.new(config.capacity, max_camps)
+	_grid = SpatialHash.new(config.hash_cell_size, config.hash_buckets, config.capacity)
 	_flow = FlowField.new(arena_half_extent, config.flow_cell_size)
 	_steering = SwarmSteering.new(state, _grid, _flow, _types,
-			config.direct_chase_distance, arena_half_extent, config.max_separation_neighbours)
+			config.direct_chase_distance, arena_half_extent, config.max_separation_neighbours,
+			config.max_attackers)
 	_combat = SwarmCombat.new(state, _grid, _types)
 	_renderer = SwarmRenderer.new()
 	_renderer.name = "Renderer"
@@ -64,9 +66,56 @@ func spawn_around(center: Vector2, amount: int, type_id: int = 0) -> int:
 
 
 ## Spawns one enemy at an exact spot. Returns its index, or -1 if the pool is full.
-func spawn_at(pos: Vector2, type_id: int = 0) -> int:
+## Camp members spawn asleep unless is_awake is set.
+func spawn_at(pos: Vector2, type_id: int = 0, camp_id: int = -1, is_awake: bool = true) -> int:
 	var h := Vector2(_half_extent, _half_extent)
-	return state.spawn(pos.clamp(-h, h), type_id, _types.max_health[type_id])
+	return state.spawn(pos.clamp(-h, h), type_id, _types.max_health[type_id], camp_id, is_awake)
+
+
+## Wakes every member of a camp. Returns how many were asleep.
+func wake_camp(camp_id: int) -> int:
+	var camp_ids := state.camp_ids
+	var awake := state.awake
+	var woken := 0
+	for i in state.count:
+		if camp_ids[i] == camp_id and awake[i] == 0:
+			awake[i] = 1
+			woken += 1
+	return woken
+
+
+## Speeds up every awake enemy within radius of center for duration seconds.
+func boost_within(center: Vector2, radius: float, duration: float) -> int:
+	var positions := state.positions
+	var awake := state.awake
+	var boost := state.boost_until
+	var until := _time + duration
+	var r_sq := radius * radius
+	var boosted := 0
+	for i in state.count:
+		if awake[i] != 0 and (positions[i] - center).length_squared() <= r_sq:
+			boost[i] = until
+			boosted += 1
+	return boosted
+
+
+## Removes every enemy, e.g. when a zone restarts.
+func clear() -> void:
+	state.clear()
+	_renderer.draw(state, _time)
+
+
+func now() -> float:
+	return _time
+
+
+## Damage per second the player is taking from touching enemies, as of the last simulate().
+func contact_dps() -> float:
+	return _steering.contact_dps
+
+
+func contact_count() -> int:
+	return _steering.contact_count
 
 
 func tick(delta: float, player_pos: Vector2, player_radius: float) -> void:
@@ -76,12 +125,14 @@ func tick(delta: float, player_pos: Vector2, player_radius: float) -> void:
 
 
 ## Moves the swarm. Enemy indices stay valid until resolve_deaths().
-func simulate(delta: float, player_pos: Vector2, player_radius: float) -> void:
+## boost_multiplier is the speed factor for lure-boosted enemies.
+func simulate(delta: float, player_pos: Vector2, player_radius: float,
+		boost_multiplier: float = 1.0) -> void:
 	var start := Time.get_ticks_usec()
 	_time += delta
 	_flow.update(player_pos)
 	_grid.build(state.positions, state.count)
-	_steering.step(player_pos, player_radius, delta)
+	_steering.step(player_pos, player_radius, delta, _time, boost_multiplier)
 	_frame_usec = Time.get_ticks_usec() - start
 
 
@@ -101,8 +152,9 @@ func first_hit(point: Vector2, radius: float) -> int:
 	return _combat.first_hit(point, radius)
 
 
-## Removes enemies killed this frame and spawns their death effects and corpses.
-func resolve_deaths() -> void:
+## Removes enemies killed this frame and spawns their death effects and
+## corpses. Returns how many died; their details are in state.dead_*.
+func resolve_deaths() -> int:
 	var start := Time.get_ticks_usec()
 	var dead := state.remove_dead()
 	var positions := state.dead_positions
@@ -118,6 +170,7 @@ func resolve_deaths() -> void:
 		for k in dead:
 			_corpses.spawn(types[k], positions[k], velocities[k])
 	_frame_usec += Time.get_ticks_usec() - start
+	return dead
 
 
 func draw() -> void:

@@ -9,6 +9,8 @@ var acceleration: PackedFloat32Array
 var body_radius: PackedFloat32Array
 var separation_radius: PackedFloat32Array
 var separation_strength: PackedFloat32Array
+var contact_dps: PackedFloat32Array
+var attack_reach: PackedFloat32Array
 
 
 func _init(p_types: Array[EnemyType]) -> void:
@@ -20,6 +22,8 @@ func _init(p_types: Array[EnemyType]) -> void:
 		body_radius.append(t.body_radius)
 		separation_radius.append(t.separation_radius)
 		separation_strength.append(t.separation_strength)
+		contact_dps.append(t.contact_dps)
+		attack_reach.append(t.attack_reach)
 
 
 func size() -> int:

@@ -11,10 +11,15 @@ extends Resource
 ## Where the faint stick hints sit before a thumb lands.
 @export var move_hint_position: Vector2 = Vector2(0.14, 0.74)
 ## Hold to fire bolts; drag from it to aim while firing.
-@export var fire_button_position: Vector2 = Vector2(0.86, 0.74)
+@export var fire_button_position: Vector2 = Vector2(0.86, 0.76)
 @export var fire_button_radius: float = 80.0
-@export var nova_button_position: Vector2 = Vector2(0.9, 0.36)
-@export var nova_button_radius: float = 72.0
+@export var nova_button_position: Vector2 = Vector2(0.75, 0.6)
+@export var nova_button_radius: float = 58.0
+@export var dodge_button_position: Vector2 = Vector2(0.71, 0.87)
+@export var dodge_button_radius: float = 50.0
+@export var lure_button_position: Vector2 = Vector2(0.9, 0.5)
+@export var lure_button_radius: float = 50.0
+@export var lure_color: Color = Color(1, 0.45, 0.3, 0.55)
 @export var spawn_button_position: Vector2 = Vector2(0.6, 0.07)
 @export var overlay_button_position: Vector2 = Vector2(0.4, 0.07)
 @export var small_button_radius: float = 38.0

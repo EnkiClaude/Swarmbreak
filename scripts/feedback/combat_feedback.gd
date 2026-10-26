@@ -13,11 +13,12 @@ var _camera: CameraRig
 var _popup: BreakPopup
 var _sfx: SfxPlayer
 var _bank: SfxBank
+var _hurt_cooldown := 0.0
 
 
 func setup(config: FeedbackConfig, audio: AudioConfig, camera: CameraRig, popup: BreakPopup,
 		sfx: SfxPlayer, swarm: SwarmManager, combat: PlayerCombat,
-		projectiles: ProjectileSystem) -> void:
+		projectiles: ProjectileSystem, player: Player = null) -> void:
 	_config = config
 	_audio = audio
 	_camera = camera
@@ -28,6 +29,19 @@ func setup(config: FeedbackConfig, audio: AudioConfig, camera: CameraRig, popup:
 	combat.nova_cast.connect(_on_nova_cast)
 	combat.bolt_fired.connect(_on_bolt_fired)
 	projectiles.bolt_burst.connect(_on_bolt_burst)
+	combat.lure_cast.connect(_on_lure_cast)
+	combat.out_of_mana.connect(_on_out_of_mana)
+	if player != null:
+		player.dashed.connect(_on_dashed)
+
+
+## The player took damage this frame (called by main).
+func player_hurt(amount: float, delta: float) -> void:
+	_hurt_cooldown -= delta
+	_camera.add_trauma(_config.shake_per_damage * amount)
+	if _hurt_cooldown <= 0.0:
+		_hurt_cooldown = _audio.hurt_interval
+		_sfx.play(_bank.hurt, _audio.hurt_db)
 
 
 ## Counts down the freeze. True while the game should stay frozen this frame.
@@ -59,6 +73,20 @@ func _on_nova_cast(_center: Vector2) -> void:
 	_camera.add_trauma(_config.shake_nova)
 	_sfx.play(_bank.nova, _audio.nova_db)
 	_vibrate(_config.vibration_nova)
+
+
+func _on_lure_cast(_center: Vector2, _camps_woken: int) -> void:
+	_camera.add_trauma(_config.shake_lure)
+	_sfx.play(_bank.lure, _audio.lure_db)
+	_vibrate(_config.vibration_nova * 0.5)
+
+
+func _on_dashed() -> void:
+	_sfx.play(_bank.dodge, _audio.dodge_db)
+
+
+func _on_out_of_mana() -> void:
+	_sfx.play(_bank.denied, _audio.denied_db)
 
 
 func _on_bolt_fired() -> void:

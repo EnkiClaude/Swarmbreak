@@ -11,7 +11,8 @@ Open `project.godot` in Godot 4.3 or newer and press F5.
 **In a browser:** every push to `main` publishes a web build to
 https://enkiclaude.github.io/Swarmbreak/. Click the game once so it gets
 keyboard focus; a controller works too. On a phone, turn it sideways: the
-left thumb moves, hold FIRE to shoot (drag it to aim), and NOVA casts the nova. Browsers use Godot's Compatibility
+left thumb moves, hold FIRE to shoot (drag it to aim), and NOVA, LURE and
+DODGE sit around it. Browsers use Godot's Compatibility
 renderer, so the web build looks a little different from the Steam Deck build,
 and its frame rate says little about the Deck.
 
@@ -20,6 +21,10 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M2:** RPG structure. A 128 m zone of sleeping enemy camps (grunts and
+  brutes) that wake when you approach or hit them; a lure war cry that wakes
+  camps in range and hurries them to you; health, mana and a dodge; zone
+  clear and death/restart; HUD bars and a minimap.
 - **M1:** the core loop. A nova pulse around the player and aimed bolts that
   burst in a small area, enemy health with a hit flash, and pooled death and
   impact effects. The overlay tracks kills and the best single "break".
@@ -29,7 +34,9 @@ and its frame rate says little about the Deck.
 | Move            | Left stick      | WASD / arrows       |
 | Aim             | Right stick     | Mouse               |
 | Fire bolts      | RT (hold)       | Left mouse (hold)   |
-| Nova            | RB              | Space / right mouse |
+| Nova            | RB              | Q / right mouse     |
+| Lure            | LB              | E                   |
+| Dodge           | A               | Space / Shift       |
 | Spawn 100 more  | View / Back     | `=` or keypad `+`   |
 | Toggle overlay  | L3              | F3                  |
 

@@ -12,3 +12,9 @@ extends Resource
 ## Kill crunch gets this much louder per doubling of kills in one hit.
 @export var kill_db_per_doubling: float = 2.5
 @export var kill_db_max: float = -2.0
+@export var lure_db: float = -6.0
+@export var dodge_db: float = -12.0
+@export var hurt_db: float = -9.0
+## Shortest gap between hurt sounds while being hit continuously.
+@export var hurt_interval: float = 0.3
+@export var denied_db: float = -10.0

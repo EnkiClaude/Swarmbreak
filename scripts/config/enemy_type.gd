@@ -15,5 +15,9 @@ extends Resource
 @export var separation_radius: float = 0.8
 ## Meters per second of push at full overlap, summed over neighbours.
 @export var separation_strength: float = 6.0
+## Damage per second dealt to the player while touching it.
+@export var contact_dps: float = 6.0
+## Extra reach beyond touching that still counts as hitting the player.
+@export var attack_reach: float = 0.2
 @export var cast_shadow: bool = false
 @export var death_effect: EffectType

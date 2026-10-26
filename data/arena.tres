@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_arena")
-half_extent = 40.0
+half_extent = 64.0
 floor_color = Color(0.15, 0.16, 0.18, 1)
 grid_line_color = Color(0.23, 0.25, 0.28, 1)
 grid_cell_size = 2.0

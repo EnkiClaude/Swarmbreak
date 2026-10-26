@@ -7,4 +7,5 @@ extends Resource
 ## Meters per second added to each enemy hit, pointing away from the player.
 @export var knockback: float = 8.0
 @export var cooldown: float = 1.2
+@export var mana_cost: float = 35.0
 @export var effect: EffectType

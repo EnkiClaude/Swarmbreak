@@ -11,7 +11,7 @@ Swarm %.2f ms   Sim total %.2f ms
 Enemies %d / %d
 Kills %d   Best break %d
 Nova %s
-RB/Space nova   RT/LMB fire
+RT/LMB fire  RB/Q nova  LB/E lure  A/Space dodge
 [+] or View: spawn %d   [F3] or L3: hide"""
 
 var swarm: SwarmManager

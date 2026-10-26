@@ -65,14 +65,15 @@ await page.keyboard.down("KeyD");
 await page.waitForTimeout(1500);
 await page.keyboard.up("KeyD");
 await page.waitForTimeout(6000); // let the swarm close in
-await page.keyboard.down("Space");
+await page.keyboard.down("KeyQ");
 await page.waitForTimeout(150);
 await shot("nova");
-await page.keyboard.up("Space");
+await page.keyboard.up("KeyQ");
 await page.waitForTimeout(3000);
 await shot("after");
 
-// Touch: hold the move stick to the right, hold FIRE and drag up to aim, then tap NOVA.
+// Touch: hold the move stick to the right, hold FIRE and drag up to aim, then
+// tap LURE and NOVA. Coordinates are the 1280x800 layout scaled to 960x600.
 await touch("touchStart", [{ x: 140, y: 440, id: 0 }]);
 await touch("touchMove", [{ x: 220, y: 440, id: 0 }]);
 await touch("touchStart", [{ x: 220, y: 440, id: 0 }, { x: 820, y: 440, id: 1 }]);
@@ -80,7 +81,11 @@ await touch("touchMove", [{ x: 220, y: 440, id: 0 }, { x: 820, y: 370, id: 1 }])
 await page.waitForTimeout(1500);
 await shot("touch");
 await touch("touchEnd", []);
-await touch("touchStart", [{ x: 864, y: 216, id: 2 }]);
+await touch("touchStart", [{ x: 864, y: 300, id: 2 }]);
+await page.waitForTimeout(100);
+await touch("touchEnd", []);
+await page.waitForTimeout(2500); // let lured camps arrive
+await touch("touchStart", [{ x: 720, y: 360, id: 3 }]);
 await page.waitForTimeout(150);
 await shot("touch-nova");
 await touch("touchEnd", []);
