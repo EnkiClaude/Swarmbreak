@@ -11,6 +11,10 @@ const XP_BAR_HEIGHT := 6.0
 const TOAST_TIME := 3.5
 const TOAST_LINES := 4
 const TOAST_ORIGIN := Vector2(16.0, 0.72)
+## Level-up banner: below the break popup so a big break and the level-up
+## it causes are both readable.
+const BANNER_Y := 0.34
+const BANNER_SIZE := 40
 
 @export var config: HudConfig
 
@@ -23,6 +27,10 @@ var _progress: PlayerProgress
 var _toast_texts: PackedStringArray = []
 var _toast_colors: PackedColorArray = []
 var _toast_ages: PackedFloat32Array = []
+var _banner_text := ""
+var _banner_color := Color.WHITE
+var _banner_left := 0.0
+var _banner_duration := 1.0
 
 
 func setup(vitals: PlayerVitals, zone: ZoneDirector, player: Player, half_extent: float,
@@ -41,6 +49,18 @@ func flash_hurt(amount: float) -> void:
 	_hurt = minf(_hurt + amount * 0.08, 1.0)
 
 
+## Shows a large line under the break popup, e.g. "LEVEL 5".
+func banner(text: String, color: Color, duration: float) -> void:
+	_banner_text = text
+	_banner_color = color
+	_banner_left = duration
+	_banner_duration = duration
+
+
+func banner_showing() -> bool:
+	return _banner_left > 0.0
+
+
 ## Shows a short message bottom-left, e.g. an item pickup.
 func toast(text: String, color: Color) -> void:
 	_toast_texts.append(text)
@@ -54,6 +74,7 @@ func toast(text: String, color: Color) -> void:
 
 func tick(delta: float) -> void:
 	_hurt = maxf(_hurt - config.hurt_vignette_fade * delta, 0.0)
+	_banner_left = maxf(_banner_left - delta, 0.0)
 	for k in range(_toast_ages.size() - 1, -1, -1):
 		_toast_ages[k] += delta
 		if _toast_ages[k] > TOAST_TIME:
@@ -69,6 +90,11 @@ func _draw() -> void:
 	_draw_bars()
 	_draw_minimap()
 	_draw_toasts()
+	if _banner_left > 0.0:
+		var color := _banner_color
+		color.a *= clampf(_banner_left / (_banner_duration * 0.3), 0.0, 1.0)
+		_draw_text_centered(Vector2(size.x * 0.5, size.y * BANNER_Y), _banner_text, color,
+				BANNER_SIZE)
 	if _hurt > 0.0:
 		_draw_vignette()
 

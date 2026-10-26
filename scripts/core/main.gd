@@ -174,7 +174,7 @@ func _on_leveled_up(level: int) -> void:
 	stats.recompute()
 	_player.vitals.health = _player.vitals.max_health
 	_player.vitals.mana = _player.vitals.max_mana
-	_popup.show_message("LEVEL %d" % level, progression_config.level_up_color, 1.6)
+	_hud.banner("LEVEL %d" % level, progression_config.level_up_color, 1.8)
 	_feedback.level_up()
 
 

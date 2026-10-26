@@ -311,6 +311,8 @@ func _break_feedback() -> void:
 	_check(_feedback.hitstop_remaining > 0.0, "a 120-enemy break starts a freeze-frame")
 	_check(_camera.trauma > trauma_before + 0.3, "the camera shakes (trauma %.2f)" % _camera.trauma)
 	_check(_popup.is_showing(), "the BREAK popup shows")
+	await _frames(1)
+	_check(_popup.is_showing(), "the BREAK popup is still up the frame after (not replaced)")
 	_check(_corpses.active_count() >= 100, "corpses fly (%d)" % _corpses.active_count())
 	var frozen_at := _player.position
 	Input.action_press("move_right")
