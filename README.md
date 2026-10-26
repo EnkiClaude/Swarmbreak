@@ -10,7 +10,9 @@ Open `project.godot` in Godot 4.3 or newer and press F5.
 
 **In a browser:** every push to `main` publishes a web build to
 https://enkiclaude.github.io/Swarmbreak/. Click the game once so it gets
-keyboard focus; a controller works too. Browsers use Godot's Compatibility
+keyboard focus; a controller works too. On a phone, turn it sideways: the
+left thumb moves, the right thumb aims and fires, and the NOVA button casts
+the nova. Browsers use Godot's Compatibility
 renderer, so the web build looks a little different from the Steam Deck build,
 and its frame rate says little about the Deck.
 

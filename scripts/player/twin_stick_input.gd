@@ -1,8 +1,8 @@
 class_name TwinStickInput
 extends RefCounted
 ## Reads move and aim intent. Controller first: the right stick aims, and the
-## mouse only takes over aiming after it moves or clicks. Any stick or button
-## use hands aiming back to the controller.
+## mouse only takes over aiming after it moves or clicks. Any stick, button or
+## touch use hands aiming back to the stick (touch controls drive the aim actions).
 
 enum AimSource { STICK, MOUSE }
 
@@ -15,7 +15,7 @@ var aim_source := AimSource.STICK
 func observe(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event is InputEventMouseButton:
 		aim_source = AimSource.MOUSE
-	elif event is InputEventJoypadButton:
+	elif event is InputEventJoypadButton or event is InputEventScreenTouch:
 		aim_source = AimSource.STICK
 	elif event is InputEventJoypadMotion:
 		if absf((event as InputEventJoypadMotion).axis_value) > STICK_WAKE_THRESHOLD:

@@ -33,7 +33,11 @@ const args = ["--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--ignor
 // Prefer the runner's Google Chrome; fall back to Playwright's own Chromium.
 const browser = await chromium.launch({ channel: "chrome", args })
   .catch(() => chromium.launch({ args }));
-const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
+// hasTouch makes the page report a touchscreen, so the touch controls show.
+const page = await browser.newPage({ viewport: { width: 960, height: 600 }, hasTouch: true });
+const cdp = await page.context().newCDPSession(page);
+const touch = (type, points) =>
+  cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points });
 const problems = [];
 let booted = false;
 page.on("console", (msg) => {
@@ -67,6 +71,20 @@ await shot("nova");
 await page.keyboard.up("Space");
 await page.waitForTimeout(3000);
 await shot("after");
+
+// Touch: hold the move stick to the right, aim up with the other thumb, then tap NOVA.
+await touch("touchStart", [{ x: 140, y: 440, id: 0 }]);
+await touch("touchMove", [{ x: 220, y: 440, id: 0 }]);
+await touch("touchStart", [{ x: 220, y: 440, id: 0 }, { x: 820, y: 440, id: 1 }]);
+await touch("touchMove", [{ x: 220, y: 440, id: 0 }, { x: 820, y: 370, id: 1 }]);
+await page.waitForTimeout(1500);
+await shot("touch");
+await touch("touchEnd", []);
+await touch("touchStart", [{ x: 864, y: 216, id: 2 }]);
+await page.waitForTimeout(150);
+await shot("touch-nova");
+await touch("touchEnd", []);
+await page.waitForTimeout(500);
 
 await browser.close();
 server.close();
