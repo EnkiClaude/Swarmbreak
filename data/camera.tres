@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CameraConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/camera_config.gd" id="1_camera"]
+
+[resource]
+script = ExtResource("1_camera")
+pitch_degrees = 55.0
+yaw_degrees = 45.0
+distance = 40.0
+ortho_size = 30.0
+follow_sharpness = 10.0

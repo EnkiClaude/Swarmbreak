@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SwarmConfig" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/swarm_config.gd" id="1_swarm"]
+[ext_resource type="Script" path="res://scripts/config/enemy_type.gd" id="2_enemy_type"]
+[ext_resource type="Resource" path="res://data/enemies/grunt.tres" id="3_grunt"]
+
+[resource]
+script = ExtResource("1_swarm")
+capacity = 4096
+initial_count = 1000
+debug_spawn_batch = 100
+spawn_min_distance = 16.0
+spawn_max_distance = 36.0
+hash_cell_size = 1.0
+flow_cell_size = 2.0
+direct_chase_distance = 3.0
+max_tick_delta = 0.05
+enemy_types = Array[ExtResource("2_enemy_type")]([ExtResource("3_grunt")])
