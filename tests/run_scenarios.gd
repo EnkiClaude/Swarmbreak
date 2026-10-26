@@ -158,14 +158,18 @@ func _touch_move() -> void:
 
 
 func _touch_aim_fires() -> void:
-	await _frames(20)  # let earlier bolts burst
+	var fired_before := _projectiles.fired_total
 	var at := _touch.size * Vector2(0.8, 0.7)
 	_touch.handle_touch(1, at, true)
 	_touch.handle_drag(1, at + Vector2(0.0, -100.0))
-	await _frames(10)
-	var flying := _projectiles.active_count()
+	await _frames(30)
 	_touch.handle_touch(1, at, false)
-	_check(flying > 0, "aiming with the touch stick fired no bolts")
+	var fired := _projectiles.fired_total - fired_before
+	_check(fired >= 2, "aiming with the touch stick fired %d bolts in half a second" % fired)
+	await _frames(10)
+	var after := _projectiles.fired_total
+	await _frames(20)
+	_check(_projectiles.fired_total == after, "firing stops after lifting the thumb")
 
 
 func _touch_nova() -> void:
@@ -176,6 +180,7 @@ func _touch_nova() -> void:
 	_touch.handle_touch(2, button, true)
 	await _frames(2)
 	_touch.handle_touch(2, button, false)
+	await _frames(1)  # button releases go through the input queue
 	var kills := _swarm.total_kills - kills_before
 	_check(kills >= 40, "touch nova killed only %d of 60 nearby" % kills)
 	_check(not Input.is_action_pressed("attack_nova"), "nova released after lifting the finger")
