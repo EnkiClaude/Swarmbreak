@@ -1,0 +1,94 @@
+extends SceneTree
+## Plays the real main scene headless with scripted input, so wiring, scene
+## loading and per-frame code all run in the engine.
+##   godot --headless --path . --fixed-fps 60 -s res://tests/run_scenarios.gd
+
+const MAIN_SCENE := "res://scenes/main.tscn"
+
+var _failures: PackedStringArray = []
+var _main: Node
+var _swarm: SwarmManager
+var _player: Player
+
+
+func _initialize() -> void:
+	_run()
+
+
+func _run() -> void:
+	_main = (load(MAIN_SCENE) as PackedScene).instantiate()
+	root.add_child(_main)
+	_swarm = _main.get_node("Swarm") as SwarmManager
+	_player = _main.get_node("Player") as Player
+	await _frames(5)
+
+	_scenario("initial swarm spawns", _initial_swarm)
+	await _scenario_async("player moves with move_right", _player_moves)
+	await _scenario_async("debug_spawn adds a batch", _debug_spawn)
+	await _scenario_async("swarm keeps out of the player", _swarm_keeps_distance)
+
+	print("%d scenario checks failed" % _failures.size())
+	for failure in _failures:
+		print("FAIL " + failure)
+	quit(1 if not _failures.is_empty() else 0)
+
+
+func _frames(n: int) -> void:
+	for i in n:
+		await process_frame
+
+
+func _check(condition: bool, message: String) -> void:
+	if not condition:
+		_failures.append(message)
+
+
+func _scenario(title: String, body: Callable) -> void:
+	print("RUN  " + title)
+	body.call()
+
+
+func _scenario_async(title: String, body: Callable) -> void:
+	print("RUN  " + title)
+	await body.call()
+
+
+func _initial_swarm() -> void:
+	_check(_swarm.enemy_count() == _swarm.config.initial_count,
+			"expected %d enemies, got %d" % [_swarm.config.initial_count, _swarm.enemy_count()])
+
+
+func _player_moves() -> void:
+	var start := _player.position
+	Input.action_press("move_right")
+	await _frames(30)
+	Input.action_release("move_right")
+	var moved := _player.position.distance_to(start)
+	_check(moved > 1.0, "player moved only %.2f m in 30 frames" % moved)
+
+
+func _debug_spawn() -> void:
+	var before := _swarm.enemy_count()
+	var press := InputEventAction.new()
+	press.action = "debug_spawn"
+	press.pressed = true
+	Input.parse_input_event(press)
+	await _frames(2)
+	var release := InputEventAction.new()
+	release.action = "debug_spawn"
+	release.pressed = false
+	Input.parse_input_event(release)
+	await _frames(1)
+	var added := _swarm.enemy_count() - before
+	_check(added == _swarm.config.debug_spawn_batch, "debug_spawn added %d enemies" % added)
+
+
+func _swarm_keeps_distance() -> void:
+	await _frames(300)
+	var player_xz := _player.ground_position()
+	var min_d: float = _player.config.radius + _swarm.config.enemy_types[0].body_radius - 0.05
+	var inside := 0
+	for i in _swarm.state.count:
+		if _swarm.state.positions[i].distance_to(player_xz) < min_d:
+			inside += 1
+	_check(inside == 0, "%d enemies overlap the player after 300 frames" % inside)

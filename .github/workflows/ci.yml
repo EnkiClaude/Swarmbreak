@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  godot:
+    name: Godot headless checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GODOT_VERSION: 4.3-stable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          cd ~/godot
+          curl -sSfL -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
+          rm godot.zip
+
+      - name: Run checks
+        run: GODOT=~/godot/godot tools/check.sh
+
+      - name: Benchmark summary
+        if: always()
+        run: cat .ci-logs/benchmark.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-logs
+          path: .ci-logs/

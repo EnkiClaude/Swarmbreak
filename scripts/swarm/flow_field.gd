@@ -43,6 +43,12 @@ func cell_index(p: Vector2) -> int:
 	return z * cols + x
 
 
+## Marks a cell as impassable (or clears it). Forces a rebuild on the next update().
+func set_blocked(x: int, z: int, is_blocked: bool) -> void:
+	blocked[z * cols + x] = 1 if is_blocked else 0
+	_goal_cell = -1
+
+
 ## Rebuilds the field if the goal moved into a new cell. Returns true if it did.
 func update(goal: Vector2) -> bool:
 	var goal_cell := cell_index(goal)
