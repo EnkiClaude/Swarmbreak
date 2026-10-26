@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/arena/arena.gd" id="2_arena"]
@@ -12,6 +12,8 @@
 [ext_resource type="Script" path="res://scripts/debug/debug_overlay.gd" id="10_overlay"]
 [ext_resource type="Script" path="res://scripts/combat/projectile_system.gd" id="11_projectiles"]
 [ext_resource type="Script" path="res://scripts/effects/effect_system.gd" id="12_effects"]
+[ext_resource type="Script" path="res://scripts/touch/touch_controls.gd" id="13_touch"]
+[ext_resource type="Resource" path="res://data/touch_controls.tres" id="14_touch_cfg"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.32, 0.38, 0.48, 1)
@@ -65,3 +67,17 @@ script = ExtResource("12_effects")
 
 [node name="DebugOverlay" type="CanvasLayer" parent="."]
 script = ExtResource("10_overlay")
+
+[node name="TouchLayer" type="CanvasLayer" parent="."]
+layer = 110
+
+[node name="TouchControls" type="Control" parent="TouchLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("13_touch")
+config = ExtResource("14_touch_cfg")

@@ -10,6 +10,8 @@ var _main: Node
 var _swarm: SwarmManager
 var _player: Player
 var _effects: EffectSystem
+var _touch: TouchControls
+var _projectiles: ProjectileSystem
 
 
 func _initialize() -> void:
@@ -22,6 +24,8 @@ func _run() -> void:
 	_swarm = _main.get_node("Swarm") as SwarmManager
 	_player = _main.get_node("Player") as Player
 	_effects = _main.get_node("Effects") as EffectSystem
+	_touch = _main.get_node("TouchLayer/TouchControls") as TouchControls
+	_projectiles = _main.get_node("Projectiles") as ProjectileSystem
 	await _frames(5)
 
 	_scenario("initial swarm spawns", _initial_swarm)
@@ -30,6 +34,9 @@ func _run() -> void:
 	await _scenario_async("swarm keeps out of the player", _swarm_keeps_distance)
 	await _scenario_async("nova breaks a nearby pack", _nova_breaks_pack)
 	await _scenario_async("bolts burst on enemies ahead", _bolts_hit)
+	await _scenario_async("touch move stick moves the player", _touch_move)
+	await _scenario_async("touch aim stick fires bolts", _touch_aim_fires)
+	await _scenario_async("touch nova button casts the nova", _touch_nova)
 
 	print("%d scenario checks failed" % _failures.size())
 	for failure in _failures:
@@ -135,3 +142,45 @@ func _bolts_hit() -> void:
 	Input.action_release("attack_fire")
 	var kills := _swarm.total_kills - kills_before
 	_check(kills > 0, "bolts killed nothing in a pack 8 m ahead")
+
+
+func _touch_move() -> void:
+	_touch.set_active(true)
+	var start := _player.position
+	var at := _touch.size * Vector2(0.2, 0.7)
+	_touch.handle_touch(0, at, true)
+	_touch.handle_drag(0, at + Vector2(100.0, 0.0))
+	await _frames(30)
+	_touch.handle_touch(0, at + Vector2(100.0, 0.0), false)
+	var moved := _player.position.distance_to(start)
+	_check(moved > 1.0, "touch stick moved the player only %.2f m" % moved)
+	_check(Input.get_action_strength("move_right") == 0.0, "move released after lifting the thumb")
+
+
+func _touch_aim_fires() -> void:
+	var fired_before := _projectiles.fired_total
+	var at := _touch.size * Vector2(0.8, 0.7)
+	_touch.handle_touch(1, at, true)
+	_touch.handle_drag(1, at + Vector2(0.0, -100.0))
+	await _frames(30)
+	_touch.handle_touch(1, at, false)
+	var fired := _projectiles.fired_total - fired_before
+	_check(fired >= 2, "aiming with the touch stick fired %d bolts in half a second" % fired)
+	await _frames(10)
+	var after := _projectiles.fired_total
+	await _frames(20)
+	_check(_projectiles.fired_total == after, "firing stops after lifting the thumb")
+
+
+func _touch_nova() -> void:
+	await _frames(80)  # nova cooldown
+	_place_pack(_player.ground_position(), 4.0, 60)
+	var kills_before := _swarm.total_kills
+	var button := _touch.size * _touch.config.nova_button_position
+	_touch.handle_touch(2, button, true)
+	await _frames(2)
+	_touch.handle_touch(2, button, false)
+	await _frames(1)  # button releases go through the input queue
+	var kills := _swarm.total_kills - kills_before
+	_check(kills >= 40, "touch nova killed only %d of 60 nearby" % kills)
+	_check(not Input.is_action_pressed("attack_nova"), "nova released after lifting the finger")

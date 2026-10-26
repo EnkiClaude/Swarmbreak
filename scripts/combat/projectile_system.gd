@@ -7,6 +7,9 @@ extends Node3D
 const MESH_RADIAL_SEGMENTS := 8
 const MESH_RINGS := 4
 
+## Bolts fired since setup, for tests and stats.
+var fired_total: int = 0
+
 var _config: BoltConfig
 var _pool: ProjectilePool
 var _batch: InstanceBatch
@@ -29,7 +32,8 @@ func setup(config: BoltConfig, effects: EffectSystem, arena_half_extent: float) 
 
 ## Fires one bolt from origin along direction (unit, XZ plane).
 func fire(origin: Vector2, direction: Vector2) -> void:
-	_pool.spawn(origin + direction * _config.muzzle_offset, direction * _config.speed)
+	if _pool.spawn(origin + direction * _config.muzzle_offset, direction * _config.speed):
+		fired_total += 1
 
 
 ## Moves bolts and resolves hits. Call between SwarmManager.simulate() and resolve_deaths().

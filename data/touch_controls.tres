@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="TouchConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/touch_config.gd" id="1_touch"]
+
+[resource]
+script = ExtResource("1_touch")
+show_without_touchscreen = false
+stick_radius = 110.0
+knob_radius = 44.0
+move_hint_position = Vector2(0.14, 0.74)
+aim_hint_position = Vector2(0.86, 0.74)
+nova_button_position = Vector2(0.9, 0.36)
+nova_button_radius = 72.0
+spawn_button_position = Vector2(0.6, 0.07)
+overlay_button_position = Vector2(0.4, 0.07)
+small_button_radius = 38.0
+color = Color(1, 1, 1, 0.35)
+active_color = Color(1, 1, 1, 0.7)
+nova_color = Color(0.5, 0.85, 1, 0.55)

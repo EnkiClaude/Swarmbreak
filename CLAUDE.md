@@ -24,6 +24,9 @@ to the swarm or rendering.
   timings and colors are exported on a `Resource` class in `scripts/config/` and
   set in a `.tres` file under `data/`. Scripts hold only structural constants
   (buffer strides, mesh detail, epsilons).
+- **Touch is a third path for phone testing.** `TouchControls` turns touches
+  into the same input actions, so gameplay never reads touch directly. Mouse
+  emulation from touch is off (it would turn every tap into a left click).
 - **Controller-first twin-stick input.** Left stick moves (camera-relative), right
   stick aims. Mouse and keyboard are the second path: WASD moves, the mouse aims
   once it moves. Every action needs a controller binding first. Read input through
@@ -64,6 +67,7 @@ scripts/
   combat/           Damage queries, abilities, cooldowns, pooled bolts.
   effects/          Pooled visual effects.
   render/           InstanceBatch: MultiMesh helper for pooled things.
+  touch/            On-screen twin sticks and buttons for touchscreens.
   debug/            Debug overlay.
 shaders/            Shaders.
 tests/              Headless unit tests, scenarios and benchmark.
@@ -127,6 +131,9 @@ run, except errors from the headless dummy renderer.
 | Nova            | RB                  | Space / right mouse |
 | Spawn 100       | View / Back         | `=` or keypad `+` |
 | Toggle overlay  | L3 (left stick)     | F3                |
+
+On touchscreens: left half of the screen is a floating move stick, right half
+a floating aim stick that auto-fires, plus NOVA, +100 and HUD buttons.
 
 ## Git
 
