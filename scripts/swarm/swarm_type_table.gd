@@ -4,6 +4,7 @@ extends RefCounted
 
 var types: Array[EnemyType]
 var max_health: PackedFloat32Array
+var xp: PackedFloat32Array
 var max_speed: PackedFloat32Array
 var acceleration: PackedFloat32Array
 var body_radius: PackedFloat32Array
@@ -17,6 +18,7 @@ func _init(p_types: Array[EnemyType]) -> void:
 	types = p_types
 	for t in types:
 		max_health.append(t.max_health)
+		xp.append(t.xp)
 		max_speed.append(t.max_speed)
 		acceleration.append(t.acceleration)
 		body_radius.append(t.body_radius)

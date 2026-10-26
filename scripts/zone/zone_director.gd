@@ -5,6 +5,9 @@ extends RefCounted
 ## its radius. The zone is cleared when every camp member is dead. Each level
 ## has more and bigger camps, generated from a fixed seed.
 
+## A camp's last member died at `at`. last_camp is true for the zone's final camp.
+signal camp_cleared(camp: int, at: Vector2, last_camp: bool)
+
 ## Golden angle, for packing camp members in a sunflower spiral.
 const GOLDEN_ANGLE := 2.39996323
 ## Sunflower spacing factor: neighbours end up about 1.8x this far apart.
@@ -98,11 +101,14 @@ func lure(center: Vector2, radius: float) -> int:
 ## Counts this frame's deaths against their camps. Call after resolve_deaths().
 func record_deaths(dead: int) -> void:
 	var dead_camps := _swarm.state.dead_camps
+	var dead_positions := _swarm.state.dead_positions
 	for k in dead:
 		var camp: int = dead_camps[k]
 		if camp >= 0 and camp < camp_alive.size():
 			camp_alive[camp] -= 1
 			alive_total -= 1
+			if camp_alive[camp] == 0:
+				camp_cleared.emit(camp, dead_positions[k], alive_total <= 0)
 
 
 func is_cleared() -> bool:

@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="SkillTree" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/skill_def.gd" id="1_skill"]
+[ext_resource type="Script" path="res://scripts/config/skill_tree.gd" id="2_tree"]
+
+[sub_resource type="Resource" id="Skill_0"]
+script = ExtResource("1_skill")
+display_name = "Shockwave"
+stat = 7
+per_rank = 0.12
+max_rank = 5
+
+[sub_resource type="Resource" id="Skill_1"]
+script = ExtResource("1_skill")
+display_name = "Wide Nova"
+stat = 8
+per_rank = 0.06
+max_rank = 5
+
+[sub_resource type="Resource" id="Skill_2"]
+script = ExtResource("1_skill")
+display_name = "Marksman"
+stat = 5
+per_rank = 0.1
+max_rank = 5
+
+[sub_resource type="Resource" id="Skill_3"]
+script = ExtResource("1_skill")
+display_name = "Rapid Fire"
+stat = 6
+per_rank = 0.08
+max_rank = 5
+
+[sub_resource type="Resource" id="Skill_4"]
+script = ExtResource("1_skill")
+display_name = "War Cry"
+stat = 9
+per_rank = 0.1
+max_rank = 3
+
+[sub_resource type="Resource" id="Skill_5"]
+script = ExtResource("1_skill")
+display_name = "Toughness"
+stat = 0
+per_rank = 15.0
+max_rank = 5
+
+[sub_resource type="Resource" id="Skill_6"]
+script = ExtResource("1_skill")
+display_name = "Focus"
+stat = 1
+per_rank = 12.0
+max_rank = 5
+
+[sub_resource type="Resource" id="Skill_7"]
+script = ExtResource("1_skill")
+display_name = "Soul Siphon"
+stat = 10
+per_rank = 0.15
+max_rank = 5
+
+[sub_resource type="Resource" id="Skill_8"]
+script = ExtResource("1_skill")
+display_name = "Fleet Foot"
+stat = 4
+per_rank = 0.05
+max_rank = 3
+
+[resource]
+script = ExtResource("2_tree")
+skills = Array[ExtResource("1_skill")]([SubResource("Skill_0"), SubResource("Skill_1"), SubResource("Skill_2"), SubResource("Skill_3"), SubResource("Skill_4"), SubResource("Skill_5"), SubResource("Skill_6"), SubResource("Skill_7"), SubResource("Skill_8")])

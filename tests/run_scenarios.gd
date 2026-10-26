@@ -42,11 +42,14 @@ func _run() -> void:
 	_scenario("the zone starts with sleeping camps", _zone_starts_asleep)
 	await _scenario_async("a camp wakes when the player comes near", _camp_wakes_on_approach)
 	await _scenario_async("lure wakes camps in range and hurries them", _lure_wakes_camps)
+	await _scenario_async("clearing a camp drops loot you can pick up", _camp_drops_loot)
+	await _scenario_async("the character screen pauses and spends points", _character_menu)
 	await _scenario_async("player moves with move_right", _player_moves)
 	await _scenario_async("debug_spawn adds a batch", _debug_spawn)
 	await _scenario_async("swarm keeps out of the player", _swarm_keeps_distance)
 	await _scenario_async("nova breaks a nearby pack", _nova_breaks_pack)
 	await _scenario_async("a big break freezes, shakes, pops up and flings corpses", _break_feedback)
+	await _scenario_async("kills give XP and level-ups refill and grant points", _xp_and_levels)
 	await _scenario_async("bolts burst on enemies ahead", _bolts_hit)
 	await _scenario_async("touch move stick moves the player", _touch_move)
 	await _scenario_async("touch FIRE stick fires and aims", _touch_fire)
@@ -380,3 +383,93 @@ func _clear_advances_zone() -> void:
 	_check(_zone.level == level + 1, "moved on to zone %d (at %d)" % [level + 1, _zone.level])
 	_check(_zone.camp_centers.size() > camps, "the next zone has more camps (%d > %d)" % [
 			_zone.camp_centers.size(), camps])
+
+
+func _main_var(name: String) -> Variant:
+	return _main.get(name)
+
+
+func _camp_drops_loot() -> void:
+	var loot := _main.get_node("Loot") as LootSystem
+	var inventory := _main_var("inventory") as Inventory
+	var camp := -1
+	for c in _zone.camp_centers.size():
+		if _zone.camp_alive[c] > 0:
+			camp = c
+			break
+	_check(camp >= 0, "a camp to clear")
+	if camp < 0:
+		return
+	var at := Vector2.ZERO
+	for i in _swarm.state.count:
+		if _swarm.state.camp_ids[i] == camp:
+			_swarm.state.health[i] = 0.0
+			at = _swarm.state.positions[i]
+	var before := loot.ground_count()
+	await _frames(2)
+	_check(_zone.camp_alive[camp] == 0, "camp %d cleared" % camp)
+	var dropped := loot.ground_count() - before
+	_check(dropped >= 1, "camp dropped %d items" % dropped)
+	var held := inventory.backpack.size()
+	for item in inventory.equipped:
+		if item != null:
+			held += 1
+	_teleport(at)
+	await _frames(40)
+	var now_held := inventory.backpack.size()
+	for item in inventory.equipped:
+		if item != null:
+			now_held += 1
+	_check(now_held >= held + dropped, "walked over the loot and picked up %d" % (now_held - held))
+	_check(loot.ground_count() == before, "nothing left on the ground")
+	_teleport(Vector2.ZERO)
+
+
+func _character_menu() -> void:
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	var progress := _main_var("progress") as PlayerProgress
+	var stats := _main_var("stats") as PlayerStats
+	var press := InputEventAction.new()
+	press.action = "character_menu"
+	press.pressed = true
+	Input.parse_input_event(press)
+	await _frames(2)
+	_check(menu.is_open(), "menu opens")
+	_check(paused, "game pauses")
+	var t := _swarm.now()
+	await _frames(10)
+	_check(_swarm.now() == t, "simulation stands still while paused")
+	var tree := _main_var("skill_tree") as SkillTree
+	var shockwave := -1
+	for k in tree.skills.size():
+		if tree.skills[k].stat == PlayerStat.Id.NOVA_DAMAGE:
+			shockwave = k
+	progress.skill_points += 1
+	var before := stats.value(PlayerStat.Id.NOVA_DAMAGE)
+	menu.rank_up(shockwave)
+	_check(stats.value(PlayerStat.Id.NOVA_DAMAGE) > before, "spending a point raised nova damage")
+	menu.close()
+	await _frames(2)
+	_check(not paused, "closing unpauses")
+	_check(not Input.emulate_mouse_from_touch, "touch is touch again after closing")
+
+
+func _xp_and_levels() -> void:
+	var progress := _main_var("progress") as PlayerProgress
+	var gained_before := progress.xp
+	var level_before := progress.level
+	await _frames(80)
+	_refill()
+	_place_pack(_player.ground_position(), 4.0, 50)
+	Input.action_press("attack_nova")
+	await _frames(2)
+	Input.action_release("attack_nova")
+	_check(progress.level > level_before or progress.xp > gained_before, "kills gave XP")
+	var level := progress.level
+	var points := progress.skill_points
+	_player.vitals.health = 10.0
+	progress.add_xp(progress.xp_to_next())
+	await _frames(2)
+	_check(progress.level == level + 1, "levelled up")
+	_check(progress.skill_points == points + 1, "got a skill point")
+	_check(_player.vitals.health == _player.vitals.max_health, "level-up refills health")

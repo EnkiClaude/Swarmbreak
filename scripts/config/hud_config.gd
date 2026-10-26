@@ -9,6 +9,7 @@ extends Resource
 @export var bar_gap: float = 6.0
 @export var health_color: Color = Color(0.85, 0.2, 0.2)
 @export var mana_color: Color = Color(0.25, 0.5, 1.0)
+@export var xp_color: Color = Color(0.6, 1.0, 0.5)
 @export var bar_back_color: Color = Color(0, 0, 0, 0.55)
 @export var minimap_size: float = 150.0
 ## Top-right corner inset of the minimap, in pixels.

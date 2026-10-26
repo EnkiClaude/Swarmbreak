@@ -21,6 +21,9 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M3:** loot and progression. XP and levels with skill points for nine
+  passive skills; camps drop weapons, charms and armor in three rarities;
+  a pausing character screen for skills, equipment and the backpack.
 - **M2:** RPG structure. A 128 m zone of sleeping enemy camps (grunts and
   brutes) that wake when you approach or hit them; a lure war cry that wakes
   camps in range and hurries them to you; health, mana and a dodge; zone
@@ -37,6 +40,7 @@ and its frame rate says little about the Deck.
 | Nova            | RB              | Q / right mouse     |
 | Lure            | LB              | E                   |
 | Dodge           | A               | Space / Shift       |
+| Character       | Start           | Tab / C / I         |
 | Spawn 100 more  | View / Back     | `=` or keypad `+`   |
 | Toggle overlay  | L3              | F3                  |
 

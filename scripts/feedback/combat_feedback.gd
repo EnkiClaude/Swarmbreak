@@ -75,6 +75,14 @@ func _on_nova_cast(_center: Vector2) -> void:
 	_vibrate(_config.vibration_nova)
 
 
+func level_up() -> void:
+	_sfx.play(_bank.level_up, _audio.level_up_db)
+
+
+func item_picked_up() -> void:
+	_sfx.play(_bank.pickup, _audio.pickup_db)
+
+
 func _on_lure_cast(_center: Vector2, _camps_woken: int) -> void:
 	_camera.add_trauma(_config.shake_lure)
 	_sfx.play(_bank.lure, _audio.lure_db)

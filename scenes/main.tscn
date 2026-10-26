@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/arena/arena.gd" id="2_arena"]
@@ -23,6 +23,11 @@
 [ext_resource type="Resource" path="res://data/zones/zone.tres" id="21_zone_cfg"]
 [ext_resource type="Script" path="res://scripts/hud/hud.gd" id="22_hud"]
 [ext_resource type="Resource" path="res://data/hud.tres" id="23_hud_cfg"]
+[ext_resource type="Resource" path="res://data/rpg/progression.tres" id="24_progression"]
+[ext_resource type="Resource" path="res://data/rpg/skills.tres" id="25_skills"]
+[ext_resource type="Resource" path="res://data/rpg/loot.tres" id="26_loot"]
+[ext_resource type="Script" path="res://scripts/loot/loot_system.gd" id="27_loot_system"]
+[ext_resource type="Script" path="res://scripts/ui/character_menu.gd" id="28_menu"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.32, 0.38, 0.48, 1)
@@ -45,6 +50,9 @@ script = ExtResource("1_main")
 feedback_config = ExtResource("19_feedback_cfg")
 audio_config = ExtResource("20_audio_cfg")
 zone_config = ExtResource("21_zone_cfg")
+progression_config = ExtResource("24_progression")
+skill_tree = ExtResource("25_skills")
+loot_config = ExtResource("26_loot")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")
@@ -88,6 +96,12 @@ script = ExtResource("17_popup")
 
 [node name="Feedback" type="Node" parent="."]
 script = ExtResource("18_feedback")
+
+[node name="Loot" type="Node3D" parent="."]
+script = ExtResource("27_loot_system")
+
+[node name="CharacterMenu" type="CanvasLayer" parent="."]
+script = ExtResource("28_menu")
 
 [node name="HudLayer" type="CanvasLayer" parent="."]
 layer = 80

@@ -14,6 +14,8 @@ var lure: AudioStreamWAV
 var dodge: AudioStreamWAV
 var hurt: AudioStreamWAV
 var denied: AudioStreamWAV
+var level_up: AudioStreamWAV
+var pickup: AudioStreamWAV
 
 var _rng := RandomNumberGenerator.new()
 
@@ -28,6 +30,8 @@ func _init() -> void:
 	dodge = _make(_dodge())
 	hurt = _make(_hurt())
 	denied = _make(_denied())
+	level_up = _make(_level_up())
+	pickup = _make(_pickup())
 
 
 ## Short descending zap.
@@ -137,6 +141,33 @@ func _denied() -> PackedFloat32Array:
 		phase += 180.0 / MIX_RATE
 		var gate := 1.0 if fmod(t, 0.1) < 0.06 else 0.0
 		out[i] = (1.0 if fmod(phase, 1.0) < 0.5 else -1.0) * gate * 0.18
+	return out
+
+
+## Rising major arpeggio.
+func _level_up() -> PackedFloat32Array:
+	var notes := [523.25, 659.25, 783.99, 1046.5]
+	var step := 0.09
+	var out := _buffer(step * notes.size() + 0.35)
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		var sample := 0.0
+		for n in notes.size():
+			var start: float = n * step
+			if t >= start:
+				var local := t - start
+				sample += sin(TAU * float(notes[n]) * local) * exp(-local * 5.0) * 0.18
+		out[i] = sample
+	return out
+
+
+## Bright two-note bling.
+func _pickup() -> PackedFloat32Array:
+	var out := _buffer(0.22)
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		var f := 1318.5 if t < 0.06 else 1760.0
+		out[i] = sin(TAU * f * t) * exp(-t * 14.0) * 0.3
 	return out
 
 
