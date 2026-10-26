@@ -37,10 +37,40 @@ func add(pos: Vector3, scale_xyz: Vector3, color: Color) -> void:
 		return
 	var b := _count * FLOATS_PER_INSTANCE
 	_buffer[b] = scale_xyz.x
+	_buffer[b + 1] = 0.0
+	_buffer[b + 2] = 0.0
 	_buffer[b + 3] = pos.x
+	_buffer[b + 4] = 0.0
 	_buffer[b + 5] = scale_xyz.y
+	_buffer[b + 6] = 0.0
 	_buffer[b + 7] = pos.y
+	_buffer[b + 8] = 0.0
+	_buffer[b + 9] = 0.0
 	_buffer[b + 10] = scale_xyz.z
+	_buffer[b + 11] = pos.z
+	_buffer[b + 12] = color.r
+	_buffer[b + 13] = color.g
+	_buffer[b + 14] = color.b
+	_buffer[b + 15] = color.a
+	_count += 1
+
+
+## Adds one instance with a full basis (rotation and scale). Ignored when full.
+func add_basis(pos: Vector3, basis: Basis, color: Color) -> void:
+	if _count >= _capacity:
+		return
+	var b := _count * FLOATS_PER_INSTANCE
+	_buffer[b] = basis.x.x
+	_buffer[b + 1] = basis.y.x
+	_buffer[b + 2] = basis.z.x
+	_buffer[b + 3] = pos.x
+	_buffer[b + 4] = basis.x.y
+	_buffer[b + 5] = basis.y.y
+	_buffer[b + 6] = basis.z.y
+	_buffer[b + 7] = pos.y
+	_buffer[b + 8] = basis.x.z
+	_buffer[b + 9] = basis.y.z
+	_buffer[b + 10] = basis.z.z
 	_buffer[b + 11] = pos.z
 	_buffer[b + 12] = color.r
 	_buffer[b + 13] = color.g

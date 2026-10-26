@@ -9,3 +9,6 @@ yaw_degrees = 45.0
 distance = 40.0
 ortho_size = 30.0
 follow_sharpness = 10.0
+shake_max_offset = 0.9
+shake_decay = 2.2
+shake_frequency = 28.0

@@ -12,6 +12,10 @@ var _player: Player
 var _effects: EffectSystem
 var _touch: TouchControls
 var _projectiles: ProjectileSystem
+var _feedback: CombatFeedback
+var _popup: BreakPopup
+var _corpses: CorpseSystem
+var _camera: CameraRig
 
 
 func _initialize() -> void:
@@ -26,6 +30,10 @@ func _run() -> void:
 	_effects = _main.get_node("Effects") as EffectSystem
 	_touch = _main.get_node("TouchLayer/TouchControls") as TouchControls
 	_projectiles = _main.get_node("Projectiles") as ProjectileSystem
+	_feedback = _main.get_node("Feedback") as CombatFeedback
+	_popup = _main.get_node("BreakPopup") as BreakPopup
+	_corpses = _main.get_node("Corpses") as CorpseSystem
+	_camera = _main.get_node("CameraRig") as CameraRig
 	await _frames(5)
 
 	_scenario("initial swarm spawns", _initial_swarm)
@@ -33,9 +41,10 @@ func _run() -> void:
 	await _scenario_async("debug_spawn adds a batch", _debug_spawn)
 	await _scenario_async("swarm keeps out of the player", _swarm_keeps_distance)
 	await _scenario_async("nova breaks a nearby pack", _nova_breaks_pack)
+	await _scenario_async("a big break freezes, shakes, pops up and flings corpses", _break_feedback)
 	await _scenario_async("bolts burst on enemies ahead", _bolts_hit)
 	await _scenario_async("touch move stick moves the player", _touch_move)
-	await _scenario_async("touch aim stick fires bolts", _touch_aim_fires)
+	await _scenario_async("touch FIRE stick fires and aims", _touch_fire)
 	await _scenario_async("touch nova button casts the nova", _touch_nova)
 
 	print("%d scenario checks failed" % _failures.size())
@@ -157,19 +166,28 @@ func _touch_move() -> void:
 	_check(Input.get_action_strength("move_right") == 0.0, "move released after lifting the thumb")
 
 
-func _touch_aim_fires() -> void:
+func _touch_fire() -> void:
+	await _frames(20)
 	var fired_before := _projectiles.fired_total
-	var at := _touch.size * Vector2(0.8, 0.7)
-	_touch.handle_touch(1, at, true)
-	_touch.handle_drag(1, at + Vector2(0.0, -100.0))
+	var center := _touch.size * _touch.config.fire_button_position
+	_touch.handle_touch(1, center, true)
+	_touch.handle_drag(1, center + Vector2(0.0, -100.0))
 	await _frames(30)
-	_touch.handle_touch(1, at, false)
+	_touch.handle_touch(1, center, false)
 	var fired := _projectiles.fired_total - fired_before
-	_check(fired >= 2, "aiming with the touch stick fired %d bolts in half a second" % fired)
+	_check(fired >= 2, "holding FIRE fired %d bolts in half a second" % fired)
+	var aim := _player.aim_direction
+	var screen_up := Vector3(0.0, 0.0, -1.0).rotated(Vector3.UP, _camera.yaw())
+	_check(aim.dot(screen_up) > 0.9, "dragging FIRE up aims screen-up (aim %s)" % aim)
 	await _frames(10)
 	var after := _projectiles.fired_total
 	await _frames(20)
 	_check(_projectiles.fired_total == after, "firing stops after lifting the thumb")
+	var right_half := _touch.size * Vector2(0.7, 0.4)
+	_touch.handle_touch(3, right_half, true)
+	await _frames(20)
+	_touch.handle_touch(3, right_half, false)
+	_check(_projectiles.fired_total == after, "touching empty screen does not fire")
 
 
 func _touch_nova() -> void:
@@ -184,3 +202,26 @@ func _touch_nova() -> void:
 	var kills := _swarm.total_kills - kills_before
 	_check(kills >= 40, "touch nova killed only %d of 60 nearby" % kills)
 	_check(not Input.is_action_pressed("attack_nova"), "nova released after lifting the finger")
+
+
+func _break_feedback() -> void:
+	await _frames(80)  # nova cooldown
+	_place_pack(_player.ground_position(), 4.5, 120)
+	var trauma_before := _camera.trauma
+	Input.action_press("attack_nova")
+	await _frames(1)
+	Input.action_release("attack_nova")
+	_check(_feedback.hitstop_remaining > 0.0, "a 120-enemy break starts a freeze-frame")
+	_check(_camera.trauma > trauma_before + 0.3, "the camera shakes (trauma %.2f)" % _camera.trauma)
+	_check(_popup.is_showing(), "the BREAK popup shows")
+	_check(_corpses.active_count() >= 100, "corpses fly (%d)" % _corpses.active_count())
+	var frozen_at := _player.position
+	Input.action_press("move_right")
+	await _frames(3)
+	_check(_player.position == frozen_at, "the player is frozen during hit-stop")
+	await _frames(20)
+	Input.action_release("move_right")
+	_check(_player.position != frozen_at, "the game resumes after hit-stop")
+	await _frames(70)
+	_check(_corpses.active_count() == 0, "corpses clear away (%d left)" % _corpses.active_count())
+	_check(not _popup.is_showing(), "the popup fades out")

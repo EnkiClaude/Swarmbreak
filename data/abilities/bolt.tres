@@ -17,5 +17,5 @@ height = 0.9
 size = 0.18
 color = Color(1, 0.85, 0.4, 1)
 capacity = 64
-auto_fire_on_aim = true
+auto_fire_on_aim = false
 burst_effect = ExtResource("2_burst")

@@ -4,6 +4,8 @@ extends Node3D
 ## enemy or reaches the end of its life, damaging everything in burst_radius.
 ## Bolts leaving the arena vanish without bursting.
 
+signal bolt_burst(at: Vector2)
+
 const MESH_RADIAL_SEGMENTS := 8
 const MESH_RINGS := 4
 
@@ -30,10 +32,12 @@ func setup(config: BoltConfig, effects: EffectSystem, arena_half_extent: float) 
 	add_child(_batch)
 
 
-## Fires one bolt from origin along direction (unit, XZ plane).
-func fire(origin: Vector2, direction: Vector2) -> void:
-	if _pool.spawn(origin + direction * _config.muzzle_offset, direction * _config.speed):
-		fired_total += 1
+## Fires one bolt from origin along direction (unit, XZ plane). False if the pool is full.
+func fire(origin: Vector2, direction: Vector2) -> bool:
+	if not _pool.spawn(origin + direction * _config.muzzle_offset, direction * _config.speed):
+		return false
+	fired_total += 1
+	return true
 
 
 ## Moves bolts and resolves hits. Call between SwarmManager.simulate() and resolve_deaths().
@@ -48,6 +52,7 @@ func tick(delta: float, swarm: SwarmManager) -> void:
 		if _pool.ages[i] >= _config.lifetime or swarm.first_hit(p, _config.hit_radius) >= 0:
 			swarm.damage_circle(p, _config.burst_radius, _config.damage, _config.knockback)
 			_effects.spawn(_burst_effect, Vector3(p.x, 0.0, p.y), _config.burst_radius)
+			bolt_burst.emit(p)
 			_pool.remove(i)
 	_draw()
 

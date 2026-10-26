@@ -72,7 +72,7 @@ await page.keyboard.up("Space");
 await page.waitForTimeout(3000);
 await shot("after");
 
-// Touch: hold the move stick to the right, aim up with the other thumb, then tap NOVA.
+// Touch: hold the move stick to the right, hold FIRE and drag up to aim, then tap NOVA.
 await touch("touchStart", [{ x: 140, y: 440, id: 0 }]);
 await touch("touchMove", [{ x: 220, y: 440, id: 0 }]);
 await touch("touchStart", [{ x: 220, y: 440, id: 0 }, { x: 820, y: 440, id: 1 }]);
