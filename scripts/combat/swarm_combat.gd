@@ -3,10 +3,11 @@ extends RefCounted
 ## Damage queries against the swarm, answered from the spatial hash.
 ## Must run after the hash is built and before SwarmState.remove_dead(), while
 ## enemy indices still match the hash. Killed enemies are left at health <= 0
-## and skipped by later queries in the same frame.
+## and skipped by later queries in the same frame. Hitting a sleeping enemy
+## wakes it and raises its camp's alarm, so the whole camp wakes.
 
 const OVERLAP_EPSILON := 0.000001
-## Enemies moved after the hash was built this frame, so queries look one
+## Enemies moved after the hash was built this frame, so queries reach one
 ## extra cell out to catch any that crossed a cell edge.
 const CELL_PADDING := 1
 
@@ -29,23 +30,28 @@ func damage_circle(center: Vector2, radius: float, damage: float, knockback: flo
 	var velocities := _state.velocities
 	var health := _state.health
 	var flash := _state.flash_until
-	var cell_start := _grid.cell_start
+	var awake := _state.awake
+	var camp_ids := _state.camp_ids
+	var alarm := _state.camp_alarm
+	var bucket_start := _grid.bucket_start
 	var sorted_ids := _grid.sorted_ids
-	var cols := _grid.cols
-	var inv := _grid.inv_cell_size
-	var origin := _grid.origin
-	var x0 := clampi(int((center.x - radius - origin.x) * inv) - CELL_PADDING, 0, cols - 1)
-	var x1 := clampi(int((center.x + radius - origin.x) * inv) + CELL_PADDING, 0, cols - 1)
-	var z0 := clampi(int((center.y - radius - origin.y) * inv) - CELL_PADDING, 0, _grid.rows - 1)
-	var z1 := clampi(int((center.y + radius - origin.y) * inv) + CELL_PADDING, 0, _grid.rows - 1)
+	var stamp := _grid.visit_stamp
+	var mask := _grid.bucket_mask
+	var visit := _grid.next_visit()
+	var x0 := _grid.cell_coord(center.x - radius) - CELL_PADDING
+	var x1 := _grid.cell_coord(center.x + radius) + CELL_PADDING
+	var z0 := _grid.cell_coord(center.y - radius) - CELL_PADDING
+	var z1 := _grid.cell_coord(center.y + radius) + CELL_PADDING
 	var r_sq := radius * radius
 	var kills := 0
 
-	for z in range(z0, z1 + 1):
-		var row: int = z * cols
-		for x in range(x0, x1 + 1):
-			var cell: int = row + x
-			for k in range(cell_start[cell], cell_start[cell + 1]):
+	for cz in range(z0, z1 + 1):
+		for cx in range(x0, x1 + 1):
+			var b: int = SpatialHash.bucket_of_cell(cx, cz, mask)
+			if stamp[b] == visit:
+				continue
+			stamp[b] = visit
+			for k in range(bucket_start[b], bucket_start[b + 1]):
 				var i: int = sorted_ids[k]
 				var hp: float = health[i]
 				if hp <= 0.0:
@@ -61,6 +67,11 @@ func damage_circle(center: Vector2, radius: float, damage: float, knockback: flo
 					kills += 1
 				if d_sq > OVERLAP_EPSILON:
 					velocities[i] += away * (knockback / sqrt(d_sq))
+				if awake[i] == 0:
+					awake[i] = 1
+					var camp: int = camp_ids[i]
+					if camp >= 0 and camp < alarm.size():
+						alarm[camp] = 1
 
 	_state.health = health
 	_state.velocities = velocities
@@ -74,19 +85,21 @@ func first_hit(point: Vector2, radius: float) -> int:
 	var health := _state.health
 	var type_ids := _state.type_ids
 	var body_radius := _types.body_radius
-	var cell_start := _grid.cell_start
+	var bucket_start := _grid.bucket_start
 	var sorted_ids := _grid.sorted_ids
-	var cols := _grid.cols
-	var inv := _grid.inv_cell_size
-	var origin := _grid.origin
-	var gx := clampi(int((point.x - origin.x) * inv), 0, cols - 1)
-	var gz := clampi(int((point.y - origin.y) * inv), 0, _grid.rows - 1)
+	var stamp := _grid.visit_stamp
+	var mask := _grid.bucket_mask
+	var visit := _grid.next_visit()
+	var gx := _grid.cell_coord(point.x)
+	var gz := _grid.cell_coord(point.y)
 	var reach := 1 + CELL_PADDING
-	for z in range(maxi(gz - reach, 0), mini(gz + reach + 1, _grid.rows)):
-		var row: int = z * cols
-		for x in range(maxi(gx - reach, 0), mini(gx + reach + 1, cols)):
-			var cell: int = row + x
-			for k in range(cell_start[cell], cell_start[cell + 1]):
+	for cz in range(gz - reach, gz + reach + 1):
+		for cx in range(gx - reach, gx + reach + 1):
+			var b: int = SpatialHash.bucket_of_cell(cx, cz, mask)
+			if stamp[b] == visit:
+				continue
+			stamp[b] = visit
+			for k in range(bucket_start[b], bucket_start[b + 1]):
 				var i: int = sorted_ids[k]
 				if health[i] <= 0.0:
 					continue

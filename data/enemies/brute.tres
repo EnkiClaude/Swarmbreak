@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyType" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/enemy_type.gd" id="1_enemy_type"]
+[ext_resource type="Resource" path="res://data/effects/death_burst.tres" id="2_death"]
+
+[resource]
+script = ExtResource("1_enemy_type")
+display_name = "Brute"
+color = Color(0.55, 0.3, 0.85, 1)
+max_health = 70.0
+body_radius = 0.55
+body_height = 1.5
+max_speed = 3.2
+acceleration = 10.0
+separation_radius = 1.15
+separation_strength = 7.0
+contact_dps = 14.0
+attack_reach = 0.3
+cast_shadow = false
+death_effect = ExtResource("2_death")

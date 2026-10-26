@@ -14,5 +14,7 @@ max_speed = 4.0
 acceleration = 14.0
 separation_radius = 0.8
 separation_strength = 6.0
+contact_dps = 6.0
+attack_reach = 0.2
 cast_shadow = false
 death_effect = ExtResource("2_death")

@@ -2,6 +2,10 @@ class_name Player
 extends Node3D
 ## Twin-stick player: left stick moves relative to the camera, right stick or
 ## mouse aims. With no aim input, the player faces where it is moving.
+## Dodge dashes along the move direction (or the aim, when standing still)
+## and makes the player briefly invulnerable.
+
+signal dashed
 
 const AIM_MARKER_SIZE := Vector3(0.18, 0.18, 0.5)
 
@@ -11,12 +15,19 @@ var velocity := Vector3.ZERO
 ## Unit vector on the XZ plane.
 var aim_direction := Vector3.FORWARD
 
+var vitals: PlayerVitals
+var dash_cooldown: Cooldown
+
 var _input := TwinStickInput.new()
+var _dash_left := 0.0
+var _dash_direction := Vector3.ZERO
 var _camera_rig: CameraRig
 var _half_extent: float
 
 
 func _ready() -> void:
+	vitals = PlayerVitals.new(config)
+	dash_cooldown = Cooldown.new(config.dash_cooldown)
 	_build_visuals()
 
 
@@ -29,15 +40,47 @@ func _unhandled_input(event: InputEvent) -> void:
 	_input.observe(event)
 
 
-func tick(delta: float) -> void:
+## Puts the player back at a spot, standing still.
+func reset_to(at: Vector3) -> void:
+	position = at
+	velocity = Vector3.ZERO
+	_dash_left = 0.0
+	dash_cooldown.remaining = 0.0
+
+
+func is_dashing() -> bool:
+	return _dash_left > 0.0
+
+
+## now is swarm time, the clock invulnerability is measured against.
+func tick(delta: float, now: float = 0.0) -> void:
 	var yaw := _camera_rig.yaw()
 	var move := _input.move_vector()
-	var wish := _screen_to_world(move, yaw) * config.move_speed
-	velocity = velocity.move_toward(wish, config.acceleration * delta)
-	position += velocity * delta
+	dash_cooldown.tick(delta)
+	if Input.is_action_just_pressed("dodge") and dash_cooldown.is_ready():
+		_start_dash(move, yaw, now)
+	if _dash_left > 0.0:
+		_dash_left -= delta
+		position += _dash_direction * (config.dash_distance / config.dash_duration) * delta
+	else:
+		var wish := _screen_to_world(move, yaw) * config.move_speed
+		velocity = velocity.move_toward(wish, config.acceleration * delta)
+		position += velocity * delta
 	position.x = clampf(position.x, -_half_extent, _half_extent)
 	position.z = clampf(position.z, -_half_extent, _half_extent)
 	_update_aim(move, yaw)
+
+
+func _start_dash(move: Vector2, yaw: float, now: float) -> void:
+	var dir := _screen_to_world(move, yaw)
+	if dir.length_squared() < 0.01:
+		dir = aim_direction
+	_dash_direction = dir.normalized()
+	_dash_left = config.dash_duration
+	velocity = _dash_direction * config.move_speed
+	vitals.invulnerable_until = now + config.dash_duration + config.dash_grace
+	dash_cooldown.trigger()
+	dashed.emit()
 
 
 ## True while the right stick is held outside its deadzone.

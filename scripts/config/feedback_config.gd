@@ -16,6 +16,9 @@ extends Resource
 @export var shake_bolt_burst: float = 0.08
 @export var shake_per_kill: float = 0.006
 @export var shake_kills_max: float = 0.5
+@export var shake_lure: float = 0.2
+## Shake per point of damage the player takes.
+@export var shake_per_damage: float = 0.03
 
 @export_group("Break popup")
 @export var popup_min_kills: int = 10

@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="PlayerConfig" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="PlayerConfig" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/player_config.gd" id="1_player"]
 [ext_resource type="Resource" path="res://data/abilities/nova.tres" id="2_nova"]
 [ext_resource type="Resource" path="res://data/abilities/bolt.tres" id="3_bolt"]
+[ext_resource type="Resource" path="res://data/abilities/lure.tres" id="4_lure"]
 
 [resource]
 script = ExtResource("1_player")
@@ -11,5 +12,16 @@ acceleration = 60.0
 radius = 0.45
 height = 1.8
 color = Color(0.3, 0.75, 1, 1)
+max_health = 100.0
+health_regen = 1.5
+max_mana = 100.0
+mana_regen = 9.0
+mana_per_kill = 0.35
+dash_distance = 5.5
+dash_duration = 0.16
+dash_cooldown = 0.7
+dash_grace = 0.12
+respawn_delay = 2.0
 nova = ExtResource("2_nova")
 bolt = ExtResource("3_bolt")
+lure = ExtResource("4_lure")

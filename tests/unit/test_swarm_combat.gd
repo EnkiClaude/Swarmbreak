@@ -13,7 +13,7 @@ class Rig:
 		enemy = EnemyType.new()
 		var types: Array[EnemyType] = [enemy]
 		state = SwarmState.new(128)
-		grid = SpatialHash.new(HALF, 1.0, 128)
+		grid = SpatialHash.new(1.0, 1024, 128)
 		combat = SwarmCombat.new(state, grid, SwarmTypeTable.new(types))
 
 	func spawn_ring(center: Vector2, radius: float, n: int) -> void:
@@ -71,3 +71,18 @@ func test_first_hit_touches_body_and_skips_dead() -> void:
 	check_eq(rig.combat.first_hit(Vector2(6.5, 5), 0.1), -1, "too far")
 	rig.state.health[0] = 0.0
 	check_eq(rig.combat.first_hit(Vector2(5.0, 5), 0.1), -1, "dead enemies are ignored")
+
+
+func test_hitting_a_sleeper_wakes_it_and_alarms_its_camp() -> void:
+	var rig := Rig.new()
+	var state := SwarmState.new(8, 4)
+	rig.state = state
+	var types: Array[EnemyType] = [rig.enemy]
+	rig.combat = SwarmCombat.new(state, rig.grid, SwarmTypeTable.new(types))
+	state.spawn(Vector2(1, 0), 0, 20.0, 2, false)
+	state.spawn(Vector2(9, 0), 0, 20.0, 2, false)
+	rig.rebuild()
+	rig.combat.damage_circle(Vector2.ZERO, 2.0, 1.0, 0.0, 0.0)
+	check_eq(state.awake[0], 1, "hit enemy wakes")
+	check_eq(state.awake[1], 0, "unhit camp mate still asleep until the camp wakes")
+	check_eq(state.camp_alarm[2], 1, "its camp is alarmed")

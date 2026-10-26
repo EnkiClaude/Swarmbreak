@@ -1,44 +1,62 @@
 class_name PlayerCombat
 extends RefCounted
-## Turns attack input into abilities: the nova pulse around the player and
-## aimed bolts. Owns only the cooldowns; damage goes through SwarmManager and
-## bolts through ProjectileSystem.
+## Turns attack input into abilities: aimed bolts, the nova pulse around the
+## player (costs mana) and the lure war cry (costs mana: wakes camps in range
+## and hurries awake enemies toward the player). Kills give mana back.
+## Owns only cooldowns and costs; damage goes through SwarmManager, bolts
+## through ProjectileSystem and camp waking through ZoneDirector.
 
 signal nova_cast(center: Vector2)
+signal lure_cast(center: Vector2, camps_woken: int)
 signal bolt_fired
+## An ability was pressed but there wasn't enough mana.
+signal out_of_mana
 
 var nova_cooldown: Cooldown
+var lure_cooldown: Cooldown
 var bolt_cooldown: Cooldown
 
 var _player: Player
 var _swarm: SwarmManager
 var _projectiles: ProjectileSystem
 var _effects: EffectSystem
+var _zone: ZoneDirector
 var _nova: NovaConfig
 var _bolt: BoltConfig
+var _lure: LureConfig
 var _nova_effect := -1
+var _lure_effect := -1
 
 
 func _init(player: Player, swarm: SwarmManager, projectiles: ProjectileSystem,
-		effects: EffectSystem) -> void:
+		effects: EffectSystem, zone: ZoneDirector = null) -> void:
 	_player = player
 	_swarm = swarm
 	_projectiles = projectiles
 	_effects = effects
+	_zone = zone
 	_nova = player.config.nova
 	_bolt = player.config.bolt
+	_lure = player.config.lure
 	nova_cooldown = Cooldown.new(_nova.cooldown)
+	lure_cooldown = Cooldown.new(_lure.cooldown if _lure != null else 1.0)
 	bolt_cooldown = Cooldown.new(_bolt.fire_interval)
 	_nova_effect = effects.register(_nova.effect)
+	if _lure != null:
+		_lure_effect = effects.register(_lure.effect)
+	swarm.enemies_killed.connect(_on_enemies_killed)
 
 
 ## Call between SwarmManager.simulate() and resolve_deaths().
 func tick(delta: float) -> void:
 	nova_cooldown.tick(delta)
+	lure_cooldown.tick(delta)
 	bolt_cooldown.tick(delta)
-	if Input.is_action_pressed("attack_nova") and nova_cooldown.is_ready():
-		nova_cooldown.trigger()
-		_cast_nova()
+	if Input.is_action_just_pressed("attack_nova") or (
+			Input.is_action_pressed("attack_nova") and nova_cooldown.is_ready()):
+		_try_nova()
+	if _lure != null and Input.is_action_just_pressed("skill_lure"):
+		_try_lure()
 	if _wants_to_fire() and bolt_cooldown.is_ready():
 		bolt_cooldown.trigger()
 		var aim := _player.aim_direction
@@ -46,14 +64,39 @@ func tick(delta: float) -> void:
 			bolt_fired.emit()
 
 
-func _cast_nova() -> void:
+func _try_nova() -> void:
+	if not nova_cooldown.is_ready():
+		return
+	if not _player.vitals.spend_mana(_nova.mana_cost):
+		if Input.is_action_just_pressed("attack_nova"):
+			out_of_mana.emit()
+		return
+	nova_cooldown.trigger()
 	var center := _player.ground_position()
+	nova_cast.emit(center)
 	_swarm.damage_circle(center, _nova.radius, _nova.damage, _nova.knockback)
 	_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), _nova.radius)
-	nova_cast.emit(center)
+
+
+func _try_lure() -> void:
+	if not lure_cooldown.is_ready():
+		return
+	if not _player.vitals.spend_mana(_lure.mana_cost):
+		out_of_mana.emit()
+		return
+	lure_cooldown.trigger()
+	var center := _player.ground_position()
+	var woken := _zone.lure(center, _lure.radius) if _zone != null else 0
+	_swarm.boost_within(center, _lure.radius, _lure.boost_duration)
+	_effects.spawn(_lure_effect, Vector3(center.x, 0.0, center.y), _lure.radius)
+	lure_cast.emit(center, woken)
 
 
 func _wants_to_fire() -> bool:
 	if Input.is_action_pressed("attack_fire"):
 		return true
 	return _bolt.auto_fire_on_aim and _player.is_stick_aiming()
+
+
+func _on_enemies_killed(count: int, _center: Vector2) -> void:
+	_player.vitals.gain_mana(_player.config.mana_per_kill * count)

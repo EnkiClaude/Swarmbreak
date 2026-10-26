@@ -3,7 +3,7 @@ extends Control
 ## On-screen twin-stick controls for touchscreens. The left half of the screen
 ## is a floating move stick. On the right, the FIRE button is also a stick:
 ## hold it to fire and drag from it to aim (no drag fires where the player
-## faces). Plus NOVA, spawn and overlay buttons.
+## faces). Around it: NOVA, LURE and DODGE; at the top, spawn and overlay.
 ##
 ## Everything is translated into the same input actions a controller presses,
 ## so gameplay code never knows the input came from touch.
@@ -144,6 +144,10 @@ func _send_action(action: String, pressed: bool) -> void:
 func _button_at(at: Vector2) -> String:
 	if at.distance_to(_screen(config.nova_button_position)) <= config.nova_button_radius:
 		return "attack_nova"
+	if at.distance_to(_screen(config.lure_button_position)) <= config.lure_button_radius:
+		return "skill_lure"
+	if at.distance_to(_screen(config.dodge_button_position)) <= config.dodge_button_radius:
+		return "dodge"
 	if at.distance_to(_screen(config.spawn_button_position)) <= config.small_button_radius:
 		return "debug_spawn"
 	if at.distance_to(_screen(config.overlay_button_position)) <= config.small_button_radius:
@@ -160,6 +164,10 @@ func _draw() -> void:
 	_draw_fire_stick()
 	_draw_button(config.nova_button_position, config.nova_button_radius, "NOVA",
 			"attack_nova", config.nova_color)
+	_draw_button(config.lure_button_position, config.lure_button_radius, "LURE",
+			"skill_lure", config.lure_color)
+	_draw_button(config.dodge_button_position, config.dodge_button_radius, "DODGE",
+			"dodge", config.color)
 	_draw_button(config.spawn_button_position, config.small_button_radius, "+100",
 			"debug_spawn", config.color)
 	_draw_button(config.overlay_button_position, config.small_button_radius, "HUD",

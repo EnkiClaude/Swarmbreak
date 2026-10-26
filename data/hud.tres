@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="HudConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/hud_config.gd" id="1_hud"]
+
+[resource]
+script = ExtResource("1_hud")
+bar_width = 340.0
+bar_height = 16.0
+bar_position = Vector2(0.5, 0.955)
+bar_gap = 6.0
+health_color = Color(0.85, 0.2, 0.2, 1)
+mana_color = Color(0.25, 0.5, 1, 1)
+bar_back_color = Color(0, 0, 0, 0.55)
+minimap_size = 150.0
+minimap_margin = 10.0
+minimap_back_color = Color(0, 0, 0, 0.45)
+minimap_camp_color = Color(0.9, 0.3, 0.25, 1)
+minimap_awake_color = Color(1, 0.75, 0.2, 1)
+minimap_player_color = Color(0.3, 0.8, 1, 1)
+hurt_vignette_color = Color(0.9, 0.05, 0.05, 0.45)
+hurt_vignette_fade = 3.0

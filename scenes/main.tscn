@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene load_steps=27 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/arena/arena.gd" id="2_arena"]
@@ -20,6 +20,9 @@
 [ext_resource type="Script" path="res://scripts/feedback/combat_feedback.gd" id="18_feedback"]
 [ext_resource type="Resource" path="res://data/feedback.tres" id="19_feedback_cfg"]
 [ext_resource type="Resource" path="res://data/audio.tres" id="20_audio_cfg"]
+[ext_resource type="Resource" path="res://data/zones/zone.tres" id="21_zone_cfg"]
+[ext_resource type="Script" path="res://scripts/hud/hud.gd" id="22_hud"]
+[ext_resource type="Resource" path="res://data/hud.tres" id="23_hud_cfg"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.32, 0.38, 0.48, 1)
@@ -41,6 +44,7 @@ tonemap_mode = 2
 script = ExtResource("1_main")
 feedback_config = ExtResource("19_feedback_cfg")
 audio_config = ExtResource("20_audio_cfg")
+zone_config = ExtResource("21_zone_cfg")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")
@@ -84,6 +88,20 @@ script = ExtResource("17_popup")
 
 [node name="Feedback" type="Node" parent="."]
 script = ExtResource("18_feedback")
+
+[node name="HudLayer" type="CanvasLayer" parent="."]
+layer = 80
+
+[node name="Hud" type="Control" parent="HudLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("22_hud")
+config = ExtResource("23_hud_cfg")
 
 [node name="DebugOverlay" type="CanvasLayer" parent="."]
 script = ExtResource("10_overlay")

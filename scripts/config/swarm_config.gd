@@ -4,13 +4,18 @@ extends Resource
 
 ## Preallocated enemy slots. Spawns beyond this are dropped.
 @export var capacity: int = 4096
-@export var initial_count: int = 1000
 @export var debug_spawn_batch: int = 100
 ## New enemies appear in a ring between these distances from the player.
 @export var spawn_min_distance: float = 16.0
 @export var spawn_max_distance: float = 36.0
 ## Spatial hash cell edge in meters. Keep >= the largest separation radius.
-@export var hash_cell_size: float = 1.0
+@export var hash_cell_size: float = 1.2
+## Spatial hash table size (rounded up to a power of two). Cost of a rebuild
+## scales with this, not with map size.
+@export var hash_buckets: int = 4096
+## Most enemies whose touch hurts the player at once, so a huge pack around
+## you is dangerous but survivable long enough to break it.
+@export var max_attackers: int = 10
 ## Flow field cell edge in meters.
 @export var flow_cell_size: float = 2.0
 ## Inside this distance enemies steer straight at the player instead of the field.

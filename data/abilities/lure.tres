@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LureConfig" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/lure_config.gd" id="1_lure"]
+[ext_resource type="Resource" path="res://data/effects/lure_ring.tres" id="2_ring"]
+
+[resource]
+script = ExtResource("1_lure")
+radius = 30.0
+cooldown = 5.0
+mana_cost = 20.0
+speed_multiplier = 1.7
+boost_duration = 3.0
+effect = ExtResource("2_ring")
