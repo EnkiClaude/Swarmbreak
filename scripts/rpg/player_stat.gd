@@ -36,6 +36,5 @@ const CAPS: PackedFloat32Array = [
 static func describe(stat: int, value: float) -> String:
 	if IS_PERCENT[stat] != 0:
 		return "+%d%% %s" % [roundi(value * 100.0), NAMES[stat]]
-	if absf(value - roundf(value)) < 0.05:
-		return "+%d %s" % [roundi(value), NAMES[stat]]
-	return "+%.1f %s" % [value, NAMES[stat]]
+	# Up to two decimals, trailing zeros dropped: 15, 1.5, 0.15.
+	return "+%s %s" % [String.num(value, 2), NAMES[stat]]

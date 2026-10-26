@@ -160,6 +160,7 @@ func _build_skills(parent: VBoxContainer) -> void:
 		var plus := _button("+")
 		plus.custom_minimum_size.x = BUTTON_HEIGHT * 1.4
 		plus.disabled = not _progress.can_rank_up(skill)
+		_style_plus(plus)
 		plus.pressed.connect(rank_up.bind(skill))
 		row.add_child(plus)
 		if not plus.disabled and _focus_target is Button and (_focus_target as Button).text == "CLOSE":
@@ -227,6 +228,21 @@ func _build_selected(parent: VBoxContainer, item: ItemData) -> void:
 	discard_button.pressed.connect(discard.bind(_selected))
 	row.add_child(discard_button)
 	_focus_target = equip_button
+
+
+## "+" buttons get a solid look: dim when no point can go there, gold when one can.
+func _style_plus(button: Button) -> void:
+	var style := StyleBoxFlat.new()
+	style.set_corner_radius_all(6)
+	style.bg_color = Color(0.2, 0.22, 0.26) if button.disabled else Color(0.85, 0.65, 0.2)
+	button.add_theme_stylebox_override("normal", style)
+	button.add_theme_stylebox_override("disabled", style)
+	var hover := style.duplicate() as StyleBoxFlat
+	hover.bg_color = hover.bg_color.lightened(0.2)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("focus", hover)
+	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.35))
+	button.add_theme_color_override("font_color", Color(0.1, 0.08, 0.02))
 
 
 func _select(index: int) -> void:

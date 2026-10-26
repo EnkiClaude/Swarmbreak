@@ -83,3 +83,10 @@ func test_vitals_follow_stats_and_armor() -> void:
 	vitals.reset()
 	var taken := vitals.take_damage(10.0, 0.0)
 	check_near(taken, 5.0, 0.001, "50% damage reduction")
+
+
+func test_stat_descriptions_keep_small_decimals() -> void:
+	check_eq(PlayerStat.describe(PlayerStat.Id.MANA_PER_KILL, 0.15), "+0.15 mana per kill",
+			"two decimals")
+	check_eq(PlayerStat.describe(PlayerStat.Id.MAX_HEALTH, 15.0), "+15 max health", "whole number")
+	check_eq(PlayerStat.describe(PlayerStat.Id.NOVA_DAMAGE, 0.12), "+12% nova damage", "percent")
