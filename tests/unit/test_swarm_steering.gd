@@ -92,7 +92,7 @@ func test_lure_boost_speeds_up_chasers() -> void:
 	slow.state.spawn(Vector2(9, 0), 0)
 	fast.state.spawn(Vector2(9, 0), 0)
 	fast.state.boost_until[0] = 100.0
-	for f in 30:
+	for f in 90:
 		for rig in [slow, fast]:
 			rig.flow.update(Vector2(-9, 0))
 			rig.grid.build(rig.state.positions, rig.state.count)

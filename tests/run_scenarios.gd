@@ -35,9 +35,9 @@ func _run() -> void:
 	_popup = _main.get_node("BreakPopup") as BreakPopup
 	_corpses = _main.get_node("Corpses") as CorpseSystem
 	_camera = _main.get_node("CameraRig") as CameraRig
+	await _frames(5)  # nodes finish _ready during the first frames
 	_zone = _main.get("zone") as ZoneDirector
 	_god_mode(true)
-	await _frames(5)
 
 	_scenario("the zone starts with sleeping camps", _zone_starts_asleep)
 	await _scenario_async("a camp wakes when the player comes near", _camp_wakes_on_approach)
