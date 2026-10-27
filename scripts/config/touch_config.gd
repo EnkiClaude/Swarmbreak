@@ -23,6 +23,7 @@ extends Resource
 @export var spawn_button_position: Vector2 = Vector2(0.6, 0.07)
 @export var overlay_button_position: Vector2 = Vector2(0.4, 0.07)
 @export var character_button_position: Vector2 = Vector2(0.5, 0.07)
+@export var bag_button_position: Vector2 = Vector2(0.7, 0.07)
 @export var small_button_radius: float = 38.0
 @export var color: Color = Color(1, 1, 1, 0.35)
 @export var active_color: Color = Color(1, 1, 1, 0.7)

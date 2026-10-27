@@ -1,12 +1,12 @@
 class_name CharacterMenu
 extends CanvasLayer
-## The character screen: level and XP, the job path, skill points into
-## passive skills, equipped items and the backpack (equip, salvage, refine)
-## and stat totals.
-## Toggled by the character_menu action (Tab/C/I, Start, touch CHAR); pauses
-## the game while open. While open, touches act as mouse clicks so its
-## buttons work on phones. It is small and the game is paused, so it simply
-## rebuilds itself after every change.
+## The character screen, with two tabs: CHARACTER (path, skills, totals,
+## New Game; see CharacterPage) and INVENTORY (equipment, backpack, item
+## details; see InventoryPage). Opens with character_menu (Tab/C, Start,
+## touch CHAR) or straight to the inventory with menu_inventory (I, Y);
+## LB/RB or Q/E switch tabs while open. Pauses the game while open, and
+## touches act as mouse clicks so its buttons work on phones. It is small and
+## the game is paused, so it simply rebuilds itself after every change.
 
 signal opened
 signal closed
@@ -15,10 +15,13 @@ signal refined(result: Refinery.Result, item: ItemData)
 ## The player confirmed erasing their save and starting over.
 signal new_game_requested
 
-const FONT_SIZE := 22
-const SMALL_FONT := 17
-const BUTTON_HEIGHT := 46.0
+enum Tab { CHARACTER, INVENTORY }
+
 const PANEL_MARGIN := 40.0
+const TAB_NAMES: PackedStringArray = ["CHARACTER", "INVENTORY"]
+
+## The open tab, a Tab value.
+var tab: int = Tab.CHARACTER
 
 var _progress: PlayerProgress
 var _tree: SkillTree
@@ -27,16 +30,10 @@ var _stats: PlayerStats
 var _loot: LootConfig
 var _jobs: JobTree
 var _refinery: Refinery
+var _character_page: CharacterPage
+var _inventory_page: InventoryPage
 var _panel: PanelContainer
 var _content: VBoxContainer
-## Selected backpack item, or -1.
-var _selected := -1
-## Selected equipped slot, or -1.
-var _selected_slot := -1
-## Result of the last refine, shown under the item.
-var _refine_text := ""
-var _refine_color := Color.WHITE
-var _focus_target: Control
 ## New Game needs a second press to confirm.
 var _confirm_new_game := false
 
@@ -44,12 +41,14 @@ var _confirm_new_game := false
 func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stats: PlayerStats,
 		loot: LootConfig, jobs: JobTree = null, refinery: Refinery = null) -> void:
 	_progress = progress
-	_jobs = jobs
-	_refinery = refinery
 	_tree = tree
 	_inventory = inventory
 	_stats = stats
 	_loot = loot
+	_jobs = jobs
+	_refinery = refinery
+	_character_page = CharacterPage.new(self, progress, tree, stats, jobs)
+	_inventory_page = InventoryPage.new(self, inventory, loot, refinery)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 120
 	_panel = PanelContainer.new()
@@ -59,7 +58,8 @@ func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stat
 	_panel.offset_right = -PANEL_MARGIN
 	_panel.offset_bottom = -PANEL_MARGIN * 0.6
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.07, 0.09, 0.94)
+	# Fully opaque: HUD text bleeding through reads as clutter on the cards.
+	style.bg_color = Color(0.06, 0.07, 0.09, 1.0)
 	style.set_corner_radius_all(10)
 	style.set_content_margin_all(18)
 	_panel.add_theme_stylebox_override("panel", style)
@@ -78,14 +78,17 @@ func is_open() -> bool:
 	return visible
 
 
-func open() -> void:
+## Opens on the given tab (or the last one used).
+func open(on_tab: int = -1) -> void:
+	if on_tab >= 0:
+		tab = on_tab
 	if visible:
+		_rebuild()
 		return
 	visible = true
-	_selected = -1
-	_selected_slot = -1
-	_refine_text = ""
 	_confirm_new_game = false
+	_inventory_page.reset()
+	_inventory.sort_backpack()
 	get_tree().paused = true
 	Input.emulate_mouse_from_touch = true
 	_rebuild()
@@ -108,35 +111,34 @@ func toggle() -> void:
 		open()
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("character_menu") or (visible and event.is_action_pressed("ui_cancel")):
-		toggle()
-		get_viewport().set_input_as_handled()
+func show_tab(new_tab: int) -> void:
+	tab = new_tab
+	_confirm_new_game = false
+	_rebuild()
 
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("character_menu"):
+		toggle()
+	elif event.is_action_pressed("menu_inventory"):
+		if visible and tab == Tab.INVENTORY:
+			close()
+		else:
+			open(Tab.INVENTORY)
+	elif visible and event.is_action_pressed("ui_cancel"):
+		close()
+	elif visible and (event.is_action_pressed("skill_lure") or event.is_action_pressed("attack_nova")):
+		show_tab(Tab.INVENTORY if tab == Tab.CHARACTER else Tab.CHARACTER)
+	else:
+		return
+	get_viewport().set_input_as_handled()
+
+
+# --- Actions (buttons call these; tests may too) ---
 
 func rank_up(skill: int) -> void:
 	if _progress.rank_up(skill):
 		_stats.recompute()
-	_rebuild()
-
-
-func equip(backpack_index: int) -> void:
-	_inventory.equip(backpack_index)
-	_selected = -1
-	_rebuild()
-
-
-func discard(backpack_index: int) -> void:
-	_inventory.discard(backpack_index)
-	_selected = -1
-	_rebuild()
-
-
-func salvage(backpack_index: int) -> void:
-	var gained := _inventory.salvage(backpack_index, _loot.salvage_stones)
-	_selected = -1
-	_refine_text = "Salvaged for %d stones" % gained
-	_refine_color = Color(0.8, 0.85, 1.0)
 	_rebuild()
 
 
@@ -147,247 +149,62 @@ func choose_job(index: int) -> void:
 	_rebuild()
 
 
-## Tries to refine an item (one click of UPGRADE).
+func select_item(item: ItemData) -> void:
+	_inventory_page.select(item)
+	_rebuild()
+
+
+func selected_item() -> ItemData:
+	return _inventory_page.selected
+
+
+func equip_item(item: ItemData) -> void:
+	_inventory.equip_item(item)
+	_inventory.sort_backpack()
+	_inventory_page.result_text = "Equipped %s" % item.display_name()
+	_inventory_page.result_color = MenuWidgets.GOOD_COLOR
+	_rebuild()
+
+
+func salvage_item(item: ItemData) -> void:
+	var gained := _inventory.salvage_item(item, _loot.salvage_stones)
+	_inventory_page.select(null)
+	_inventory_page.result_text = "Salvaged for %d stones" % gained
+	_inventory_page.result_color = Color(0.8, 0.85, 1.0)
+	_rebuild()
+
+
+## Salvage All for a rarity (magic needs a second press). Returns stones gained.
+func salvage_all(rarity: int) -> int:
+	var gained := _inventory_page.press_salvage_all(rarity)
+	_rebuild()
+	return gained
+
+
+## Tries to refine an item (one press of UPGRADE).
 func refine(item: ItemData) -> Refinery.Result:
 	var before := item.upgrade_level
 	var result := _refinery.attempt(item, _inventory)
+	var page := _inventory_page
 	match result:
 		Refinery.Result.SUCCESS:
-			_refine_text = "SUCCESS! +%d -> +%d" % [before, item.upgrade_level]
-			_refine_color = Color(0.6, 1.0, 0.5)
+			page.result_text = "SUCCESS! +%d -> +%d" % [before, item.upgrade_level]
+			page.result_color = MenuWidgets.GOOD_COLOR
 		Refinery.Result.DOWNGRADED:
-			_refine_text = "Failed - dropped to +%d. Try again!" % item.upgrade_level
-			_refine_color = Color(1.0, 0.5, 0.4)
+			page.result_text = "Failed - dropped to +%d. Try again!" % item.upgrade_level
+			page.result_color = MenuWidgets.BAD_COLOR
 		Refinery.Result.FAILED:
-			_refine_text = "Failed - still +0. Try again!"
-			_refine_color = Color(1.0, 0.5, 0.4)
+			page.result_text = "Failed - still +0. Try again!"
+			page.result_color = MenuWidgets.BAD_COLOR
 		Refinery.Result.NOT_ENOUGH_STONES:
-			_refine_text = "Not enough stones"
-			_refine_color = Color(1.0, 0.7, 0.3)
+			page.result_text = "Not enough stones"
+			page.result_color = Color(1.0, 0.7, 0.3)
 		Refinery.Result.MAXED:
-			_refine_text = "Already at the maximum"
-			_refine_color = Color(1.0, 0.85, 0.3)
+			page.result_text = "Already at the maximum"
+			page.result_color = Color(1.0, 0.85, 0.3)
 	refined.emit(result, item)
 	_rebuild()
 	return result
-
-
-func _rebuild() -> void:
-	for child in _content.get_children():
-		_content.remove_child(child)
-		child.queue_free()
-	_focus_target = null
-	_build_header()
-	var columns := HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 28)
-	_content.add_child(columns)
-	var left := _column(columns)
-	var right := _column(columns)
-	_build_job(left)
-	_build_skills(left)
-	_build_totals(left)
-	_build_equipment(right)
-	_build_backpack(right)
-	_build_new_game(left)
-	if _focus_target != null:
-		_grab_focus_later.call_deferred(_focus_target)
-
-
-## Deferred so the new controls are laid out first. A quick second rebuild
-## may already have replaced the control, so check it's still on screen.
-func _grab_focus_later(target: Control) -> void:
-	if is_instance_valid(target) and target.is_inside_tree():
-		target.grab_focus()
-
-
-func _build_header() -> void:
-	var row := HBoxContainer.new()
-	_content.add_child(row)
-	var xp := "MAX" if _progress.is_max_level() else "%d / %d" % [
-			floori(_progress.xp), ceili(_progress.xp_to_next())]
-	var job := ""
-	if _jobs != null and _progress.job >= 0:
-		job = "%s     " % _progress.job_title(_jobs)
-	var title := _label("%sLEVEL %d     XP %s     Skill points: %d     Stones: %d" % [
-			job, _progress.level, xp, _progress.skill_points, _inventory.stones], FONT_SIZE + 2)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(title)
-	var close_button := _button("CLOSE")
-	close_button.pressed.connect(close)
-	row.add_child(close_button)
-	_focus_target = close_button
-
-
-func _build_job(parent: VBoxContainer) -> void:
-	if _jobs == null:
-		return
-	parent.add_child(_label("PATH", FONT_SIZE, Color(0.7, 0.8, 1.0)))
-	if _progress.job >= 0:
-		var def := _jobs.jobs[_progress.job]
-		var promoted := _progress.job_rank >= 2
-		parent.add_child(_label(_progress.job_title(_jobs), SMALL_FONT + 2, def.color))
-		parent.add_child(_label(def.rank2_description if promoted else def.description, SMALL_FONT))
-		if not promoted:
-			parent.add_child(_label("Promotes to %s at level %d" % [def.rank2_name,
-					_jobs.rank2_level], SMALL_FONT, Color(1, 1, 1, 0.55)))
-		return
-	if not _progress.can_choose_job(_jobs):
-		parent.add_child(_label("Choose a path at level %d" % _jobs.unlock_level, SMALL_FONT,
-				Color(1, 1, 1, 0.55)))
-		return
-	parent.add_child(_label("Choose your path (permanent):", SMALL_FONT, Color(1.0, 0.85, 0.35)))
-	for index in _jobs.jobs.size():
-		var def := _jobs.jobs[index]
-		var button := _button(def.display_name.to_upper())
-		button.add_theme_color_override("font_color", def.color)
-		button.pressed.connect(choose_job.bind(index))
-		parent.add_child(button)
-		parent.add_child(_label(def.description, SMALL_FONT))
-		if index == 0:
-			_focus_target = button
-
-
-func _build_skills(parent: VBoxContainer) -> void:
-	parent.add_child(_label("SKILLS", FONT_SIZE, Color(0.7, 0.8, 1.0)))
-	for skill in _tree.skills.size():
-		var def := _tree.skills[skill]
-		var row := HBoxContainer.new()
-		parent.add_child(row)
-		var text := "%s   %d/%d\n%s per rank" % [def.display_name, _progress.ranks[skill],
-				def.max_rank, PlayerStat.describe(def.stat, def.per_rank)]
-		var label := _label(text, SMALL_FONT)
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
-		var plus := _button("+")
-		plus.custom_minimum_size.x = BUTTON_HEIGHT * 1.4
-		plus.disabled = not _progress.can_rank_up(skill)
-		_style_plus(plus)
-		plus.pressed.connect(rank_up.bind(skill))
-		row.add_child(plus)
-		if not plus.disabled and _focus_target is Button and (_focus_target as Button).text == "CLOSE":
-			_focus_target = plus
-
-
-func _build_totals(parent: VBoxContainer) -> void:
-	parent.add_child(_label("TOTALS", FONT_SIZE, Color(0.7, 0.8, 1.0)))
-	var lines: PackedStringArray = []
-	for stat in PlayerStat.COUNT:
-		var v := _stats.value(stat)
-		if absf(v) > 0.0001:
-			lines.append(PlayerStat.describe(stat, v))
-	parent.add_child(_label("\n".join(lines) if not lines.is_empty() else "Nothing yet",
-			SMALL_FONT))
-
-
-func _build_equipment(parent: VBoxContainer) -> void:
-	parent.add_child(_label("EQUIPPED", FONT_SIZE, Color(0.7, 0.8, 1.0)))
-	for slot in _inventory.equipped.size():
-		var item := _inventory.equipped[slot]
-		if item == null:
-			parent.add_child(_label("%s: empty" % _loot.slot_names[slot], SMALL_FONT,
-					Color(1, 1, 1, 0.5)))
-			continue
-		var button := _button(_item_title(item))
-		button.add_theme_color_override("font_color", _loot.rarity_colors[item.rarity])
-		button.toggle_mode = true
-		button.button_pressed = slot == _selected_slot
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.pressed.connect(_select_equipped.bind(slot))
-		parent.add_child(button)
-		parent.add_child(_label("   " + "\n   ".join(item.describe_lines()), SMALL_FONT))
-		if slot == _selected_slot:
-			_build_refine(parent, item)
-
-
-func _build_backpack(parent: VBoxContainer) -> void:
-	parent.add_child(_label("BACKPACK  %d/%d" % [_inventory.backpack.size(),
-			_inventory.backpack_size], FONT_SIZE, Color(0.7, 0.8, 1.0)))
-	if _inventory.backpack.is_empty():
-		parent.add_child(_label("Empty. Clear camps to find loot.", SMALL_FONT, Color(1, 1, 1, 0.5)))
-		return
-	var grid := GridContainer.new()
-	grid.columns = 2
-	parent.add_child(grid)
-	for index in _inventory.backpack.size():
-		var item := _inventory.backpack[index]
-		var button := _button(_item_title(item))
-		button.add_theme_color_override("font_color", _loot.rarity_colors[item.rarity])
-		button.toggle_mode = true
-		button.button_pressed = index == _selected
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.pressed.connect(_select.bind(index))
-		grid.add_child(button)
-	if _selected >= 0 and _selected < _inventory.backpack.size():
-		_build_selected(parent, _inventory.backpack[_selected])
-
-
-func _build_selected(parent: VBoxContainer, item: ItemData) -> void:
-	parent.add_child(_label(_item_title(item), SMALL_FONT + 1, _loot.rarity_colors[item.rarity]))
-	parent.add_child(_label("   " + "\n   ".join(item.describe_lines()), SMALL_FONT))
-	var current := _inventory.equipped[item.slot]
-	if current != null:
-		parent.add_child(_label("Replaces %s:\n   %s" % [current.item_name,
-				"\n   ".join(current.describe_lines())], SMALL_FONT, Color(1, 1, 1, 0.6)))
-	var row := HBoxContainer.new()
-	parent.add_child(row)
-	var equip_button := _button("EQUIP")
-	equip_button.pressed.connect(equip.bind(_selected))
-	row.add_child(equip_button)
-	var salvage_button := _button("SALVAGE (+%d stones)" % (
-			_loot.salvage_stones[mini(item.rarity, _loot.salvage_stones.size() - 1)]
-			+ item.upgrade_level))
-	salvage_button.pressed.connect(salvage.bind(_selected))
-	row.add_child(salvage_button)
-	_focus_target = equip_button
-	_build_refine(parent, item)
-
-
-func _build_refine(parent: VBoxContainer, item: ItemData) -> void:
-	if _refinery == null:
-		return
-	if _refinery.is_maxed(item):
-		parent.add_child(_label("Fully refined (+%d)" % item.upgrade_level, SMALL_FONT,
-				Color(1.0, 0.85, 0.3)))
-	else:
-		var cost := _refinery.cost_for(item)
-		var chance := roundi(_refinery.chance_for(item) * 100.0)
-		var button := _button("UPGRADE +%d -> +%d   %d%%   cost %d stones" % [
-				item.upgrade_level, item.upgrade_level + 1, chance, cost])
-		button.disabled = _inventory.stones < cost
-		button.pressed.connect(refine.bind(item))
-		parent.add_child(button)
-		var note := "Fails drop it one level; it never breaks."
-		if item.fail_streak > 0:
-			note += " Luck builds: +%d%% from %d failures." % [
-					roundi(item.fail_streak * _loot.upgrade_pity_per_fail * 100.0), item.fail_streak]
-		parent.add_child(_label(note, SMALL_FONT - 1, Color(1, 1, 1, 0.55)))
-		if not button.disabled:
-			_focus_target = button
-	if _refine_text != "":
-		parent.add_child(_label(_refine_text, SMALL_FONT + 1, _refine_color))
-
-
-## "+" buttons get a solid look: dim when no point can go there, gold when one can.
-func _style_plus(button: Button) -> void:
-	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(6)
-	style.bg_color = Color(0.2, 0.22, 0.26) if button.disabled else Color(0.85, 0.65, 0.2)
-	button.add_theme_stylebox_override("normal", style)
-	button.add_theme_stylebox_override("disabled", style)
-	var hover := style.duplicate() as StyleBoxFlat
-	hover.bg_color = hover.bg_color.lightened(0.2)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("focus", hover)
-	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.35))
-	button.add_theme_color_override("font_color", Color(0.1, 0.08, 0.02))
-
-
-func _build_new_game(parent: VBoxContainer) -> void:
-	var button := _button("TAP AGAIN TO ERASE YOUR SAVE" if _confirm_new_game else "NEW GAME")
-	button.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4) if _confirm_new_game
-			else Color(1, 1, 1, 0.6))
-	button.pressed.connect(press_new_game)
-	parent.add_child(button)
 
 
 ## First press asks for confirmation; the second erases and restarts.
@@ -401,45 +218,51 @@ func press_new_game() -> void:
 	new_game_requested.emit()
 
 
-func _select(index: int) -> void:
-	_selected = -1 if _selected == index else index
-	_selected_slot = -1
-	_refine_text = ""
-	_rebuild()
+# --- Building ---
+
+func _rebuild() -> void:
+	for child in _content.get_children():
+		_content.remove_child(child)
+		child.queue_free()
+	var header_focus := _build_header()
+	var focus: Control
+	if tab == Tab.CHARACTER:
+		focus = _character_page.build(_content, _confirm_new_game)
+	else:
+		focus = _inventory_page.build(_content)
+	_grab_focus_later.call_deferred(focus if focus != null else header_focus)
 
 
-func _select_equipped(slot: int) -> void:
-	_selected_slot = -1 if _selected_slot == slot else slot
-	_selected = -1
-	_refine_text = ""
-	_rebuild()
+## Deferred so the new controls are laid out first. A quick second rebuild
+## may already have replaced the control, so check it's still on screen.
+func _grab_focus_later(target: Control) -> void:
+	if is_instance_valid(target) and target.is_inside_tree():
+		target.grab_focus()
 
 
-func _item_title(item: ItemData) -> String:
-	return "%s (%s %s)" % [item.display_name(), _loot.rarity_names[item.rarity],
-			_loot.slot_names[item.slot]]
-
-
-func _column(parent: HBoxContainer) -> VBoxContainer:
-	var column := VBoxContainer.new()
-	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation", 8)
-	parent.add_child(column)
-	return column
-
-
-func _label(text: String, font_size: int, color: Color = Color(1, 1, 1, 0.92)) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return label
-
-
-func _button(text: String) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.custom_minimum_size = Vector2(0, BUTTON_HEIGHT)
-	button.add_theme_font_size_override("font_size", SMALL_FONT + 1)
-	return button
+func _build_header() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	_content.add_child(row)
+	for index in TAB_NAMES.size():
+		var b := MenuWidgets.button(TAB_NAMES[index], MenuWidgets.FONT_SIZE - 2)
+		b.custom_minimum_size.x = 190.0
+		b.toggle_mode = true
+		b.button_pressed = index == tab
+		b.pressed.connect(show_tab.bind(index))
+		row.add_child(b)
+	var job := ""
+	if _jobs != null and _progress.job >= 0:
+		job = "%s   " % _progress.job_title(_jobs)
+	var xp := "MAX" if _progress.is_max_level() else "%d / %d" % [
+			floori(_progress.xp), ceili(_progress.xp_to_next())]
+	var summary := MenuWidgets.label("   %sLEVEL %d   XP %s   Stones %d" % [job, _progress.level,
+			xp, _inventory.stones], MenuWidgets.SMALL_FONT + 1)
+	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(summary)
+	var close_button := MenuWidgets.button("CLOSE")
+	close_button.pressed.connect(close)
+	row.add_child(close_button)
+	_content.add_child(HSeparator.new())
+	return close_button

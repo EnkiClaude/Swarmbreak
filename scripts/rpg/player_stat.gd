@@ -33,6 +33,13 @@ const CAPS: PackedFloat32Array = [
 ]
 
 
+## The size of a change, signed: "+4%", "-12", "+0.15".
+static func describe_delta(stat: int, delta: float) -> String:
+	if IS_PERCENT[stat] != 0:
+		return "%+d%%" % roundi(delta * 100.0)
+	return ("+" if delta >= 0.0 else "-") + String.num(absf(delta), 2)
+
+
 static func describe(stat: int, value: float) -> String:
 	if IS_PERCENT[stat] != 0:
 		return "+%d%% %s" % [roundi(value * 100.0), NAMES[stat]]

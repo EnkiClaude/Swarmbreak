@@ -53,6 +53,7 @@ func _run() -> void:
 	await _scenario_async("lure wakes camps in range and hurries them", _lure_wakes_camps)
 	await _scenario_async("clearing a camp drops loot you can pick up", _camp_drops_loot)
 	await _scenario_async("with a full backpack, loot stays put until there's room", _full_backpack)
+	await _scenario_async("the inventory tab salvages, compares and equips", _inventory_tab)
 	await _scenario_async("the character screen pauses and spends points", _character_menu)
 	await _scenario_async("player moves with move_right", _player_moves)
 	await _scenario_async("debug_spawn adds a batch", _debug_spawn)
@@ -715,3 +716,58 @@ func _full_backpack() -> void:
 	inventory.equipped.assign(saved_equipped)
 	inventory.notify_changed()
 	_teleport(Vector2.ZERO)
+
+
+func _inventory_tab() -> void:
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	var inventory := _main_var("inventory") as Inventory
+	var loot_config := _main_var("loot_config") as LootConfig
+	var saved_backpack := inventory.backpack.duplicate()
+	var saved_equipped := inventory.equipped.duplicate()
+	inventory.backpack.clear()
+	var worn := ItemData.new()
+	worn.slot = AffixDef.Slot.CHARM
+	worn.rarity = 1
+	worn.item_name = "Old Charm"
+	worn.stats = PackedInt32Array([PlayerStat.Id.NOVA_RADIUS])
+	worn.values = PackedFloat32Array([0.05])
+	inventory.equipped[AffixDef.Slot.CHARM] = worn
+	var better := ItemData.new()
+	better.slot = AffixDef.Slot.CHARM
+	better.rarity = 2
+	better.item_name = "Bright Charm"
+	better.stats = PackedInt32Array([PlayerStat.Id.NOVA_RADIUS])
+	better.values = PackedFloat32Array([0.09])
+	inventory.backpack.append(better)
+	for n in 3:
+		var junk := ItemData.new()
+		junk.slot = AffixDef.Slot.WEAPON
+		junk.item_name = "Junk"
+		inventory.backpack.append(junk)
+	# I (or Y) opens straight to the inventory.
+	var press := InputEventAction.new()
+	press.action = "menu_inventory"
+	press.pressed = true
+	Input.parse_input_event(press)
+	await _frames(2)
+	_check(menu.is_open() and menu.tab == CharacterMenu.Tab.INVENTORY, "opened on the inventory tab")
+	var stones := inventory.stones
+	var gained := menu.salvage_all(0)
+	_check(gained == loot_config.salvage_stones[0] * 3, "salvaged the 3 commons (%d)" % gained)
+	_check(inventory.stones == stones + gained and inventory.backpack.size() == 1,
+			"only the rare charm is left")
+	_check(menu.salvage_all(1) == 0, "salvage-all magic asks to confirm first")
+	menu.select_item(better)
+	_check(menu.selected_item() == better, "selected the charm")
+	var rows := ItemCompare.compare(better, worn)
+	_check(rows[0]["change"] == ItemCompare.Change.BETTER, "it compares as better")
+	menu.equip_item(better)
+	_check(inventory.equipped[AffixDef.Slot.CHARM] == better, "equipped")
+	_check(inventory.backpack.has(worn), "old charm went to the backpack")
+	menu.show_tab(CharacterMenu.Tab.CHARACTER)
+	_check(menu.tab == CharacterMenu.Tab.CHARACTER, "switched tabs")
+	menu.close()
+	await _frames(1)
+	inventory.backpack.assign(saved_backpack)
+	inventory.equipped.assign(saved_equipped)
+	inventory.notify_changed()

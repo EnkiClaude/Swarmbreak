@@ -70,7 +70,8 @@ scripts/
   hud/              Health/mana/XP bars, minimap, pickup messages, hurt flash.
   rpg/              Stats, XP, levels, jobs, items, rolls, inventory, Refinery.
   loot/             Ground loot: drops, magnet, pickup.
-  ui/               Character screen (skills, equipment, backpack).
+  ui/               Character screen: CHARACTER tab (path, skills, totals) and
+                    INVENTORY tab (equipped, backpack grid, compare, refine).
   save/             Save file: codec (Dictionary <-> progress), store, autosave.
   swarm/            Swarm state, flow field, spatial hash, steering, rendering.
   combat/           Damage queries, abilities, cooldowns, pooled bolts.
@@ -223,13 +224,15 @@ run, except errors from the headless dummy renderer.
 | Nova            | RB                  | Q / right mouse   |
 | Lure            | LB                  | E                 |
 | Dodge           | A                   | Space / Shift     |
-| Character       | Start               | Tab / C / I       |
+| Character       | Start               | Tab / C           |
+| Inventory       | Y                   | I                 |
+| Switch menu tab | LB / RB             | Q / E             |
 | Spawn 100       | View / Back         | `=` or keypad `+` |
 | Toggle overlay  | L3 (left stick)     | F3                |
 
 On touchscreens: the left half of the screen is a floating move stick; FIRE
 (bottom right) is held to fire and dragged to aim; NOVA, LURE and DODGE sit
-around it; HUD, CHAR and +100 at the top.
+around it; HUD, CHAR, +100 and BAG at the top.
 
 ## Git
 
