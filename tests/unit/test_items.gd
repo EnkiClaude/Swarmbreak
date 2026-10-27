@@ -65,3 +65,19 @@ func test_inventory_equips_stores_and_swaps() -> void:
 	check(inventory.backpack[0] == first, "old one in the backpack")
 	inventory.discard(0)
 	check(inventory.backpack.is_empty(), "discarded")
+
+
+func test_can_accept_matches_add() -> void:
+	var inventory := Inventory.new(1)
+	var a := ItemData.new()
+	a.slot = AffixDef.Slot.ARMOR
+	var b := ItemData.new()
+	b.slot = AffixDef.Slot.ARMOR
+	var c := ItemData.new()
+	c.slot = AffixDef.Slot.ARMOR
+	var d := ItemData.new()
+	d.slot = AffixDef.Slot.CHARM
+	check(inventory.can_accept(a) and inventory.add(a), "empty slot")
+	check(inventory.can_accept(b) and inventory.add(b), "backpack has room")
+	check(not inventory.can_accept(c), "slot taken and backpack full")
+	check(inventory.can_accept(d), "a different empty slot still fits")

@@ -16,6 +16,11 @@ func _init(p_backpack_size: int) -> void:
 	backpack_size = p_backpack_size
 
 
+## True if add() would succeed: the item's slot is empty or the backpack has room.
+func can_accept(item: ItemData) -> bool:
+	return equipped[item.slot] == null or backpack.size() < backpack_size
+
+
 ## Equips into an empty slot, otherwise stores in the backpack. False if full.
 func add(item: ItemData) -> bool:
 	if equipped[item.slot] == null:
