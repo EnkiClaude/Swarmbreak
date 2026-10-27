@@ -14,8 +14,7 @@ extends Resource
 @export var max_speed: float = 4.0
 ## Meters per second squared toward the desired velocity.
 @export var acceleration: float = 14.0
-## Neighbours closer than this push each other apart. Must not exceed the
-## swarm's hash cell size, or some neighbours will be missed.
+## Neighbours closer than this push each other apart.
 @export var separation_radius: float = 0.8
 ## Meters per second of push at full overlap, summed over neighbours.
 @export var separation_strength: float = 6.0

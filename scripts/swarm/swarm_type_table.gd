@@ -32,10 +32,3 @@ func _init(p_types: Array[EnemyType]) -> void:
 
 func size() -> int:
 	return types.size()
-
-
-func largest_separation_radius() -> float:
-	var largest := 0.0
-	for r in separation_radius:
-		largest = maxf(largest, r)
-	return largest

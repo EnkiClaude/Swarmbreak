@@ -530,7 +530,7 @@ func _boss_slam() -> void:
 	_refill()
 	var slot := _lone_boss(Vector2(3.0, 0.0))
 	var frames := 0
-	while not bosses.is_winding_up(slot) and frames < 120:
+	while not bosses.is_winding_up(slot) and frames < 300:
 		await _frames(1)
 		frames += 1
 	_check(bosses.is_winding_up(slot), "boss starts a slam when the player is close")

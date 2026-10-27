@@ -184,7 +184,14 @@ func _rebuild() -> void:
 	_build_equipment(right)
 	_build_backpack(right)
 	if _focus_target != null:
-		_focus_target.grab_focus.call_deferred()
+		_grab_focus_later.call_deferred(_focus_target)
+
+
+## Deferred so the new controls are laid out first. A quick second rebuild
+## may already have replaced the control, so check it's still on screen.
+func _grab_focus_later(target: Control) -> void:
+	if is_instance_valid(target) and target.is_inside_tree():
+		target.grab_focus()
 
 
 func _build_header() -> void:

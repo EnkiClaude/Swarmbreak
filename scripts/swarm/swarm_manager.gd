@@ -46,8 +46,6 @@ func setup(arena_half_extent: float, effects: EffectSystem = null,
 	_effects = effects
 	_corpses = corpses
 	_types = SwarmTypeTable.new(config.enemy_types)
-	if _types.largest_separation_radius() > config.hash_cell_size:
-		push_warning("Swarm: a separation radius exceeds hash_cell_size; neighbours will be missed.")
 	state = SwarmState.new(config.capacity, max_camps, max_bosses)
 	_grid = SpatialHash.new(config.hash_cell_size, config.hash_buckets, config.capacity)
 	_flow = FlowField.new(arena_half_extent, config.flow_cell_size)
