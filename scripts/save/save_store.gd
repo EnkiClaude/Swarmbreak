@@ -26,10 +26,12 @@ func read() -> Dictionary:
 		last_status = Status.MISSING
 		return {}
 	var text := FileAccess.get_file_as_string(path)
-	var data: Variant = JSON.parse_string(text)
-	if data is Dictionary:
+	# JSON.parse() reports failure through its return value; the static
+	# parse_string() would also print an engine error for a handled case.
+	var json := JSON.new()
+	if json.parse(text) == OK and json.data is Dictionary:
 		last_status = Status.OK
-		return data
+		return json.data
 	last_status = Status.CORRUPT
 	DirAccess.rename_absolute(path, path + ".bad")
 	return {}
