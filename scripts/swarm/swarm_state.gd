@@ -23,6 +23,15 @@ var camp_ids: PackedInt32Array
 var boost_until: PackedFloat32Array
 ## Set to 1 by damage to any member of a camp; ZoneDirector wakes the camp.
 var camp_alarm: PackedByteArray
+## Swarm time until which the enemy takes extra damage (Warlord's lure mark).
+var mark_until: PackedFloat32Array
+## Swarm time until which the enemy stands still (a boss winding up a slam).
+var stun_until: PackedFloat32Array
+## Boss slot of the enemy, or -1. See boss_index.
+var boss_ids: PackedInt32Array
+## Current enemy index of each boss slot, or -1 once dead. Kept up to date
+## through despawns and compaction, since enemy indices move.
+var boss_index: PackedInt32Array
 ## Filled by remove_dead(): the enemies removed this frame.
 var dead_positions: PackedVector2Array
 var dead_types: PackedInt32Array
@@ -31,7 +40,7 @@ var dead_velocities: PackedVector2Array
 var dead_camps: PackedInt32Array
 
 
-func _init(p_capacity: int, max_camps: int = 1) -> void:
+func _init(p_capacity: int, max_camps: int = 1, max_bosses: int = 1) -> void:
 	capacity = p_capacity
 	positions.resize(capacity)
 	positions.fill(Vector2.ZERO)
@@ -51,6 +60,14 @@ func _init(p_capacity: int, max_camps: int = 1) -> void:
 	boost_until.fill(0.0)
 	camp_alarm.resize(maxi(max_camps, 1))
 	camp_alarm.fill(0)
+	mark_until.resize(capacity)
+	mark_until.fill(0.0)
+	stun_until.resize(capacity)
+	stun_until.fill(0.0)
+	boss_ids.resize(capacity)
+	boss_ids.fill(-1)
+	boss_index.resize(maxi(max_bosses, 1))
+	boss_index.fill(-1)
 	dead_positions.resize(capacity)
 	dead_positions.fill(Vector2.ZERO)
 	dead_types.resize(capacity)
@@ -76,12 +93,23 @@ func spawn(pos: Vector2, type_id: int, max_health: float = 1.0, camp_id: int = -
 	awake[i] = 1 if is_awake else 0
 	camp_ids[i] = camp_id
 	boost_until[i] = 0.0
+	mark_until[i] = 0.0
+	stun_until[i] = 0.0
+	boss_ids[i] = -1
 	count += 1
 	return i
 
 
+## Makes an existing enemy a boss in the given slot.
+func make_boss(i: int, slot: int) -> void:
+	boss_ids[i] = slot
+	boss_index[slot] = i
+
+
 ## Indices are not stable: the enemy that was last now lives at i.
 func despawn(i: int) -> void:
+	if boss_ids[i] >= 0:
+		boss_index[boss_ids[i]] = -1
 	var last := count - 1
 	if i != last:
 		_move(last, i)
@@ -103,6 +131,8 @@ func remove_dead() -> int:
 			dead_types[dead] = type_ids[read]
 			dead_velocities[dead] = velocities[read]
 			dead_camps[dead] = camp_ids[read]
+			if boss_ids[read] >= 0:
+				boss_index[boss_ids[read]] = -1
 			dead += 1
 	count = write
 	return dead
@@ -111,6 +141,7 @@ func remove_dead() -> int:
 func clear() -> void:
 	count = 0
 	camp_alarm.fill(0)
+	boss_index.fill(-1)
 
 
 func _move(from: int, to: int) -> void:
@@ -122,3 +153,9 @@ func _move(from: int, to: int) -> void:
 	awake[to] = awake[from]
 	camp_ids[to] = camp_ids[from]
 	boost_until[to] = boost_until[from]
+	mark_until[to] = mark_until[from]
+	stun_until[to] = stun_until[from]
+	var boss := boss_ids[from]
+	boss_ids[to] = boss
+	if boss >= 0:
+		boss_index[boss] = to

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="BossConfig" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/boss_config.gd" id="1_boss"]
+[ext_resource type="Resource" path="res://data/effects/boss_telegraph.tres" id="2_telegraph"]
+
+[resource]
+script = ExtResource("1_boss")
+display_name = "Camp Warlord"
+type_index = 2
+min_camp_size = 20
+chance = 0.45
+guaranteed_per_zone = 1
+max_per_zone = 8
+health_growth = 0.3
+slam_trigger_range = 6.0
+slam_radius = 4.5
+slam_windup = 1.1
+slam_cooldown = 4.0
+slam_damage = 32.0
+telegraph_effect = ExtResource("2_telegraph")
+extra_drops = 2
+min_drop_rarity = 2
+stones = 6
+hud_range = 30.0

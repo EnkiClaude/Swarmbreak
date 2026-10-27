@@ -1,6 +1,6 @@
 class_name Inventory
 extends RefCounted
-## Equipped items (one per slot) and the backpack.
+## Equipped items (one per slot), the backpack and Refining Stones.
 
 signal changed
 
@@ -8,6 +8,8 @@ signal changed
 var equipped: Array[ItemData] = [null, null, null]
 var backpack: Array[ItemData] = []
 var backpack_size: int
+## Currency for refining items.
+var stones: int = 0
 
 
 func _init(p_backpack_size: int) -> void:
@@ -41,6 +43,27 @@ func equip(backpack_index: int) -> void:
 
 func discard(backpack_index: int) -> void:
 	backpack.remove_at(backpack_index)
+	changed.emit()
+
+
+## Breaks a backpack item down into stones. Returns how many it gave.
+func salvage(backpack_index: int, salvage_table: PackedInt32Array) -> int:
+	var item := backpack[backpack_index]
+	var gained: int = salvage_table[mini(item.rarity, salvage_table.size() - 1)] \
+			+ item.upgrade_level
+	backpack.remove_at(backpack_index)
+	stones += gained
+	changed.emit()
+	return gained
+
+
+func add_stones(amount: int) -> void:
+	stones += amount
+	changed.emit()
+
+
+## Call after changing an item in place (e.g. refining it).
+func notify_changed() -> void:
 	changed.emit()
 
 

@@ -21,6 +21,10 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M4:** jobs, bosses and refining. Choose a path at level 10 (Stormcaller,
+  Warlord or Arcanist) that changes how an ability works, promoted at 25;
+  camp bosses with a telegraphed ground slam and rare drops; refine items
+  +0 to +10 with stones, where failure drops a level but never breaks it.
 - **M3:** loot and progression. XP and levels with skill points for nine
   passive skills; camps drop weapons, charms and armor in three rarities;
   a pausing character screen for skills, equipment and the backpack.

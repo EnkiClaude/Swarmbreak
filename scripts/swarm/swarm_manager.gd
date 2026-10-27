@@ -18,6 +18,8 @@ var last_tick_usec: int = 0
 var total_kills: int = 0
 ## XP earned from the enemies removed by the last resolve_deaths().
 var last_xp := 0.0
+## Extra damage marked enemies take (set from the Warlord job's perks).
+var mark_damage_bonus := 0.0
 ## Most kills from a single damage event: the biggest "break" so far.
 var best_break: int = 0
 
@@ -37,16 +39,14 @@ var _frame_usec := 0
 
 
 ## effects and corpses may be null (benchmarks, tests): deaths then show nothing.
-## max_camps sizes the camp alarm flags.
+## max_camps sizes the camp alarm flags, max_bosses the boss slots.
 func setup(arena_half_extent: float, effects: EffectSystem = null,
-		corpses: CorpseSystem = null, max_camps: int = 1) -> void:
+		corpses: CorpseSystem = null, max_camps: int = 1, max_bosses: int = 1) -> void:
 	_half_extent = arena_half_extent
 	_effects = effects
 	_corpses = corpses
 	_types = SwarmTypeTable.new(config.enemy_types)
-	if _types.largest_separation_radius() > config.hash_cell_size:
-		push_warning("Swarm: a separation radius exceeds hash_cell_size; neighbours will be missed.")
-	state = SwarmState.new(config.capacity, max_camps)
+	state = SwarmState.new(config.capacity, max_camps, max_bosses)
 	_grid = SpatialHash.new(config.hash_cell_size, config.hash_buckets, config.capacity)
 	_flow = FlowField.new(arena_half_extent, config.flow_cell_size)
 	_steering = SwarmSteering.new(state, _grid, _flow, _types,
@@ -101,6 +101,30 @@ func boost_within(center: Vector2, radius: float, duration: float) -> int:
 	return boosted
 
 
+## Marks every awake enemy within radius so it takes mark_damage_bonus extra damage.
+func mark_within(center: Vector2, radius: float, duration: float) -> int:
+	var positions := state.positions
+	var awake := state.awake
+	var marks := state.mark_until
+	var until := _time + duration
+	var r_sq := radius * radius
+	var marked := 0
+	for i in state.count:
+		if awake[i] != 0 and (positions[i] - center).length_squared() <= r_sq:
+			marks[i] = until
+			marked += 1
+	return marked
+
+
+## Holds an enemy still for duration seconds.
+func stun(index: int, duration: float) -> void:
+	state.stun_until[index] = maxf(state.stun_until[index], _time + duration)
+
+
+func type_max_health(type_id: int) -> float:
+	return _types.max_health[type_id]
+
+
 ## Removes every enemy, e.g. when a zone restarts.
 func clear() -> void:
 	state.clear()
@@ -141,7 +165,7 @@ func simulate(delta: float, player_pos: Vector2, player_radius: float,
 ## Damages every enemy within radius of center. Returns how many died.
 func damage_circle(center: Vector2, radius: float, damage: float, knockback: float) -> int:
 	var kills := _combat.damage_circle(center, radius, damage, knockback,
-			_time + config.hit_flash_duration)
+			_time + config.hit_flash_duration, _time, mark_damage_bonus)
 	total_kills += kills
 	best_break = maxi(best_break, kills)
 	if kills > 0:

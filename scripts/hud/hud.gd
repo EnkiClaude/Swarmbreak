@@ -2,7 +2,8 @@ class_name Hud
 extends Control
 ## Player-facing HUD: health, mana and XP bars, level and zone line, a hint
 ## when skill points are waiting, a minimap of the camps, pickup messages and
-## a red edge flash when the player is hurt.
+## a red edge flash when the player is hurt, a boss health bar while a boss
+## is awake nearby, and a prompt when a job path can be chosen.
 ## Redraws every frame from the live game state; owns no game state itself.
 
 const TEXT_SIZE := 18
@@ -15,6 +16,10 @@ const TOAST_ORIGIN := Vector2(16.0, 0.72)
 ## it causes are both readable.
 const BANNER_Y := 0.34
 const BANNER_SIZE := 40
+const BOSS_BAR_Y := 0.15
+const BOSS_BAR_WIDTH := 460.0
+const BOSS_BAR_HEIGHT := 14.0
+const BOSS_BAR_COLOR := Color(0.95, 0.45, 0.15)
 
 @export var config: HudConfig
 
@@ -31,6 +36,9 @@ var _banner_text := ""
 var _banner_color := Color.WHITE
 var _banner_left := 0.0
 var _banner_duration := 1.0
+var _bosses: BossSystem
+var _boss_name := ""
+var _jobs: JobTree
 
 
 func setup(vitals: PlayerVitals, zone: ZoneDirector, player: Player, half_extent: float,
@@ -47,6 +55,12 @@ func setup(vitals: PlayerVitals, zone: ZoneDirector, player: Player, half_extent
 ## Flashes the screen edges; amount is damage taken this frame.
 func flash_hurt(amount: float) -> void:
 	_hurt = minf(_hurt + amount * 0.08, 1.0)
+
+
+func setup_bosses_and_jobs(bosses: BossSystem, boss_name: String, jobs: JobTree) -> void:
+	_bosses = bosses
+	_boss_name = boss_name
+	_jobs = jobs
 
 
 ## Shows a large line under the break popup, e.g. "LEVEL 5".
@@ -89,6 +103,7 @@ func _draw() -> void:
 		return
 	_draw_bars()
 	_draw_minimap()
+	_draw_boss_bar()
 	_draw_toasts()
 	if _banner_left > 0.0:
 		var color := _banner_color
@@ -116,6 +131,9 @@ func _draw_bars() -> void:
 		draw_rect(Rect2(xp_rect.position, Vector2(w * fraction, XP_BAR_HEIGHT)), config.xp_color)
 		line = "LV %d   " % _progress.level
 		top -= XP_BAR_HEIGHT + 4.0
+		if _jobs != null and _progress.can_choose_job(_jobs):
+			_draw_text_centered(Vector2(center.x, top - 58.0), "Choose your path - open CHAR",
+					Color(1.0, 0.85, 0.35))
 		if _progress.skill_points > 0:
 			_draw_text_centered(Vector2(center.x, top - 34.0), "%d skill point%s - open CHAR" % [
 					_progress.skill_points, "" if _progress.skill_points == 1 else "s"],
@@ -152,6 +170,19 @@ func _draw_minimap() -> void:
 	var p := _player.ground_position()
 	draw_circle(origin + (p + Vector2(_half_extent, _half_extent)) * scale_factor, 3.5,
 			config.minimap_player_color)
+
+
+func _draw_boss_bar() -> void:
+	if _bosses == null:
+		return
+	var target: Array = _bosses.hud_target(_player.ground_position())
+	if int(target[0]) < 0:
+		return
+	var rect := Rect2(size.x * 0.5 - BOSS_BAR_WIDTH * 0.5, size.y * BOSS_BAR_Y, BOSS_BAR_WIDTH,
+			BOSS_BAR_HEIGHT)
+	_draw_bar(rect, float(target[1]), BOSS_BAR_COLOR, "")
+	_draw_text_centered(Vector2(size.x * 0.5, rect.position.y - 6.0), _boss_name.to_upper(),
+			BOSS_BAR_COLOR)
 
 
 func _draw_toasts() -> void:

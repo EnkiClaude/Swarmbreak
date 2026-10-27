@@ -8,7 +8,8 @@ extends Resource
 ## New enemies appear in a ring between these distances from the player.
 @export var spawn_min_distance: float = 16.0
 @export var spawn_max_distance: float = 36.0
-## Spatial hash cell edge in meters. Keep >= the largest separation radius.
+## Spatial hash cell edge in meters. Separation scans every cell its radius
+## overlaps, so any radius works; near the common separation radius is fastest.
 @export var hash_cell_size: float = 1.2
 ## Spatial hash table size (rounded up to a power of two). Cost of a rebuild
 ## scales with this, not with map size.

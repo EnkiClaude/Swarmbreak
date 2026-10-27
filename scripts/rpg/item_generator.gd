@@ -15,10 +15,12 @@ func _init(config: LootConfig, seed_value: int = 0) -> void:
 		_rng.randomize()
 
 
-func roll(zone_level: int) -> ItemData:
+## min_rarity forces at least that rarity (bosses drop rares).
+func roll(zone_level: int, min_rarity: int = 0) -> ItemData:
 	var item := ItemData.new()
 	item.slot = _rng.randi_range(0, 2)
-	item.rarity = _pick_weighted(_config.rarity_weights)
+	item.rarity = maxi(_pick_weighted(_config.rarity_weights), min_rarity)
+	item.upgrade_bonus = _config.upgrade_bonus_per_level
 	item.item_level = zone_level
 	var growth := 1.0 + _config.value_growth_per_zone * (zone_level - 1)
 	var allowed: Array[AffixDef] = []

@@ -1,7 +1,8 @@
 class_name CharacterMenu
 extends CanvasLayer
-## The character screen: level and XP, skill points into passive skills,
-## equipped items, the backpack (equip or discard) and stat totals.
+## The character screen: level and XP, the job path, skill points into
+## passive skills, equipped items and the backpack (equip, salvage, refine)
+## and stat totals.
 ## Toggled by the character_menu action (Tab/C/I, Start, touch CHAR); pauses
 ## the game while open. While open, touches act as mouse clicks so its
 ## buttons work on phones. It is small and the game is paused, so it simply
@@ -9,6 +10,8 @@ extends CanvasLayer
 
 signal opened
 signal closed
+signal job_chosen(job: int)
+signal refined(result: Refinery.Result, item: ItemData)
 
 const FONT_SIZE := 22
 const SMALL_FONT := 17
@@ -20,15 +23,25 @@ var _tree: SkillTree
 var _inventory: Inventory
 var _stats: PlayerStats
 var _loot: LootConfig
+var _jobs: JobTree
+var _refinery: Refinery
 var _panel: PanelContainer
 var _content: VBoxContainer
+## Selected backpack item, or -1.
 var _selected := -1
+## Selected equipped slot, or -1.
+var _selected_slot := -1
+## Result of the last refine, shown under the item.
+var _refine_text := ""
+var _refine_color := Color.WHITE
 var _focus_target: Control
 
 
 func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stats: PlayerStats,
-		loot: LootConfig) -> void:
+		loot: LootConfig, jobs: JobTree = null, refinery: Refinery = null) -> void:
 	_progress = progress
+	_jobs = jobs
+	_refinery = refinery
 	_tree = tree
 	_inventory = inventory
 	_stats = stats
@@ -66,6 +79,8 @@ func open() -> void:
 		return
 	visible = true
 	_selected = -1
+	_selected_slot = -1
+	_refine_text = ""
 	get_tree().paused = true
 	Input.emulate_mouse_from_touch = true
 	_rebuild()
@@ -112,6 +127,46 @@ func discard(backpack_index: int) -> void:
 	_rebuild()
 
 
+func salvage(backpack_index: int) -> void:
+	var gained := _inventory.salvage(backpack_index, _loot.salvage_stones)
+	_selected = -1
+	_refine_text = "Salvaged for %d stones" % gained
+	_refine_color = Color(0.8, 0.85, 1.0)
+	_rebuild()
+
+
+func choose_job(index: int) -> void:
+	if _jobs != null and _progress.choose_job(_jobs, index):
+		_stats.recompute()
+		job_chosen.emit(index)
+	_rebuild()
+
+
+## Tries to refine an item (one click of UPGRADE).
+func refine(item: ItemData) -> Refinery.Result:
+	var before := item.upgrade_level
+	var result := _refinery.attempt(item, _inventory)
+	match result:
+		Refinery.Result.SUCCESS:
+			_refine_text = "SUCCESS! +%d -> +%d" % [before, item.upgrade_level]
+			_refine_color = Color(0.6, 1.0, 0.5)
+		Refinery.Result.DOWNGRADED:
+			_refine_text = "Failed - dropped to +%d. Try again!" % item.upgrade_level
+			_refine_color = Color(1.0, 0.5, 0.4)
+		Refinery.Result.FAILED:
+			_refine_text = "Failed - still +0. Try again!"
+			_refine_color = Color(1.0, 0.5, 0.4)
+		Refinery.Result.NOT_ENOUGH_STONES:
+			_refine_text = "Not enough stones"
+			_refine_color = Color(1.0, 0.7, 0.3)
+		Refinery.Result.MAXED:
+			_refine_text = "Already at the maximum"
+			_refine_color = Color(1.0, 0.85, 0.3)
+	refined.emit(result, item)
+	_rebuild()
+	return result
+
+
 func _rebuild() -> void:
 	for child in _content.get_children():
 		_content.remove_child(child)
@@ -123,12 +178,20 @@ func _rebuild() -> void:
 	_content.add_child(columns)
 	var left := _column(columns)
 	var right := _column(columns)
+	_build_job(left)
 	_build_skills(left)
 	_build_totals(left)
 	_build_equipment(right)
 	_build_backpack(right)
 	if _focus_target != null:
-		_focus_target.grab_focus.call_deferred()
+		_grab_focus_later.call_deferred(_focus_target)
+
+
+## Deferred so the new controls are laid out first. A quick second rebuild
+## may already have replaced the control, so check it's still on screen.
+func _grab_focus_later(target: Control) -> void:
+	if is_instance_valid(target) and target.is_inside_tree():
+		target.grab_focus()
 
 
 func _build_header() -> void:
@@ -136,14 +199,46 @@ func _build_header() -> void:
 	_content.add_child(row)
 	var xp := "MAX" if _progress.is_max_level() else "%d / %d" % [
 			floori(_progress.xp), ceili(_progress.xp_to_next())]
-	var title := _label("LEVEL %d     XP %s     Skill points: %d" % [
-			_progress.level, xp, _progress.skill_points], FONT_SIZE + 4)
+	var job := ""
+	if _jobs != null and _progress.job >= 0:
+		job = "%s     " % _progress.job_title(_jobs)
+	var title := _label("%sLEVEL %d     XP %s     Skill points: %d     Stones: %d" % [
+			job, _progress.level, xp, _progress.skill_points, _inventory.stones], FONT_SIZE + 2)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(title)
 	var close_button := _button("CLOSE")
 	close_button.pressed.connect(close)
 	row.add_child(close_button)
 	_focus_target = close_button
+
+
+func _build_job(parent: VBoxContainer) -> void:
+	if _jobs == null:
+		return
+	parent.add_child(_label("PATH", FONT_SIZE, Color(0.7, 0.8, 1.0)))
+	if _progress.job >= 0:
+		var def := _jobs.jobs[_progress.job]
+		var promoted := _progress.job_rank >= 2
+		parent.add_child(_label(_progress.job_title(_jobs), SMALL_FONT + 2, def.color))
+		parent.add_child(_label(def.rank2_description if promoted else def.description, SMALL_FONT))
+		if not promoted:
+			parent.add_child(_label("Promotes to %s at level %d" % [def.rank2_name,
+					_jobs.rank2_level], SMALL_FONT, Color(1, 1, 1, 0.55)))
+		return
+	if not _progress.can_choose_job(_jobs):
+		parent.add_child(_label("Choose a path at level %d" % _jobs.unlock_level, SMALL_FONT,
+				Color(1, 1, 1, 0.55)))
+		return
+	parent.add_child(_label("Choose your path (permanent):", SMALL_FONT, Color(1.0, 0.85, 0.35)))
+	for index in _jobs.jobs.size():
+		var def := _jobs.jobs[index]
+		var button := _button(def.display_name.to_upper())
+		button.add_theme_color_override("font_color", def.color)
+		button.pressed.connect(choose_job.bind(index))
+		parent.add_child(button)
+		parent.add_child(_label(def.description, SMALL_FONT))
+		if index == 0:
+			_focus_target = button
 
 
 func _build_skills(parent: VBoxContainer) -> void:
@@ -186,8 +281,16 @@ func _build_equipment(parent: VBoxContainer) -> void:
 			parent.add_child(_label("%s: empty" % _loot.slot_names[slot], SMALL_FONT,
 					Color(1, 1, 1, 0.5)))
 			continue
-		parent.add_child(_label(_item_title(item), SMALL_FONT + 1, _loot.rarity_colors[item.rarity]))
+		var button := _button(_item_title(item))
+		button.add_theme_color_override("font_color", _loot.rarity_colors[item.rarity])
+		button.toggle_mode = true
+		button.button_pressed = slot == _selected_slot
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.pressed.connect(_select_equipped.bind(slot))
+		parent.add_child(button)
 		parent.add_child(_label("   " + "\n   ".join(item.describe_lines()), SMALL_FONT))
+		if slot == _selected_slot:
+			_build_refine(parent, item)
 
 
 func _build_backpack(parent: VBoxContainer) -> void:
@@ -224,10 +327,38 @@ func _build_selected(parent: VBoxContainer, item: ItemData) -> void:
 	var equip_button := _button("EQUIP")
 	equip_button.pressed.connect(equip.bind(_selected))
 	row.add_child(equip_button)
-	var discard_button := _button("DISCARD")
-	discard_button.pressed.connect(discard.bind(_selected))
-	row.add_child(discard_button)
+	var salvage_button := _button("SALVAGE (+%d stones)" % (
+			_loot.salvage_stones[mini(item.rarity, _loot.salvage_stones.size() - 1)]
+			+ item.upgrade_level))
+	salvage_button.pressed.connect(salvage.bind(_selected))
+	row.add_child(salvage_button)
 	_focus_target = equip_button
+	_build_refine(parent, item)
+
+
+func _build_refine(parent: VBoxContainer, item: ItemData) -> void:
+	if _refinery == null:
+		return
+	if _refinery.is_maxed(item):
+		parent.add_child(_label("Fully refined (+%d)" % item.upgrade_level, SMALL_FONT,
+				Color(1.0, 0.85, 0.3)))
+	else:
+		var cost := _refinery.cost_for(item)
+		var chance := roundi(_refinery.chance_for(item) * 100.0)
+		var button := _button("UPGRADE +%d -> +%d   %d%%   cost %d stones" % [
+				item.upgrade_level, item.upgrade_level + 1, chance, cost])
+		button.disabled = _inventory.stones < cost
+		button.pressed.connect(refine.bind(item))
+		parent.add_child(button)
+		var note := "Fails drop it one level; it never breaks."
+		if item.fail_streak > 0:
+			note += " Luck builds: +%d%% from %d failures." % [
+					roundi(item.fail_streak * _loot.upgrade_pity_per_fail * 100.0), item.fail_streak]
+		parent.add_child(_label(note, SMALL_FONT - 1, Color(1, 1, 1, 0.55)))
+		if not button.disabled:
+			_focus_target = button
+	if _refine_text != "":
+		parent.add_child(_label(_refine_text, SMALL_FONT + 1, _refine_color))
 
 
 ## "+" buttons get a solid look: dim when no point can go there, gold when one can.
@@ -247,11 +378,20 @@ func _style_plus(button: Button) -> void:
 
 func _select(index: int) -> void:
 	_selected = -1 if _selected == index else index
+	_selected_slot = -1
+	_refine_text = ""
+	_rebuild()
+
+
+func _select_equipped(slot: int) -> void:
+	_selected_slot = -1 if _selected_slot == slot else slot
+	_selected = -1
+	_refine_text = ""
 	_rebuild()
 
 
 func _item_title(item: ItemData) -> String:
-	return "%s (%s %s)" % [item.item_name, _loot.rarity_names[item.rarity],
+	return "%s (%s %s)" % [item.display_name(), _loot.rarity_names[item.rarity],
 			_loot.slot_names[item.slot]]
 
 

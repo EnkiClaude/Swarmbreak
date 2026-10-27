@@ -21,12 +21,16 @@ const START_POSITION := Vector3.ZERO
 @export var progression_config: ProgressionConfig
 @export var skill_tree: SkillTree
 @export var loot_config: LootConfig
+@export var job_tree: JobTree
+@export var boss_config: BossConfig
 
 var combat: PlayerCombat
 var zone: ZoneDirector
 var progress: PlayerProgress
 var inventory: Inventory
 var stats: PlayerStats
+var bosses: BossSystem
+var refinery: Refinery
 
 var _loot_rng := RandomNumberGenerator.new()
 
@@ -55,29 +59,36 @@ func _ready() -> void:
 	var half_extent := _arena.config.half_extent
 	progress = PlayerProgress.new(progression_config, skill_tree)
 	inventory = Inventory.new(loot_config.backpack_size)
-	stats = PlayerStats.new(progress, skill_tree, inventory, progression_config)
+	stats = PlayerStats.new(progress, skill_tree, inventory, progression_config, job_tree)
 	inventory.changed.connect(stats.recompute)
 	progress.leveled_up.connect(_on_leveled_up)
 	_player.setup(_camera_rig, half_extent)
 	_player.set_stats(stats)
 	_camera_rig.follow(_player)
 	_corpses.setup(_swarm.config.enemy_types, feedback_config)
-	_swarm.setup(half_extent, _effects, _corpses, zone_config.max_camps)
+	_swarm.setup(half_extent, _effects, _corpses, zone_config.max_camps, boss_config.max_per_zone)
 	_projectiles.setup(_player.config.bolt, _effects, half_extent)
-	zone = ZoneDirector.new(zone_config, _swarm, half_extent)
+	bosses = BossSystem.new(boss_config, _swarm, _effects)
+	bosses.slammed.connect(_on_boss_slammed)
+	bosses.boss_killed.connect(_on_boss_killed)
+	zone = ZoneDirector.new(zone_config, _swarm, half_extent, bosses, boss_config)
 	combat = PlayerCombat.new(_player, _swarm, _projectiles, _effects, zone, stats)
 	zone.camp_cleared.connect(_on_camp_cleared)
 	_loot_rng.randomize()
 	_loot.setup(loot_config, inventory, ItemGenerator.new(loot_config))
 	_loot.picked_up.connect(_on_item_picked_up)
 	_loot.backpack_full.connect(_on_backpack_full)
-	_menu.setup(progress, skill_tree, inventory, stats, loot_config)
+	refinery = Refinery.new(loot_config)
+	_menu.setup(progress, skill_tree, inventory, stats, loot_config, job_tree, refinery)
+	_menu.job_chosen.connect(_on_job_chosen)
+	_menu.refined.connect(_on_refined)
 	_menu.opened.connect(_touch.release_all)
 	_sfx.setup(audio_config)
 	_popup.setup(feedback_config)
 	_feedback.setup(feedback_config, audio_config, _camera_rig, _popup, _sfx, _swarm, combat,
 			_projectiles, _player)
 	_hud.setup(_player.vitals, zone, _player, half_extent, progress)
+	_hud.setup_bosses_and_jobs(bosses, boss_config.display_name, job_tree)
 	_overlay.swarm = _swarm
 	_overlay.combat = combat
 	start_zone(1)
@@ -114,6 +125,8 @@ func _process(delta: float) -> void:
 	zone.record_deaths(_swarm.resolve_deaths())
 	progress.add_xp(_swarm.last_xp)
 	zone.tick(player_pos)
+	if alive:
+		bosses.tick(dt, player_pos, _player.vitals)
 	_loot.tick(dt, player_pos)
 	_update_player_health(dt, now, alive)
 	_update_zone_flow(dt)
@@ -136,9 +149,15 @@ func _update_player_health(dt: float, now: float, alive: bool) -> void:
 		_hud.flash_hurt(taken)
 		_feedback.player_hurt(taken, dt)
 	if vitals.is_dead():
-		_popup.show_message("YOU DIED", Color(1.0, 0.3, 0.25), _player.config.respawn_delay)
-		_restart_in = _player.config.respawn_delay
-		_restart_level = zone.level
+		_on_player_died()
+
+
+func _on_player_died() -> void:
+	if _restart_in >= 0.0:
+		return
+	_popup.show_message("YOU DIED", Color(1.0, 0.3, 0.25), _player.config.respawn_delay)
+	_restart_in = _player.config.respawn_delay
+	_restart_level = zone.level
 
 
 func _update_zone_flow(dt: float) -> void:
@@ -157,6 +176,36 @@ func _on_camp_cleared(_camp: int, at: Vector2, last_camp: bool) -> void:
 	if last_camp:
 		amount += loot_config.zone_clear_bonus_drops
 	_loot.drop(at, amount, zone.level)
+	var stones := _loot_rng.randi_range(loot_config.camp_stones_min, loot_config.camp_stones_max)
+	inventory.add_stones(stones)
+	_hud.toast("+%d Refining Stones" % stones, Color(0.75, 0.85, 1.0))
+
+
+func _on_boss_killed(_slot: int, at: Vector2) -> void:
+	_loot.drop(at, boss_config.extra_drops, zone.level, boss_config.min_drop_rarity)
+	inventory.add_stones(boss_config.stones)
+	_hud.banner("%s SLAIN" % boss_config.display_name.to_upper(), Color(1.0, 0.7, 0.3), 2.0)
+	_hud.toast("+%d Refining Stones" % boss_config.stones, Color(0.75, 0.85, 1.0))
+
+
+func _on_boss_slammed(_center: Vector2, _inside: bool, damage: float) -> void:
+	_feedback.boss_slam(damage > 0.0)
+	if damage > 0.0:
+		_hud.flash_hurt(damage)
+		if _player.vitals.is_dead():
+			_on_player_died()
+
+
+func _on_job_chosen(job: int) -> void:
+	_hud.banner(job_tree.jobs[job].display_name.to_upper(), job_tree.jobs[job].color, 2.0)
+	_feedback.level_up()
+
+
+func _on_refined(result: Refinery.Result, _item: ItemData) -> void:
+	if result == Refinery.Result.SUCCESS:
+		_feedback.refined(true)
+	elif result == Refinery.Result.DOWNGRADED or result == Refinery.Result.FAILED:
+		_feedback.refined(false)
 
 
 func _on_item_picked_up(item: ItemData) -> void:
@@ -171,6 +220,8 @@ func _on_backpack_full() -> void:
 
 
 func _on_leveled_up(level: int) -> void:
+	if progress.promote_if_ready(job_tree):
+		_hud.toast("Promoted to %s!" % progress.job_title(job_tree), job_tree.jobs[progress.job].color)
 	stats.recompute()
 	_player.vitals.health = _player.vitals.max_health
 	_player.vitals.mana = _player.vitals.max_mana
