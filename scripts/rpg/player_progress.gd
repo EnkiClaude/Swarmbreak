@@ -5,6 +5,7 @@ extends RefCounted
 
 signal leveled_up(level: int)
 signal job_changed(job: int, rank: int)
+signal skills_changed
 
 var level := 1
 var xp := 0.0
@@ -95,4 +96,16 @@ func rank_up(skill: int) -> bool:
 		return false
 	ranks[skill] += 1
 	skill_points -= 1
+	skills_changed.emit()
 	return true
+
+
+## Back to a brand-new level 1 character (New Game).
+func reset() -> void:
+	level = 1
+	xp = 0.0
+	skill_points = 0
+	ranks.fill(0)
+	job = -1
+	job_rank = 0
+	job_changed.emit(job, job_rank)

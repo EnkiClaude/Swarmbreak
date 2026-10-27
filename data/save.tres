@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="SaveConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/save_config.gd" id="1_save"]
+
+[resource]
+script = ExtResource("1_save")
+path = "user://swarmbreak_save.json"
+autosave_delay = 1.5
+periodic_save_interval = 30.0

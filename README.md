@@ -21,6 +21,8 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M5:** saving. Autosaves your character, gear and zone; reload to carry
+  on; New Game on the character screen starts over.
 - **M4:** jobs, bosses and refining. Choose a path at level 10 (Stormcaller,
   Warlord or Arcanist) that changes how an ability works, promoted at 25;
   camp bosses with a telegraphed ground slam and rare drops; refine items

@@ -12,6 +12,8 @@ signal opened
 signal closed
 signal job_chosen(job: int)
 signal refined(result: Refinery.Result, item: ItemData)
+## The player confirmed erasing their save and starting over.
+signal new_game_requested
 
 const FONT_SIZE := 22
 const SMALL_FONT := 17
@@ -35,6 +37,8 @@ var _selected_slot := -1
 var _refine_text := ""
 var _refine_color := Color.WHITE
 var _focus_target: Control
+## New Game needs a second press to confirm.
+var _confirm_new_game := false
 
 
 func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stats: PlayerStats,
@@ -81,6 +85,7 @@ func open() -> void:
 	_selected = -1
 	_selected_slot = -1
 	_refine_text = ""
+	_confirm_new_game = false
 	get_tree().paused = true
 	Input.emulate_mouse_from_touch = true
 	_rebuild()
@@ -183,6 +188,7 @@ func _rebuild() -> void:
 	_build_totals(left)
 	_build_equipment(right)
 	_build_backpack(right)
+	_build_new_game(left)
 	if _focus_target != null:
 		_grab_focus_later.call_deferred(_focus_target)
 
@@ -374,6 +380,25 @@ func _style_plus(button: Button) -> void:
 	button.add_theme_stylebox_override("focus", hover)
 	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.35))
 	button.add_theme_color_override("font_color", Color(0.1, 0.08, 0.02))
+
+
+func _build_new_game(parent: VBoxContainer) -> void:
+	var button := _button("TAP AGAIN TO ERASE YOUR SAVE" if _confirm_new_game else "NEW GAME")
+	button.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4) if _confirm_new_game
+			else Color(1, 1, 1, 0.6))
+	button.pressed.connect(press_new_game)
+	parent.add_child(button)
+
+
+## First press asks for confirmation; the second erases and restarts.
+func press_new_game() -> void:
+	if not _confirm_new_game:
+		_confirm_new_game = true
+		_rebuild()
+		return
+	_confirm_new_game = false
+	close()
+	new_game_requested.emit()
 
 
 func _select(index: int) -> void:
