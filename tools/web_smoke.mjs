@@ -40,10 +40,12 @@ const touch = (type, points) =>
   cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points });
 const problems = [];
 let booted = false;
+let saveLoaded = false;
 page.on("console", (msg) => {
   const text = msg.text();
   console.log(`[console.${msg.type()}] ${text}`);
   if (text.includes("Godot Engine v")) booted = true;
+  if (text.includes("Save loaded")) saveLoaded = true;
   if (msg.type() === "error" || /SCRIPT ERROR|Parse Error|^ERROR:/.test(text)) problems.push(text);
 });
 page.on("pageerror", (err) => problems.push(`page error: ${err.message}`));
@@ -98,11 +100,19 @@ await page.waitForTimeout(800);
 await shot("menu");
 await page.keyboard.press("Tab");
 await page.waitForTimeout(500);
+
+// Opening and closing the character screen saved the game; a reload must
+// find that save in the browser's storage.
+booted = false;
+await page.reload();
+await page.waitForTimeout(12000);
+await shot("reloaded");
 await page.waitForTimeout(500);
 
 await browser.close();
 server.close();
 if (!booted) problems.push("engine never printed its version banner");
+if (!saveLoaded) problems.push("the save was not found after reloading the page");
 for (const p of problems) console.log(`PROBLEM ${p}`);
 console.log(problems.length ? `web smoke: ${problems.length} problem(s)` : "web smoke: ok");
 process.exit(problems.length ? 1 : 0);

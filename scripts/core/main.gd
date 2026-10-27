@@ -10,7 +10,8 @@ extends Node3D
 ## Zone flow: a zone starts with all camps asleep. Clearing every camp moves
 ## on to the next level after a short pause; dying restarts the current one.
 ## Character progress (level, skills, items) carries across both. Clearing a
-## camp drops loot; kills give XP.
+## camp drops loot; kills give XP. Progress autosaves (SaveManager) and the
+## game resumes at the saved zone.
 
 const ZONE_MESSAGE_TIME := 2.0
 const START_POSITION := Vector3.ZERO
@@ -23,6 +24,7 @@ const START_POSITION := Vector3.ZERO
 @export var loot_config: LootConfig
 @export var job_tree: JobTree
 @export var boss_config: BossConfig
+@export var save_config: SaveConfig
 
 var combat: PlayerCombat
 var zone: ZoneDirector
@@ -31,6 +33,7 @@ var inventory: Inventory
 var stats: PlayerStats
 var bosses: BossSystem
 var refinery: Refinery
+var save: SaveManager
 
 var _loot_rng := RandomNumberGenerator.new()
 
@@ -91,7 +94,55 @@ func _ready() -> void:
 	_hud.setup_bosses_and_jobs(bosses, boss_config.display_name, job_tree)
 	_overlay.swarm = _swarm
 	_overlay.combat = combat
+	save = SaveManager.new(save_config, progress, inventory, job_tree,
+			progression_config.max_level, loot_config.upgrade_max)
+	var level := save.load_game()
+	stats.recompute()
+	_connect_autosave()
+	start_zone(level)
+	_greet()
+
+
+## Every change worth keeping schedules an autosave.
+func _connect_autosave() -> void:
+	progress.leveled_up.connect(save.mark_dirty.unbind(1))
+	progress.job_changed.connect(save.mark_dirty.unbind(2))
+	progress.skills_changed.connect(save.mark_dirty)
+	inventory.changed.connect(save.mark_dirty)
+	_menu.opened.connect(save.save_now)
+	_menu.closed.connect(save.save_now)
+	_menu.new_game_requested.connect(new_game)
+
+
+func _greet() -> void:
+	match save.status():
+		SaveStore.Status.OK:
+			var title := progress.job_title(job_tree)
+			_hud.toast("Welcome back - level %d%s" % [progress.level,
+					" " + title if title != "" else ""], Color(0.75, 0.9, 1.0))
+		SaveStore.Status.CORRUPT:
+			_hud.toast("Your save couldn't be read; starting fresh (kept a backup)",
+					Color(1.0, 0.6, 0.4))
+
+
+## Erases the save and starts a brand-new character at zone 1.
+func new_game() -> void:
+	save.erase()
+	progress.reset()
+	inventory.reset()
+	stats.recompute()
 	start_zone(1)
+	save.save_now()
+	_hud.toast("New game started", Color(0.75, 0.9, 1.0))
+
+
+func _notification(what: int) -> void:
+	# Closing the window, switching tabs or backgrounding a phone: save now.
+	if save == null:
+		return
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_FOCUS_OUT \
+			or what == NOTIFICATION_APPLICATION_PAUSED:
+		save.save_now()
 
 
 ## Resets the player and spawns the given level's camps.
@@ -102,6 +153,8 @@ func start_zone(level: int) -> void:
 	_player.reset_to(START_POSITION)
 	_player.vitals.reset()
 	_camera_rig.follow(_player)
+	if save != null:
+		save.set_zone_level(level)
 	_popup.show_message("ZONE %d" % level, Color(0.85, 0.9, 1.0), ZONE_MESSAGE_TIME)
 
 
@@ -136,6 +189,7 @@ func _process(delta: float) -> void:
 	_popup.tick(dt)
 	_hud.tick(dt)
 	_camera_rig.tick(dt)
+	save.tick(dt)
 	_overlay.sim_usec = Time.get_ticks_usec() - start
 
 

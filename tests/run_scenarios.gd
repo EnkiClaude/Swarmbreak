@@ -4,6 +4,7 @@ extends SceneTree
 ##   godot --headless --path . --fixed-fps 60 -s res://tests/run_scenarios.gd
 
 const MAIN_SCENE := "res://scenes/main.tscn"
+const SCENARIO_SAVE := "user://scenario_save.json"
 
 var _failures: PackedStringArray = []
 var _main: Node
@@ -27,6 +28,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# Never touch a real save: use a scratch file, starting empty.
+	var save_config := load("res://data/save.tres") as SaveConfig
+	save_config.path = SCENARIO_SAVE
+	DirAccess.remove_absolute(SCENARIO_SAVE)
 	_main = (load(MAIN_SCENE) as PackedScene).instantiate()
 	root.add_child(_main)
 	_swarm = _main.get_node("Swarm") as SwarmManager
@@ -56,6 +61,7 @@ func _run() -> void:
 	await _scenario_async("kills give XP and level-ups refill and grant points", _xp_and_levels)
 	await _scenario_async("Stormcaller novas send aftershocks", _stormcaller_aftershocks)
 	await _scenario_async("refining raises or lowers an item but never breaks it", _refining)
+	await _scenario_async("progress autosaves and loads back", _autosave_and_load)
 	await _scenario_async("bolts burst on enemies ahead", _bolts_hit)
 	await _scenario_async("touch move stick moves the player", _touch_move)
 	await _scenario_async("touch FIRE stick fires and aims", _touch_fire)
@@ -66,6 +72,7 @@ func _run() -> void:
 	await _scenario_async("without mana the nova does not cast", _nova_needs_mana)
 	await _scenario_async("dying restarts the zone", _death_restarts_zone)
 	await _scenario_async("clearing every camp starts the next zone", _clear_advances_zone)
+	await _scenario_async("New Game erases the save and starts over", _new_game)
 
 	print("%d scenario checks failed" % _failures.size())
 	for failure in _failures:
@@ -624,3 +631,51 @@ func _refining() -> void:
 	_check(item.upgrade_level >= 0 and item.upgrade_level <= 10,
 			"level %d in range" % item.upgrade_level)
 	_check(inventory.stones < 500, "stones were spent")
+
+
+func _autosave_and_load() -> void:
+	var progress := _main_var("progress") as PlayerProgress
+	var inventory := _main_var("inventory") as Inventory
+	var save := _main_var("save") as SaveManager
+	inventory.add_stones(7)
+	_check(save.is_dirty(), "a change schedules an autosave")
+	await _frames(roundi(1.5 * 60.0) + 10)
+	_check(not save.is_dirty(), "autosave written after the delay")
+	_check(FileAccess.file_exists(SCENARIO_SAVE), "save file exists")
+	# Load the file into fresh objects, as a restart would.
+	var jobs := _main_var("job_tree") as JobTree
+	var copy := PlayerProgress.new(_main_var("progression_config") as ProgressionConfig,
+			_main_var("skill_tree") as SkillTree)
+	var copy_inventory := Inventory.new(inventory.backpack_size)
+	var store := SaveStore.new(SCENARIO_SAVE)
+	var zone := SaveCodec.decode(store.read(), copy, copy_inventory, jobs, 50, 10)
+	_check(zone == _zone.level, "saved zone %d (playing %d)" % [zone, _zone.level])
+	_check(copy.level == progress.level and copy.job == progress.job,
+			"level %d and job %d restored" % [copy.level, copy.job])
+	_check(copy_inventory.stones == inventory.stones, "stones restored")
+	var equipped := 0
+	for item in copy_inventory.equipped:
+		if item != null:
+			equipped += 1
+	var live_equipped := 0
+	for item in inventory.equipped:
+		if item != null:
+			live_equipped += 1
+	_check(equipped == live_equipped, "equipped items restored (%d)" % equipped)
+
+
+func _new_game() -> void:
+	var progress := _main_var("progress") as PlayerProgress
+	var inventory := _main_var("inventory") as Inventory
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	menu.open()
+	menu.press_new_game()
+	_check(menu.is_open(), "first press only asks to confirm")
+	menu.press_new_game()
+	await _frames(2)
+	_check(not menu.is_open() and not paused, "confirmed: menu closed, game running")
+	_check(progress.level == 1 and progress.job == -1, "back to a level 1 character")
+	_check(inventory.stones == 0 and inventory.backpack.is_empty(), "inventory emptied")
+	_check(_zone.level == 1, "back to zone 1")
+	var data := SaveStore.new(SCENARIO_SAVE).read()
+	_check(int(data.get("progress", {}).get("level", 0)) == 1, "the save was overwritten")

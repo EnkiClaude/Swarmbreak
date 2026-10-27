@@ -62,6 +62,14 @@ func add_stones(amount: int) -> void:
 	changed.emit()
 
 
+## Empties everything (New Game).
+func reset() -> void:
+	equipped = [null, null, null]
+	backpack.clear()
+	stones = 0
+	changed.emit()
+
+
 ## Call after changing an item in place (e.g. refining it).
 func notify_changed() -> void:
 	changed.emit()

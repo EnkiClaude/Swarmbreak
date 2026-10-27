@@ -71,6 +71,7 @@ scripts/
   rpg/              Stats, XP, levels, jobs, items, rolls, inventory, Refinery.
   loot/             Ground loot: drops, magnet, pickup.
   ui/               Character screen (skills, equipment, backpack).
+  save/             Save file: codec (Dictionary <-> progress), store, autosave.
   swarm/            Swarm state, flow field, spatial hash, steering, rendering.
   combat/           Damage queries, abilities, cooldowns, pooled bolts.
   effects/          Pooled visual effects.
@@ -119,6 +120,16 @@ to the next try. Keep it that way: no item loss.
 
 Item data is a small object created per drop. That's allowed because drops
 happen per camp, not per frame; ground loot itself is a fixed pool.
+
+## Saving
+
+`SaveManager` autosaves the character (level, XP, skills, job, items,
+stones) and the zone reached to `user://` (the browser's storage on web).
+Anything worth keeping calls `mark_dirty()`, and the write happens
+`autosave_delay` later. The menu, tab switches and closing save immediately.
+`SaveCodec` must stay tolerant: when adding saved fields, read them with a
+default so older saves still load, and bump `VERSION` only for breaking
+changes. Scenarios point `data/save.tres` at a scratch file.
 
 ## Camp bosses
 
