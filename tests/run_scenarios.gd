@@ -52,6 +52,7 @@ func _run() -> void:
 	await _scenario_async("a camp wakes when the player comes near", _camp_wakes_on_approach)
 	await _scenario_async("lure wakes camps in range and hurries them", _lure_wakes_camps)
 	await _scenario_async("clearing a camp drops loot you can pick up", _camp_drops_loot)
+	await _scenario_async("with a full backpack, loot stays put until there's room", _full_backpack)
 	await _scenario_async("the character screen pauses and spends points", _character_menu)
 	await _scenario_async("player moves with move_right", _player_moves)
 	await _scenario_async("debug_spawn adds a batch", _debug_spawn)
@@ -679,3 +680,38 @@ func _new_game() -> void:
 	_check(_zone.level == 1, "back to zone 1")
 	var data := SaveStore.new(SCENARIO_SAVE).read()
 	_check(int(data.get("progress", {}).get("level", 0)) == 1, "the save was overwritten")
+
+
+func _full_backpack() -> void:
+	var loot := _main.get_node("Loot") as LootSystem
+	var inventory := _main_var("inventory") as Inventory
+	var saved_backpack := inventory.backpack.duplicate()
+	var saved_equipped := inventory.equipped.duplicate()
+	# Weapon slot taken and the backpack full of weapons.
+	var filler := ItemData.new()
+	filler.slot = AffixDef.Slot.WEAPON
+	filler.item_name = "Filler"
+	inventory.equipped[AffixDef.Slot.WEAPON] = filler
+	while inventory.backpack.size() < inventory.backpack_size:
+		inventory.backpack.append(filler)
+	loot.clear()
+	var item := ItemData.new()
+	item.slot = AffixDef.Slot.WEAPON
+	item.item_name = "Dropped Wand"
+	var spot := _player.ground_position() + Vector2(2.5, 0.0)
+	loot.place(item, spot)
+	await _frames(60)
+	_check(loot.ground_count() == 1, "the item wasn't picked up")
+	_check(loot.item_position(0).distance_to(spot) < 0.01,
+			"the item stayed where it dropped (moved %.2f m)" % loot.item_position(0).distance_to(spot))
+	_teleport(spot)
+	await _frames(30)
+	_check(loot.ground_count() == 1, "standing on it with no room doesn't pick it up")
+	inventory.discard(0)
+	await _frames(30)
+	_check(loot.ground_count() == 0, "once there's room, it's picked up")
+	_check(inventory.backpack.has(item), "it went into the backpack")
+	inventory.backpack.assign(saved_backpack)
+	inventory.equipped.assign(saved_equipped)
+	inventory.notify_changed()
+	_teleport(Vector2.ZERO)

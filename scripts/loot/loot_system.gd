@@ -1,7 +1,8 @@
 class_name LootSystem
 extends Node3D
 ## Items lying on the ground. Drops scatter around where a camp was cleared;
-## items near the player drift toward it and are picked up on touch. Gems
+## items near the player drift toward it and are picked up on touch. Items
+## the inventory can't take right now stay put (no magnet) until there's room. Gems
 ## bob and spin; magic and rare items also show a light beam. Ground slots
 ## are a fixed pool drawn with two InstanceBatches.
 
@@ -74,6 +75,11 @@ func ground_count() -> int:
 	return _count
 
 
+## Ground position of the i-th item (0 <= i < ground_count()).
+func item_position(i: int) -> Vector2:
+	return Vector2(_positions[i].x, _positions[i].z)
+
+
 func tick(delta: float, player_pos: Vector2) -> void:
 	_time += delta
 	_full_warning_in -= delta
@@ -83,15 +89,19 @@ func tick(delta: float, player_pos: Vector2) -> void:
 		var p: Vector3 = _positions[i]
 		var to_player := player_pos - Vector2(p.x, p.z)
 		var d_sq := to_player.length_squared()
-		if d_sq <= pickup_sq:
-			if _inventory.add(_items[i]):
-				picked_up.emit(_items[i])
-				_remove(i)
-				continue
-			if _full_warning_in <= 0.0:
+		if d_sq > magnet_sq:
+			continue
+		if not _inventory.can_accept(_items[i]):
+			# Leave it where it lies; pulling it along would pile items under the player.
+			if d_sq <= pickup_sq and _full_warning_in <= 0.0:
 				_full_warning_in = FULL_WARNING_INTERVAL
 				backpack_full.emit()
-		elif d_sq <= magnet_sq:
+			continue
+		if d_sq <= pickup_sq:
+			_inventory.add(_items[i])
+			picked_up.emit(_items[i])
+			_remove(i)
+		else:
 			var step := to_player.normalized() * minf(_config.magnet_speed * delta, sqrt(d_sq))
 			_positions[i] = Vector3(p.x + step.x, p.y, p.z + step.y)
 	_draw()

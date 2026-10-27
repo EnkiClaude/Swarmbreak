@@ -75,8 +75,13 @@ func banner_showing() -> bool:
 	return _banner_left > 0.0
 
 
-## Shows a short message bottom-left, e.g. an item pickup.
+## Shows a short message bottom-left, e.g. an item pickup. Repeating a
+## message that's still showing refreshes it instead of adding a line.
 func toast(text: String, color: Color) -> void:
+	var existing := _toast_texts.find(text)
+	if existing >= 0:
+		_toast_ages[existing] = 0.0
+		return
 	_toast_texts.append(text)
 	_toast_colors.append(color)
 	_toast_ages.append(0.0)
@@ -120,7 +125,7 @@ func _draw_bars() -> void:
 	var h := config.bar_height
 	var top := center.y - h - config.bar_gap * 0.5
 	_draw_bar(Rect2(center.x - w * 0.5, top, w, h), _vitals.health / _vitals.max_health,
-			config.health_color, "%d / %d" % [ceili(_vitals.health), roundi(_vitals.max_health)])
+			config.health_color, _health_text())
 	_draw_bar(Rect2(center.x - w * 0.5, top + h + config.bar_gap, w, h),
 			_vitals.mana / _vitals.max_mana, config.mana_color, "%d" % floori(_vitals.mana))
 	var line := ""
@@ -141,6 +146,12 @@ func _draw_bars() -> void:
 	if _zone != null:
 		line += "ZONE %d   camps left %d" % [_zone.level, _zone.camps_left()]
 	_draw_text_centered(Vector2(center.x, top - 10.0), line, Color(1, 1, 1, 0.85))
+
+
+## Rounds both numbers the same way, so health never reads above max.
+func _health_text() -> String:
+	var shown_max := ceili(_vitals.max_health)
+	return "%d / %d" % [mini(ceili(_vitals.health), shown_max), shown_max]
 
 
 func _draw_bar(rect: Rect2, fraction: float, color: Color, label: String) -> void:
