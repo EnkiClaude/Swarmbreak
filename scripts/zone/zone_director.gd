@@ -22,20 +22,28 @@ var alive_total := 0
 
 var _config: ZoneConfig
 var _swarm: SwarmManager
+var _bosses: BossSystem
+var _boss_config: BossConfig
 var _half_extent: float
 var _rng := RandomNumberGenerator.new()
 
 
-func _init(config: ZoneConfig, swarm: SwarmManager, half_extent: float) -> void:
+func _init(config: ZoneConfig, swarm: SwarmManager, half_extent: float,
+		bosses: BossSystem = null, boss_config: BossConfig = null) -> void:
 	_config = config
 	_swarm = swarm
 	_half_extent = half_extent
+	_bosses = bosses
+	_boss_config = boss_config
 
 
-## Clears the swarm and spawns this level's camps, all asleep.
+## Clears the swarm and spawns this level's camps, all asleep. Big camps may
+## get a boss at their center; every zone gets at least the guaranteed ones.
 func generate(p_level: int, player_start: Vector2) -> void:
 	level = p_level
 	_swarm.clear()
+	if _bosses != null:
+		_bosses.reset()
 	camp_centers.clear()
 	camp_alive.clear()
 	camp_awake.clear()
@@ -61,14 +69,25 @@ func generate(p_level: int, player_start: Vector2) -> void:
 		if not crowded:
 			camp_centers.append(candidate)
 	var heavy_type := 1 if _swarm.config.enemy_types.size() > 1 else 0
+	var health_mult := 1.0 + _config.health_growth * (level - 1)
+	var sizes := PackedInt32Array()
 	for camp in camp_centers.size():
-		var size := roundi(_rng.randf_range(_config.camp_size_min, _config.camp_size_max) * growth)
+		sizes.append(roundi(_rng.randf_range(_config.camp_size_min, _config.camp_size_max) * growth))
+	var boss_camps := _pick_boss_camps(sizes)
+	for camp in camp_centers.size():
 		var spawned := 0
 		var spiral := _config.member_spacing * SPIRAL_DENSITY
-		for k in size:
+		var has_boss := boss_camps.has(camp)
+		if has_boss and _spawn_boss(camp):
+			spawned += 1
+		# With a boss in the middle, members start a few rings out.
+		var first := 6 if has_boss else 0
+		for k in range(first, first + sizes[camp]):
 			var offset := Vector2.from_angle(k * GOLDEN_ANGLE) * spiral * sqrt(k + 0.5)
 			var type_id := heavy_type if _rng.randf() < _config.heavy_chance else 0
-			if _swarm.spawn_at(camp_centers[camp] + offset, type_id, camp, false) >= 0:
+			var i := _swarm.spawn_at(camp_centers[camp] + offset, type_id, camp, false)
+			if i >= 0:
+				_swarm.state.health[i] *= health_mult
 				spawned += 1
 		camp_alive.append(spawned)
 		camp_awake.append(0)
@@ -121,6 +140,34 @@ func camps_left() -> int:
 		if alive > 0:
 			left += 1
 	return left
+
+
+func _pick_boss_camps(sizes: PackedInt32Array) -> PackedInt32Array:
+	var picked := PackedInt32Array()
+	if _bosses == null or _boss_config == null:
+		return picked
+	for camp in sizes.size():
+		if sizes[camp] >= _boss_config.min_camp_size and _rng.randf() < _boss_config.chance:
+			picked.append(camp)
+	# Top up to the guaranteed count with the biggest camps left.
+	while picked.size() < mini(_boss_config.guaranteed_per_zone, sizes.size()):
+		var biggest := -1
+		for camp in sizes.size():
+			if not picked.has(camp) and (biggest < 0 or sizes[camp] > sizes[biggest]):
+				biggest = camp
+		picked.append(biggest)
+	while picked.size() > _boss_config.max_per_zone:
+		picked.remove_at(picked.size() - 1)
+	return picked
+
+
+func _spawn_boss(camp: int) -> bool:
+	var type_id := _boss_config.type_index
+	var i := _swarm.spawn_at(camp_centers[camp], type_id, camp, false)
+	if i < 0:
+		return false
+	var health := _swarm.type_max_health(type_id) * (1.0 + _boss_config.health_growth * (level - 1))
+	return _bosses.add(i, health) >= 0
 
 
 func _wake(camp: int) -> void:

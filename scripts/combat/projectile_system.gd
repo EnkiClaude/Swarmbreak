@@ -2,17 +2,23 @@ class_name ProjectileSystem
 extends Node3D
 ## Pooled player bolts. A bolt flies straight and bursts when it touches an
 ## enemy or reaches the end of its life, damaging everything in burst_radius.
-## Bolts leaving the arena vanish without bursting.
+## With pierce (Arcanist), a bolt bursts and keeps flying, up to `pierce`
+## more times. Bolts leaving the arena vanish without bursting.
 
 signal bolt_burst(at: Vector2)
 
 const MESH_RADIAL_SEGMENTS := 8
 const MESH_RINGS := 4
+## After a piercing burst, a bolt ignores hits this long so it flies clear.
+const PIERCE_GRACE := 0.08
 
 ## Bolts fired since setup, for tests and stats.
 var fired_total: int = 0
 ## Scales bolt burst damage (from player stats).
 var damage_multiplier := 1.0
+## From the job: extra bursts per bolt, and burst size.
+var pierce := 0
+var burst_radius_multiplier := 1.0
 
 var _config: BoltConfig
 var _pool: ProjectilePool
@@ -36,7 +42,8 @@ func setup(config: BoltConfig, effects: EffectSystem, arena_half_extent: float) 
 
 ## Fires one bolt from origin along direction (unit, XZ plane). False if the pool is full.
 func fire(origin: Vector2, direction: Vector2) -> bool:
-	if not _pool.spawn(origin + direction * _config.muzzle_offset, direction * _config.speed):
+	if not _pool.spawn(origin + direction * _config.muzzle_offset, direction * _config.speed,
+			pierce):
 		return false
 	fired_total += 1
 	return true
@@ -51,11 +58,19 @@ func tick(delta: float, swarm: SwarmManager) -> void:
 		if absf(p.x) > h or absf(p.y) > h:
 			_pool.remove(i)
 			continue
-		if _pool.ages[i] >= _config.lifetime or swarm.first_hit(p, _config.hit_radius) >= 0:
-			swarm.damage_circle(p, _config.burst_radius, _config.damage * damage_multiplier,
-					_config.knockback)
-			_effects.spawn(_burst_effect, Vector3(p.x, 0.0, p.y), _config.burst_radius)
-			bolt_burst.emit(p)
+		var expired := _pool.ages[i] >= _config.lifetime
+		var hit := not expired and _pool.hit_cooldown[i] <= 0.0 \
+				and swarm.first_hit(p, _config.hit_radius) >= 0
+		if not expired and not hit:
+			continue
+		var radius := _config.burst_radius * burst_radius_multiplier
+		swarm.damage_circle(p, radius, _config.damage * damage_multiplier, _config.knockback)
+		_effects.spawn(_burst_effect, Vector3(p.x, 0.0, p.y), radius)
+		bolt_burst.emit(p)
+		if hit and _pool.pierce_left[i] > 0:
+			_pool.pierce_left[i] -= 1
+			_pool.hit_cooldown[i] = PIERCE_GRACE
+		else:
 			_pool.remove(i)
 	_draw()
 

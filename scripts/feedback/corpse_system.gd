@@ -15,8 +15,8 @@ var _rng := RandomNumberGenerator.new()
 func setup(types: Array[EnemyType], config: FeedbackConfig) -> void:
 	_config = config
 	_rng.randomize()
-	@warning_ignore("integer_division")
-	var per_type := maxi(1, config.corpse_capacity / maxi(types.size(), 1))
+	# Each type gets the full capacity: a big break is almost all one type.
+	var per_type := maxi(1, config.corpse_capacity)
 	for t in types:
 		var batch := InstanceBatch.new()
 		batch.name = "Corpses_" + t.display_name

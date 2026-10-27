@@ -11,6 +11,7 @@ camp_size_min = 12
 camp_size_max = 36
 camp_size_growth = 1.15
 heavy_chance = 0.1
+health_growth = 0.15
 member_spacing = 0.95
 aggro_radius = 11.0
 safe_start_radius = 24.0

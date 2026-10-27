@@ -23,9 +23,10 @@ func _init(state: SwarmState, grid: SpatialHash, types: SwarmTypeTable) -> void:
 
 
 ## Damages and knocks back every live enemy whose center is within radius.
-## Hit enemies flash until flash_until. Returns how many this call killed.
+## Hit enemies flash until flash_until. Marked enemies (mark_until > now)
+## take mark_bonus extra damage. Returns how many this call killed.
 func damage_circle(center: Vector2, radius: float, damage: float, knockback: float,
-		flash_until: float) -> int:
+		flash_until: float, now: float = 0.0, mark_bonus: float = 0.0) -> int:
 	var positions := _state.positions
 	var velocities := _state.velocities
 	var health := _state.health
@@ -33,6 +34,10 @@ func damage_circle(center: Vector2, radius: float, damage: float, knockback: flo
 	var awake := _state.awake
 	var camp_ids := _state.camp_ids
 	var alarm := _state.camp_alarm
+	var marks := _state.mark_until
+	var type_ids := _state.type_ids
+	var resist := _types.knockback_resist
+	var marked_damage := damage * (1.0 + mark_bonus)
 	var bucket_start := _grid.bucket_start
 	var sorted_ids := _grid.sorted_ids
 	var stamp := _grid.visit_stamp
@@ -60,13 +65,14 @@ func damage_circle(center: Vector2, radius: float, damage: float, knockback: flo
 				var d_sq: float = away.length_squared()
 				if d_sq > r_sq:
 					continue
-				hp -= damage
+				hp -= marked_damage if marks[i] > now else damage
 				health[i] = hp
 				flash[i] = flash_until
 				if hp <= 0.0:
 					kills += 1
 				if d_sq > OVERLAP_EPSILON:
-					velocities[i] += away * (knockback / sqrt(d_sq))
+					var push: float = knockback * (1.0 - resist[type_ids[i]])
+					velocities[i] += away * (push / sqrt(d_sq))
 				if awake[i] == 0:
 					awake[i] = 1
 					var camp: int = camp_ids[i]

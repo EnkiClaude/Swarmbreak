@@ -12,6 +12,7 @@ var separation_radius: PackedFloat32Array
 var separation_strength: PackedFloat32Array
 var contact_dps: PackedFloat32Array
 var attack_reach: PackedFloat32Array
+var knockback_resist: PackedFloat32Array
 
 
 func _init(p_types: Array[EnemyType]) -> void:
@@ -26,6 +27,7 @@ func _init(p_types: Array[EnemyType]) -> void:
 		separation_strength.append(t.separation_strength)
 		contact_dps.append(t.contact_dps)
 		attack_reach.append(t.attack_reach)
+		knockback_resist.append(t.knockback_resist)
 
 
 func size() -> int:

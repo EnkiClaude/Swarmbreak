@@ -30,6 +30,7 @@ func setup(config: FeedbackConfig, audio: AudioConfig, camera: CameraRig, popup:
 	combat.bolt_fired.connect(_on_bolt_fired)
 	projectiles.bolt_burst.connect(_on_bolt_burst)
 	combat.lure_cast.connect(_on_lure_cast)
+	combat.aftershock.connect(func(_center: Vector2) -> void: aftershock())
 	combat.out_of_mana.connect(_on_out_of_mana)
 	if player != null:
 		player.dashed.connect(_on_dashed)
@@ -73,6 +74,23 @@ func _on_nova_cast(_center: Vector2) -> void:
 	_camera.add_trauma(_config.shake_nova)
 	_sfx.play(_bank.nova, _audio.nova_db)
 	_vibrate(_config.vibration_nova)
+
+
+## A boss slam landed (shake either way; it's loud).
+func boss_slam(hit_player: bool) -> void:
+	_camera.add_trauma(_config.shake_nova * (1.2 if hit_player else 0.7))
+	_sfx.play(_bank.nova, _audio.nova_db - 3.0)
+	_vibrate(_config.vibration_nova)
+
+
+func aftershock() -> void:
+	_camera.add_trauma(_config.shake_nova * 0.6)
+	_sfx.play(_bank.bolt_burst, _audio.nova_db)
+
+
+func refined(success: bool) -> void:
+	_sfx.play(_bank.level_up if success else _bank.denied,
+			_audio.level_up_db if success else _audio.denied_db)
 
 
 func level_up() -> void:

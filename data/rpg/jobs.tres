@@ -1,0 +1,91 @@
+[gd_resource type="Resource" script_class="JobTree" load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/job_perks.gd" id="1_perks"]
+[ext_resource type="Script" path="res://scripts/config/job_def.gd" id="2_job"]
+[ext_resource type="Script" path="res://scripts/config/job_tree.gd" id="3_tree"]
+
+[sub_resource type="Resource" id="Perks_storm_1"]
+script = ExtResource("1_perks")
+nova_aftershocks = 1
+aftershock_delay = 0.35
+aftershock_radius_multiplier = 1.35
+aftershock_damage_multiplier = 0.55
+stats = Array[int]([7])
+values = PackedFloat32Array(0.1)
+
+[sub_resource type="Resource" id="Perks_storm_2"]
+script = ExtResource("1_perks")
+nova_aftershocks = 2
+aftershock_delay = 0.3
+aftershock_radius_multiplier = 1.4
+aftershock_damage_multiplier = 0.65
+stats = Array[int]([7, 8])
+values = PackedFloat32Array(0.2, 0.1)
+
+[sub_resource type="Resource" id="Perks_war_1"]
+script = ExtResource("1_perks")
+lure_mark_duration = 5.0
+mark_damage_bonus = 0.3
+lure_cooldown_multiplier = 0.7
+stats = Array[int]([0, 12])
+values = PackedFloat32Array(25.0, 0.05)
+
+[sub_resource type="Resource" id="Perks_war_2"]
+script = ExtResource("1_perks")
+lure_mark_duration = 6.0
+mark_damage_bonus = 0.5
+lure_cooldown_multiplier = 0.55
+lure_armor = 0.35
+lure_armor_duration = 4.0
+stats = Array[int]([0, 12, 9])
+values = PackedFloat32Array(50.0, 0.1, 0.15)
+
+[sub_resource type="Resource" id="Perks_arc_1"]
+script = ExtResource("1_perks")
+bolt_pierce = 2
+burst_radius_multiplier = 1.25
+stats = Array[int]([5])
+values = PackedFloat32Array(0.1)
+
+[sub_resource type="Resource" id="Perks_arc_2"]
+script = ExtResource("1_perks")
+bolt_pierce = 4
+burst_radius_multiplier = 1.5
+stats = Array[int]([5, 6])
+values = PackedFloat32Array(0.2, 0.15)
+
+[sub_resource type="Resource" id="Job_storm"]
+script = ExtResource("2_job")
+display_name = "Stormcaller"
+description = "Every nova sends out an aftershock: a second, wider pulse."
+rank2_name = "Tempest Lord"
+rank2_description = "Two aftershocks per nova, each stronger. More nova damage and radius."
+color = Color(0.5, 0.8, 1, 1)
+rank1 = SubResource("Perks_storm_1")
+rank2 = SubResource("Perks_storm_2")
+
+[sub_resource type="Resource" id="Job_war"]
+script = ExtResource("2_job")
+display_name = "Warlord"
+description = "Your lure marks enemies: marked enemies take 30% more damage. Lure recharges faster. Tougher."
+rank2_name = "Warmaster"
+rank2_description = "Marked enemies take 50% more damage, and luring hardens you with armor while the pack closes in."
+color = Color(1, 0.45, 0.3, 1)
+rank1 = SubResource("Perks_war_1")
+rank2 = SubResource("Perks_war_2")
+
+[sub_resource type="Resource" id="Job_arc"]
+script = ExtResource("2_job")
+display_name = "Arcanist"
+description = "Bolts pierce: each bursts on up to 3 enemies in a row, with bigger bursts."
+rank2_name = "Archmage"
+rank2_description = "Bolts burst on up to 5 enemies, with even bigger bursts and faster fire."
+color = Color(0.75, 0.55, 1, 1)
+rank1 = SubResource("Perks_arc_1")
+rank2 = SubResource("Perks_arc_2")
+
+[resource]
+script = ExtResource("3_tree")
+unlock_level = 10
+rank2_level = 25
+jobs = Array[ExtResource("2_job")]([SubResource("Job_storm"), SubResource("Job_war"), SubResource("Job_arc")])

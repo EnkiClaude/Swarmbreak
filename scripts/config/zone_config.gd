@@ -12,6 +12,8 @@ extends Resource
 @export var camp_size_growth: float = 1.15
 ## Chance each camp member is the second enemy type (brutes).
 @export var heavy_chance: float = 0.1
+## Camp members' health multiplies by (1 + this) per zone level above 1.
+@export var health_growth: float = 0.15
 ## Spacing between members of a sleeping camp.
 @export var member_spacing: float = 0.95
 ## A sleeping camp wakes when the player comes this close to its center.

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyType" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/enemy_type.gd" id="1_enemy_type"]
+[ext_resource type="Resource" path="res://data/effects/death_burst.tres" id="2_death"]
+
+[resource]
+script = ExtResource("1_enemy_type")
+display_name = "Warlord"
+color = Color(0.95, 0.55, 0.15, 1)
+max_health = 650.0
+knockback_resist = 0.9
+xp = 60.0
+body_radius = 1.0
+body_height = 2.8
+max_speed = 2.6
+acceleration = 8.0
+separation_radius = 1.2
+separation_strength = 9.0
+contact_dps = 24.0
+attack_reach = 0.4
+cast_shadow = true
+death_effect = ExtResource("2_death")

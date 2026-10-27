@@ -3,8 +3,8 @@ extends RefCounted
 ## The per-tick hot loop.
 ## Pass 1 builds each awake enemy's velocity from the flow field (or a
 ## straight chase near the player) plus separation from neighbours found in
-## the spatial hash. Sleeping camp members only bleed off knockback, so a
-## sleeping camp costs almost nothing.
+## the spatial hash. Sleeping or stunned enemies only bleed off knockback, so
+## a sleeping camp costs almost nothing.
 ## Pass 2 integrates positions, keeps enemies out of the player's body and
 ## inside the arena, and totals the damage from enemies touching the player.
 ##
@@ -60,6 +60,7 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 	var type_ids := _state.type_ids
 	var awake := _state.awake
 	var boost_until := _state.boost_until
+	var stun_until := _state.stun_until
 
 	var max_speed := _types.max_speed
 	var acceleration := _types.acceleration
@@ -96,7 +97,7 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 	for i in count:
 		var v: Vector2 = velocities[i]
 		var t: int = type_ids[i]
-		if awake[i] == 0:
+		if awake[i] == 0 or stun_until[i] > now:
 			velocities[i] = v.move_toward(Vector2.ZERO, acceleration[t] * delta)
 			continue
 		var p: Vector2 = positions[i]

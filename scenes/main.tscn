@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=34 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/arena/arena.gd" id="2_arena"]
@@ -28,6 +28,8 @@
 [ext_resource type="Resource" path="res://data/rpg/loot.tres" id="26_loot"]
 [ext_resource type="Script" path="res://scripts/loot/loot_system.gd" id="27_loot_system"]
 [ext_resource type="Script" path="res://scripts/ui/character_menu.gd" id="28_menu"]
+[ext_resource type="Resource" path="res://data/rpg/jobs.tres" id="29_jobs"]
+[ext_resource type="Resource" path="res://data/zones/boss.tres" id="30_boss"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.32, 0.38, 0.48, 1)
@@ -53,6 +55,8 @@ zone_config = ExtResource("21_zone_cfg")
 progression_config = ExtResource("24_progression")
 skill_tree = ExtResource("25_skills")
 loot_config = ExtResource("26_loot")
+job_tree = ExtResource("29_jobs")
+boss_config = ExtResource("30_boss")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")

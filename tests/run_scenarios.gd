@@ -17,6 +17,9 @@ var _popup: BreakPopup
 var _corpses: CorpseSystem
 var _camera: CameraRig
 var _zone: ZoneDirector
+var _slams_inside := 0
+var _slams_outside := 0
+var _slam_damage := 0.0
 
 
 func _initialize() -> void:
@@ -40,6 +43,7 @@ func _run() -> void:
 	_god_mode(true)
 
 	_scenario("the zone starts with sleeping camps", _zone_starts_asleep)
+	_scenario("every zone has a sleeping camp boss", _zone_has_boss)
 	await _scenario_async("a camp wakes when the player comes near", _camp_wakes_on_approach)
 	await _scenario_async("lure wakes camps in range and hurries them", _lure_wakes_camps)
 	await _scenario_async("clearing a camp drops loot you can pick up", _camp_drops_loot)
@@ -50,10 +54,14 @@ func _run() -> void:
 	await _scenario_async("nova breaks a nearby pack", _nova_breaks_pack)
 	await _scenario_async("a big break freezes, shakes, pops up and flings corpses", _break_feedback)
 	await _scenario_async("kills give XP and level-ups refill and grant points", _xp_and_levels)
+	await _scenario_async("Stormcaller novas send aftershocks", _stormcaller_aftershocks)
+	await _scenario_async("refining raises or lowers an item but never breaks it", _refining)
 	await _scenario_async("bolts burst on enemies ahead", _bolts_hit)
 	await _scenario_async("touch move stick moves the player", _touch_move)
 	await _scenario_async("touch FIRE stick fires and aims", _touch_fire)
 	await _scenario_async("touch nova button casts the nova", _touch_nova)
+	await _scenario_async("a boss telegraphs its slam; leaving the ring avoids it", _boss_slam)
+	await _scenario_async("a slain boss drops rare loot and stones", _boss_loot)
 	await _scenario_async("enemies hurt the player; dodging grants i-frames", _damage_and_dodge)
 	await _scenario_async("without mana the nova does not cast", _nova_needs_mana)
 	await _scenario_async("dying restarts the zone", _death_restarts_zone)
@@ -396,7 +404,7 @@ func _camp_drops_loot() -> void:
 	var inventory := _main_var("inventory") as Inventory
 	var camp := -1
 	for c in _zone.camp_centers.size():
-		if _zone.camp_alive[c] > 0:
+		if _zone.camp_alive[c] > 0 and not _camp_has_boss(c):
 			camp = c
 			break
 	_check(camp >= 0, "a camp to clear")
@@ -475,3 +483,144 @@ func _xp_and_levels() -> void:
 	_check(progress.level == level + 1, "levelled up")
 	_check(progress.skill_points == points + 1, "got a skill point")
 	_check(_player.vitals.health == _player.vitals.max_health, "level-up refills health")
+
+
+
+func _bosses() -> BossSystem:
+	return _main_var("bosses") as BossSystem
+
+
+func _camp_has_boss(camp: int) -> bool:
+	for i in _swarm.state.count:
+		if _swarm.state.camp_ids[i] == camp and _swarm.state.boss_ids[i] >= 0:
+			return true
+	return false
+
+
+func _zone_has_boss() -> void:
+	var bosses := _bosses()
+	_check(bosses.count() >= 1, "%d bosses in zone 1" % bosses.count())
+	var i := bosses.index_of(0)
+	_check(i >= 0 and _swarm.state.awake[i] == 0, "the boss sleeps with its camp")
+	_check(_swarm.state.health[i] > 400.0, "bosses are tough (%.0f hp)" % _swarm.state.health[i])
+
+
+## Clears the swarm and spawns one lone, awake boss next to the player.
+func _lone_boss(offset: Vector2) -> int:
+	var bosses := _bosses()
+	_swarm.state.clear()
+	bosses.reset()
+	var boss_type: int = (_main_var("boss_config") as BossConfig).type_index
+	var i := _swarm.spawn_at(_player.ground_position() + offset, boss_type)
+	return bosses.add(i, 5000.0)
+
+
+func _on_test_slam(_center: Vector2, inside: bool, damage: float) -> void:
+	if inside:
+		_slams_inside += 1
+	else:
+		_slams_outside += 1
+	_slam_damage += damage
+
+
+func _boss_slam() -> void:
+	var bosses := _bosses()
+	var config := _main_var("boss_config") as BossConfig
+	bosses.slammed.connect(_on_test_slam)
+	_refill()
+	var slot := _lone_boss(Vector2(3.0, 0.0))
+	var frames := 0
+	while not bosses.is_winding_up(slot) and frames < 120:
+		await _frames(1)
+		frames += 1
+	_check(bosses.is_winding_up(slot), "boss starts a slam when the player is close")
+	# Leave the ring before it lands.
+	var center: Vector2 = _swarm.state.positions[bosses.index_of(slot)]
+	_teleport(center + Vector2(config.slam_radius + 4.0, 0.0))
+	await _frames(roundi(config.slam_windup * 60.0) + 5)
+	_check(_slams_outside == 1 and _slams_inside == 0, "the slam missed (out %d, in %d)" % [
+			_slams_outside, _slams_inside])
+	# Next slam: stand in it, vulnerable.
+	_god_mode(false)
+	_refill()
+	frames = 0
+	while _slams_inside == 0 and frames < 600:
+		var boss_pos: Vector2 = _swarm.state.positions[bosses.index_of(slot)]
+		_teleport(boss_pos + Vector2(2.0, 0.0))
+		await _frames(1)
+		frames += 1
+	_check(_slams_inside >= 1, "a second slam came")
+	_check(_slam_damage > config.slam_damage * 0.5, "standing in it hurts (%.1f)" % _slam_damage)
+	bosses.slammed.disconnect(_on_test_slam)
+	_god_mode(true)
+	_refill()
+	_teleport(Vector2.ZERO)
+
+
+func _boss_loot() -> void:
+	var bosses := _bosses()
+	var loot := _main.get_node("Loot") as LootSystem
+	var inventory := _main_var("inventory") as Inventory
+	var slot := _lone_boss(Vector2(12.0, 0.0))
+	var stones := inventory.stones
+	var on_ground := loot.ground_count()
+	_swarm.state.health[bosses.index_of(slot)] = 0.0
+	await _frames(3)
+	_check(bosses.alive_count() == 0, "boss is dead")
+	_check(inventory.stones > stones, "boss gave stones (%d -> %d)" % [stones, inventory.stones])
+	_check(loot.ground_count() > on_ground, "boss dropped items")
+	_teleport(_player.ground_position() + Vector2(12.0, 0.0))
+	await _frames(40)
+	var rare := false
+	for item in inventory.backpack + inventory.equipped:
+		if item != null and item.rarity >= 2:
+			rare = true
+	_check(rare, "a rare item from the boss is in the inventory")
+	_teleport(Vector2.ZERO)
+
+
+func _stormcaller_aftershocks() -> void:
+	var progress := _main_var("progress") as PlayerProgress
+	var jobs := _main_var("job_tree") as JobTree
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	progress.level = maxi(progress.level, jobs.unlock_level)
+	menu.open()
+	await _frames(1)
+	menu.choose_job(0)
+	menu.close()
+	await _frames(1)
+	_check(progress.job == 0, "became a Stormcaller")
+	await _frames(80)  # nova cooldown
+	_refill()
+	_place_pack(_player.ground_position(), 9.0, 120)
+	Input.action_press("attack_nova")
+	await _frames(1)
+	Input.action_release("attack_nova")
+	var combat := _main_var("combat") as PlayerCombat
+	_check(combat.pending_aftershocks() >= 1, "an aftershock is queued")
+	await _frames(60)
+	_check(combat.pending_aftershocks() == 0, "aftershocks went off")
+
+
+func _refining() -> void:
+	var inventory := _main_var("inventory") as Inventory
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	var item: ItemData = null
+	for equipped in inventory.equipped:
+		if equipped != null:
+			item = equipped
+			break
+	_check(item != null, "an equipped item to refine")
+	if item == null:
+		return
+	inventory.stones = 500
+	menu.open()
+	var outcomes := {}
+	for n in 40:
+		outcomes[menu.refine(item)] = true
+	menu.close()
+	_check(outcomes.has(Refinery.Result.SUCCESS), "some refines succeed")
+	_check(inventory.equipped[item.slot] == item, "the item is still equipped")
+	_check(item.upgrade_level >= 0 and item.upgrade_level <= 10,
+			"level %d in range" % item.upgrade_level)
+	_check(inventory.stones < 500, "stones were spent")

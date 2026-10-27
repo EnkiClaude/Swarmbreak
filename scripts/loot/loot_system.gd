@@ -48,10 +48,10 @@ func setup(config: LootConfig, inventory: Inventory, generator: ItemGenerator) -
 
 
 ## Rolls and drops `amount` items scattered around a ground position.
-func drop(at: Vector2, amount: int, zone_level: int) -> void:
+func drop(at: Vector2, amount: int, zone_level: int, min_rarity: int = 0) -> void:
 	for _n in amount:
 		var offset := Vector2.from_angle(_rng.randf() * TAU) * _rng.randf() * _config.drop_scatter
-		place(_generator.roll(zone_level), at + offset)
+		place(_generator.roll(zone_level, min_rarity), at + offset)
 
 
 ## Puts a specific item on the ground. False if the ground pool is full.

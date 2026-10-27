@@ -10,6 +10,9 @@ var max_health: float
 var max_mana: float
 ## Swarm time until which damage is ignored.
 var invulnerable_until := 0.0
+## Temporary damage reduction (e.g. from the Warmaster's lure).
+var bonus_armor := 0.0
+var bonus_armor_until := 0.0
 
 var _config: PlayerConfig
 var _stats: PlayerStats
@@ -34,6 +37,7 @@ func reset() -> void:
 	health = max_health
 	mana = max_mana
 	invulnerable_until = 0.0
+	bonus_armor_until = 0.0
 
 
 func is_dead() -> bool:
@@ -57,9 +61,18 @@ func tick(delta: float) -> void:
 func take_damage(amount: float, now: float) -> float:
 	if amount <= 0.0 or is_dead() or is_invulnerable(now):
 		return 0.0
-	var taken := minf(amount * (1.0 - _stat(PlayerStat.Id.ARMOR)), health)
+	var armor := _stat(PlayerStat.Id.ARMOR)
+	if now < bonus_armor_until:
+		armor += bonus_armor
+	armor = minf(armor, PlayerStat.CAPS[PlayerStat.Id.ARMOR])
+	var taken := minf(amount * (1.0 - armor), health)
 	health -= taken
 	return taken
+
+
+func grant_armor(amount: float, until: float) -> void:
+	bonus_armor = amount
+	bonus_armor_until = until
 
 
 ## Spends mana if there is enough. Returns whether it was spent.
