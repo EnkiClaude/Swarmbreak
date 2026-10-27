@@ -270,7 +270,7 @@ func _on_item_picked_up(item: ItemData) -> void:
 
 
 func _on_backpack_full() -> void:
-	_hud.toast("Backpack full - open CHAR to discard", Color(1.0, 0.5, 0.4))
+	_hud.toast("Backpack full - open BAG (I) to salvage", Color(1.0, 0.5, 0.4))
 
 
 func _on_leveled_up(level: int) -> void:

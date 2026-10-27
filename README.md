@@ -46,7 +46,8 @@ and its frame rate says little about the Deck.
 | Nova            | RB              | Q / right mouse     |
 | Lure            | LB              | E                   |
 | Dodge           | A               | Space / Shift       |
-| Character       | Start           | Tab / C / I         |
+| Character       | Start           | Tab / C             |
+| Inventory       | Y               | I                   |
 | Spawn 100 more  | View / Back     | `=` or keypad `+`   |
 | Toggle overlay  | L3              | F3                  |
 

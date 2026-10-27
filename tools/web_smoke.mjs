@@ -98,6 +98,9 @@ await touch("touchStart", [{ x: 480, y: 42, id: 4 }]);
 await touch("touchEnd", []);
 await page.waitForTimeout(800);
 await shot("menu");
+await page.keyboard.press("KeyE"); // switch to the inventory tab
+await page.waitForTimeout(500);
+await shot("inventory");
 await page.keyboard.press("Tab");
 await page.waitForTimeout(500);
 

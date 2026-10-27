@@ -20,6 +20,7 @@ lure_color = Color(1, 0.45, 0.3, 0.55)
 spawn_button_position = Vector2(0.6, 0.07)
 overlay_button_position = Vector2(0.4, 0.07)
 character_button_position = Vector2(0.5, 0.07)
+bag_button_position = Vector2(0.7, 0.07)
 small_button_radius = 38.0
 color = Color(1, 1, 1, 0.35)
 active_color = Color(1, 1, 1, 0.7)
