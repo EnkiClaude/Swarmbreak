@@ -58,7 +58,8 @@ func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stat
 	_panel.offset_right = -PANEL_MARGIN
 	_panel.offset_bottom = -PANEL_MARGIN * 0.6
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.07, 0.09, 0.95)
+	# Fully opaque: HUD text bleeding through reads as clutter on the cards.
+	style.bg_color = Color(0.06, 0.07, 0.09, 1.0)
 	style.set_corner_radius_all(10)
 	style.set_content_margin_all(18)
 	_panel.add_theme_stylebox_override("panel", style)
