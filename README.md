@@ -88,7 +88,7 @@ and its frame rate says little about the Deck.
 | Move            | Left stick      | WASD / arrows       |
 | Turn camera     | Right stick     | Mouse (click to capture, Esc frees) |
 | Zoom camera     | D-pad, R3       | Mouse wheel, Z      |
-| Fire bolts      | RT (hold)       | Left mouse (hold)   |
+| Fire bolts      | X or RT (hold)  | Left mouse (hold)   |
 | Nova            | RB              | Q / right mouse     |
 | Lure            | LB              | E                   |
 | Dodge           | A               | Space / Shift       |

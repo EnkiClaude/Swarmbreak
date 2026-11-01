@@ -282,9 +282,11 @@ func tooltip_showing() -> bool:
 	return _tooltip != null
 
 
+## Freed at the end of the frame, not removed now: focus and mouse-exit
+## signals can arrive while the menu is busy removing children.
 func _clear_tooltip() -> void:
 	if _tooltip != null:
-		remove_child(_tooltip)
+		_tooltip.visible = false
 		_tooltip.queue_free()
 	_tooltip = null
 	_tooltip_owner = null

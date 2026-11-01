@@ -241,7 +241,7 @@ func _draw_skills() -> void:
 	var lure_ready := _combat.lure_cooldown.progress() if pc.lure != null else 0.0
 	var lure_usable := pc.lure != null and mana >= pc.lure.mana_cost
 	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 0, SKILL_ROWS),
-			HudSkills.Glyph.BOLT, "RT", 1.0, true)
+			HudSkills.Glyph.BOLT, "X", 1.0, true)
 	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 1, SKILL_ROWS),
 			HudSkills.Glyph.NOVA, "RB", _combat.nova_cooldown.progress(),
 			mana >= pc.nova.mana_cost)

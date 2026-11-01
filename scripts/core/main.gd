@@ -44,6 +44,7 @@ var quests: QuestLog
 var pets: PetSystem
 
 var _loot_rng := RandomNumberGenerator.new()
+var _gamepads := GamepadCompat.new()
 var _pillar_effect := -1
 
 ## Seconds until the player respawns in town, or < 0 when not dead.
@@ -247,6 +248,7 @@ func _process(delta: float) -> void:
 		_hud.tick(dt)
 		_camera_rig.tick(dt)
 		return
+	_gamepads.tick()
 	var alive := not _player.vitals.is_dead()
 	var now := _swarm.now()
 	if alive:
