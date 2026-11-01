@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LootConfig" load_steps=28 format=3]
+[gd_resource type="Resource" script_class="LootConfig" load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/affix_def.gd" id="1_affix"]
 [ext_resource type="Script" path="res://scripts/config/loot_config.gd" id="2_loot"]
@@ -107,6 +107,14 @@ min_value = 0.05
 max_value = 0.15
 slots = Array[int]([2, 4, 5])
 weight = 1.0
+
+[sub_resource type="Resource" id="Affix_13"]
+script = ExtResource("1_affix")
+stat = 13
+min_value = 0.02
+max_value = 0.06
+slots = Array[int]([2, 4, 5])
+weight = 1.5
 
 [sub_resource type="Resource" id="Kind_0"]
 script = ExtResource("3_kind")
@@ -242,6 +250,12 @@ implicit_max = 0.06
 
 [resource]
 script = ExtResource("2_loot")
+currency_name = "Geon"
+item_drop_chance = 0.05
+geon_pile_min = 2
+geon_pile_max = 5
+geon_growth_per_level = 0.25
+geon_color = Color(1, 0.8, 0.3, 1)
 camp_drop_min = 1
 camp_drop_max = 2
 rarity_weights = PackedFloat32Array(60, 30, 10)
@@ -251,7 +265,7 @@ rarity_colors = PackedColorArray(0.92, 0.92, 0.92, 1, 0.4, 0.6, 1, 1, 1, 0.85, 0
 value_growth_per_zone = 0.15
 slot_names = PackedStringArray("Weapon", "Amulet", "Armor", "Off hand", "Belt", "Ring")
 rare_prefixes = PackedStringArray("Grim", "Storm", "Hollow", "Ember", "Dread", "Bright", "Iron", "Wild")
-affixes = Array[ExtResource("1_affix")]([SubResource("Affix_0"), SubResource("Affix_1"), SubResource("Affix_2"), SubResource("Affix_3"), SubResource("Affix_4"), SubResource("Affix_5"), SubResource("Affix_6"), SubResource("Affix_7"), SubResource("Affix_8"), SubResource("Affix_9"), SubResource("Affix_10"), SubResource("Affix_11"), SubResource("Affix_12")])
+affixes = Array[ExtResource("1_affix")]([SubResource("Affix_0"), SubResource("Affix_1"), SubResource("Affix_2"), SubResource("Affix_3"), SubResource("Affix_4"), SubResource("Affix_5"), SubResource("Affix_6"), SubResource("Affix_7"), SubResource("Affix_8"), SubResource("Affix_9"), SubResource("Affix_10"), SubResource("Affix_11"), SubResource("Affix_12"), SubResource("Affix_13")])
 item_kinds = Array[ExtResource("3_kind")]([SubResource("Kind_0"), SubResource("Kind_1"), SubResource("Kind_2"), SubResource("Kind_3"), SubResource("Kind_4"), SubResource("Kind_5"), SubResource("Kind_6"), SubResource("Kind_7"), SubResource("Kind_8"), SubResource("Kind_9"), SubResource("Kind_10")])
 pickup_radius = 1.2
 magnet_radius = 4.0
@@ -266,7 +280,5 @@ upgrade_chances = PackedFloat32Array(0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42, 0.34, 
 upgrade_pity_per_fail = 0.04
 upgrade_cost_base = 1
 upgrade_cost_per_level = 1
-camp_stones_min = 1
-camp_stones_max = 3
 salvage_stones = PackedInt32Array(1, 3, 6)
 beam_height = 3.5

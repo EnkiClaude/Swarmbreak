@@ -47,8 +47,8 @@ static func build(item: ItemData, inventory: Inventory, loot: LootConfig) -> Pan
 	else:
 		box.add_child(HSeparator.new())
 		add_comparison(box, item, inventory, loot, MenuWidgets.SMALL_FONT - 2)
-	box.add_child(_label("Salvage: %d stones" % Inventory.salvage_value(item,
-			loot.salvage_stones), MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
+	box.add_child(_label("Salvage: %d %s" % [Inventory.salvage_value(item, loot.salvage_stones),
+			loot.currency_name], MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
 	return panel
 
 

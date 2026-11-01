@@ -163,11 +163,11 @@ boss_camp_size = 24
 spawner_count = 2
 spawner_population = 30
 spawner_interval = 0.0
-spawner_item_chance = 0.03
-spawner_stone_chance = 0.08
+spawner_drop_chance = 0.03
+spawner_geon_chance = 0.08
 min_drop_rarity = 1
 extra_drops = 1
-stones_multiplier = 2.0
+geon_multiplier = 2.0
 
 [sub_resource type="Resource" id="Dungeon_1"]
 script = ExtResource("3_dungeon")
@@ -191,11 +191,11 @@ boss_camp_size = 24
 spawner_count = 2
 spawner_population = 30
 spawner_interval = 0.0
-spawner_item_chance = 0.03
-spawner_stone_chance = 0.08
+spawner_drop_chance = 0.03
+spawner_geon_chance = 0.08
 min_drop_rarity = 1
 extra_drops = 1
-stones_multiplier = 2.0
+geon_multiplier = 2.0
 
 [resource]
 script = ExtResource("1_world")

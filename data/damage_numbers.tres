@@ -18,3 +18,6 @@ outline_color = Color(0.15, 0.05, 0, 1)
 big_damage = 40.0
 big_color = Color(1, 0.75, 0.2, 1)
 big_scale = 1.4
+evade_text = "EVADE"
+evade_color = Color(0.6, 1, 0.75, 1)
+evade_interval = 0.35

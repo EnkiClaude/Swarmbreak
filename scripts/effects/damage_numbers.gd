@@ -12,6 +12,8 @@ var _scales := PackedFloat32Array()
 var _rng := RandomNumberGenerator.new()
 ## Next label to reuse when every label is busy: the oldest one.
 var _next := 0
+var _clock := 0.0
+var _evade_ready_at := 0.0
 
 
 func setup(p_config: DamageNumbersConfig, swarm: SwarmManager) -> void:
@@ -44,19 +46,38 @@ func _on_enemies_hit(positions: PackedVector2Array, amounts: PackedFloat32Array,
 
 ## Shows one number above ground position at.
 func show_number(at: Vector2, amount: float) -> void:
+	var big := amount >= config.big_damage
+	show_text(at, str(roundi(amount)), config.big_color if big else config.color,
+			config.big_scale if big else 1.0)
+
+
+## Shows the evade word over the player, at most once per evade_interval.
+func show_evade(at: Vector2) -> void:
+	if _evade_ready_at > _clock:
+		return
+	_evade_ready_at = _clock + config.evade_interval
+	show_text(at, config.evade_text, config.evade_color, 1.1, 0.0)
+
+
+## A word or number floating up from ground position at. A scatter of 0
+## (words over the player) also starts it a little higher.
+func show_text(at: Vector2, text: String, color: Color, size_scale: float,
+		scatter: float = -1.0) -> void:
+	var spread := config.scatter if scatter < 0.0 else scatter
+	var lift := 0.6 if scatter >= 0.0 else 0.0
 	var slot := _free_slot()
 	var label := _labels[slot]
-	var big := amount >= config.big_damage
-	label.text = str(roundi(amount))
-	label.modulate = config.big_color if big else config.color
-	label.position = Vector3(at.x + _rng.randf_range(-config.scatter, config.scatter),
-			config.start_height, at.y + _rng.randf_range(-config.scatter, config.scatter))
+	label.text = text
+	label.modulate = color
+	label.position = Vector3(at.x + _rng.randf_range(-spread, spread), config.start_height + lift,
+			at.y + _rng.randf_range(-spread, spread))
 	label.visible = true
 	_ages[slot] = 0.0
-	_scales[slot] = config.big_scale if big else 1.0
+	_scales[slot] = size_scale
 
 
 func tick(delta: float) -> void:
+	_clock += delta
 	var lifetime := config.lifetime
 	for k in _labels.size():
 		var age := _ages[k]

@@ -73,7 +73,7 @@ func _run() -> void:
 	await _scenario_async("touch FIRE stick fires and aims", _touch_fire)
 	await _scenario_async("touch nova button casts the nova", _touch_nova)
 	await _scenario_async("a boss telegraphs its slam; leaving the ring avoids it", _boss_slam)
-	await _scenario_async("a slain boss drops rare loot and stones", _boss_loot)
+	await _scenario_async("a slain boss drops rare loot and Geon", _boss_loot)
 	await _scenario_async("enemies hurt the player; dodging grants i-frames", _damage_and_dodge)
 	await _scenario_async("without mana the nova does not cast", _nova_needs_mana)
 	await _scenario_async("a cleared camp comes back after its timer", _camp_respawns)
@@ -605,21 +605,17 @@ func _camp_drops_loot() -> void:
 			_swarm.state.health[i] = 0.0
 			at = _swarm.state.positions[i]
 	var before := loot.ground_count()
+	var geon_before := inventory.stones
 	await _frames(2)
 	_check(_camps.sites.alive[camp] == 0, "camp %d cleared" % camp)
 	var dropped := loot.ground_count() - before
-	_check(dropped >= 1, "camp dropped %d items" % dropped)
-	var held := inventory.backpack.size()
-	for item in inventory.equipped:
-		if item != null:
-			held += 1
+	_check(dropped >= 1, "camp dropped %d things" % dropped)
+	var piles := loot.ground_geon()
+	_check(piles > 0 or dropped == 0, "mostly Geon (%d on the ground)" % piles)
 	_teleport(at)
 	await _frames(40)
-	var now_held := inventory.backpack.size()
-	for item in inventory.equipped:
-		if item != null:
-			now_held += 1
-	_check(now_held >= held + dropped, "walked over the loot and picked up %d" % (now_held - held))
+	_check(inventory.stones >= geon_before + piles,
+			"walked over it and picked up %d Geon" % (inventory.stones - geon_before))
 	_check(loot.ground_count() == before, "nothing left on the ground")
 	_go_to_town()
 
@@ -749,16 +745,23 @@ func _boss_loot() -> void:
 	var bosses := _bosses()
 	var loot := _main.get_node("Loot") as LootSystem
 	var inventory := _main_var("inventory") as Inventory
+	var loot_config := _main_var("loot_config") as LootConfig
+	# Items are rare drops now; make this boss's drops all items to check them.
+	var item_chance := loot_config.item_drop_chance
+	loot_config.item_drop_chance = 1.0
 	var slot := _lone_boss(Vector2(12.0, 0.0))
 	var stones := inventory.stones
 	var on_ground := loot.ground_count()
 	_swarm.state.health[bosses.index_of(slot)] = 0.0
 	await _frames(3)
+	loot_config.item_drop_chance = item_chance
 	_check(bosses.alive_count() == 0, "boss is dead")
-	_check(inventory.stones > stones, "boss gave stones (%d -> %d)" % [stones, inventory.stones])
-	_check(loot.ground_count() > on_ground, "boss dropped items")
+	_check(loot.ground_geon() > 0, "boss dropped a pile of Geon")
+	_check(loot.ground_count() > on_ground + 1, "and items")
 	_teleport(_player.ground_position() + Vector2(12.0, 0.0))
 	await _frames(40)
+	_check(inventory.stones > stones, "picked up the boss's Geon (%d -> %d)" % [stones,
+			inventory.stones])
 	var rare := false
 	for item in inventory.backpack + inventory.equipped:
 		if item != null and item.rarity >= 2:

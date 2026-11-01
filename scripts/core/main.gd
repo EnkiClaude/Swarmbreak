@@ -79,6 +79,7 @@ func _ready() -> void:
 	_swarm.setup(flow_half, _effects, _corpses, _max_sites(), boss_config.max_active)
 	_projectiles.setup(_player.config.bolt, _effects, flow_half)
 	_numbers.setup(damage_numbers_config, _swarm)
+	_player.vitals.evaded.connect(func() -> void: _numbers.show_evade(_player.ground_position()))
 	_pillar_effect = _effects.register(feedback_config.pillar_effect)
 	bosses = BossSystem.new(boss_config, _swarm, _effects)
 	bosses.slammed.connect(_on_boss_slammed)
@@ -94,6 +95,7 @@ func _ready() -> void:
 	_loot.setup(loot_config, inventory, ItemGenerator.new(loot_config))
 	world.setup_actors(_player, _camera_rig, _projectiles, _loot)
 	_loot.picked_up.connect(_on_item_picked_up)
+	_loot.picked_up_geon.connect(_on_geon_picked_up)
 	_loot.backpack_full.connect(_on_backpack_full)
 	refinery = Refinery.new(loot_config)
 	_menu.setup(progress, skill_tree, inventory, stats, loot_config, job_tree, refinery)
@@ -283,19 +285,19 @@ func _update_respawn(dt: float) -> void:
 		_hud.toast("You wake up in %s" % world.location_name(), Color(0.75, 0.9, 1.0))
 
 
-## Loot by the camp's level; dungeons add drops, rarity and stones.
+## Loot by the camp's level; dungeons add drops, rarity and Geon.
+## Drops by the camp's level: mostly Geon, now and then an item. Dungeons add
+## drops, a minimum item rarity and bigger piles.
 func _on_camp_cleared(_camp: int, at: Vector2, level: int, _had_boss: bool) -> void:
 	var amount := _loot_rng.randi_range(loot_config.camp_drop_min, loot_config.camp_drop_max)
-	var stones := _loot_rng.randi_range(loot_config.camp_stones_min, loot_config.camp_stones_max)
 	var min_rarity := 0
+	var multiplier := 1.0
 	var dungeon := world.dungeon()
 	if dungeon != null:
 		amount += dungeon.extra_drops
 		min_rarity = dungeon.min_drop_rarity
-		stones = roundi(stones * dungeon.stones_multiplier)
-	_loot.drop(at, amount, level, min_rarity)
-	inventory.add_stones(stones)
-	_hud.toast("+%d Refining Stones" % stones, Color(0.75, 0.85, 1.0))
+		multiplier = dungeon.geon_multiplier
+	_loot.drop_rewards(at, amount, level, min_rarity, multiplier)
 
 
 ## Spawner monsters drop rarely, one at a time: farming adds up.
@@ -303,10 +305,10 @@ func _on_spawner_kill(_camp: int, at: Vector2, level: int) -> void:
 	var dungeon := world.dungeon()
 	if dungeon == null:
 		return
-	if _loot_rng.randf() < dungeon.spawner_item_chance:
-		_loot.drop(at, 1, level, dungeon.min_drop_rarity)
-	if _loot_rng.randf() < dungeon.spawner_stone_chance:
-		inventory.add_stones(1)
+	if _loot_rng.randf() < dungeon.spawner_drop_chance:
+		_loot.drop_rewards(at, 1, level, dungeon.min_drop_rarity, dungeon.geon_multiplier)
+	if _loot_rng.randf() < dungeon.spawner_geon_chance:
+		_loot.place_geon(1, at)
 
 
 func _on_location_entered(title: String, level: int, is_town: bool) -> void:
@@ -317,10 +319,11 @@ func _on_location_entered(title: String, level: int, is_town: bool) -> void:
 
 func _on_boss_killed(_slot: int, at: Vector2) -> void:
 	_effects.spawn(_pillar_effect, Vector3(at.x, 0.0, at.y), 2.0)
-	_loot.drop(at, boss_config.extra_drops, world.level(), boss_config.min_drop_rarity)
-	inventory.add_stones(boss_config.stones)
+	var level := world.level()
+	_loot.drop_rewards(at, boss_config.extra_drops, level, boss_config.min_drop_rarity)
+	var growth := 1.0 + loot_config.geon_growth_per_level * (level - 1)
+	_loot.place_geon(roundi(boss_config.geon * growth), at)
 	_hud.banner("%s SLAIN" % boss_config.display_name.to_upper(), Color(1.0, 0.7, 0.3), 2.0)
-	_hud.toast("+%d Refining Stones" % boss_config.stones, Color(0.75, 0.85, 1.0))
 
 
 func _on_boss_slammed(_center: Vector2, _inside: bool, damage: float) -> void:
@@ -342,6 +345,10 @@ func _on_refined(result: Refinery.Result, _item: ItemData) -> void:
 		_feedback.refined(true)
 	elif result == Refinery.Result.DOWNGRADED or result == Refinery.Result.FAILED:
 		_feedback.refined(false)
+
+
+func _on_geon_picked_up(amount: int) -> void:
+	_hud.toast("+%d %s" % [amount, loot_config.currency_name], loot_config.geon_color)
 
 
 func _on_item_picked_up(item: ItemData) -> void:

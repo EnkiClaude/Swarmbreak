@@ -22,6 +22,10 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M10:** evasion and Geon. Agility (and some armor, belts and rings) now
+  gives evasion, a chance to ignore each hit outright, up to 85%. The
+  currency is Geon: camps, bosses and spawners drop piles of it, and items
+  drop at a twentieth of the old rate.
 - **M9:** characters and monsters. The hero is a robed battle-mage with a
   wide hat and an orb-topped staff, raised when casting; six monster models
   (goblin, ogre, warlord boss, skeleton, treant, wisp) walk, face where

@@ -25,6 +25,7 @@ extends Resource
 @export var extra_drops: int = 2
 ## 0 common, 1 magic, 2 rare.
 @export var min_drop_rarity: int = 2
-@export var stones: int = 6
+## Geon in the pile a slain boss drops, at level 1 (grows like other piles).
+@export var geon: int = 12
 ## The boss health bar shows while an awake boss is this close.
 @export var hud_range: float = 30.0

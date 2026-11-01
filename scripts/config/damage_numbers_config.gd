@@ -23,3 +23,7 @@ extends Resource
 @export var big_damage: float = 40.0
 @export var big_color: Color = Color(1.0, 0.75, 0.2)
 @export var big_scale: float = 1.4
+## Word shown over the player on an evaded hit, at most once per interval.
+@export var evade_text: String = "EVADE"
+@export var evade_color: Color = Color(0.6, 1.0, 0.75)
+@export var evade_interval: float = 0.35

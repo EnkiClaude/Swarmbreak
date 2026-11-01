@@ -43,10 +43,10 @@ per_point = PackedFloat32Array(3.0, 0.006)
 script = ExtResource("1_attr")
 display_name = "Agility"
 short_name = "AGI"
-description = "Faster bolts, feet and dodges."
+description = "Evade hits, and faster bolts, feet and dodges."
 color = Color(0.6, 1, 0.55, 1)
-stats = Array[int]([6, 4, 11])
-per_point = PackedFloat32Array(0.005, 0.003, 0.003)
+stats = Array[int]([13, 6, 4, 11])
+per_point = PackedFloat32Array(0.004, 0.005, 0.003, 0.003)
 
 [resource]
 script = ExtResource("2_table")

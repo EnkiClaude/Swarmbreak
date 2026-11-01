@@ -1,6 +1,6 @@
 class_name Refinery
 extends RefCounted
-## Risky item upgrades. Each attempt costs stones; success raises the item
+## Risky item upgrades. Each attempt costs Geon; success raises the item
 ## one level, failure drops it one level (never below +0, never destroyed).
 ## Odds fall as the level rises, and each failure in a row adds a little
 ## "pity" to the next chance, so bad streaks end.
