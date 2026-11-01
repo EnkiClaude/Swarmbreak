@@ -195,7 +195,7 @@ each boss slam); an evaded hit does nothing and pops up EVADE.
 Pets (`data/rpg/pets.tres`, `PetConfig`/`PetDef`, logic in `PetRules`): an
 egg is an `ItemData` in the PET slot with `pet_type`, `pet_level` and
 `pet_xp`; its stats are rewritten for its level (base plus per level), so
-`Inventory.total()` counts them like any item. It takes a share of the
+`Inventory.total()` counts them like any item. It earns a bonus share of the
 player's kill XP that grows per stage, hatches at level 10 and evolves
 every 10 levels (bigger model, new name). `PetSystem` follows the player,
 feeds the pet XP and, once hatched, sets `LootSystem.collect_radius` so

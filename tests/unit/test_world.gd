@@ -82,7 +82,7 @@ func test_dungeons_have_a_boss_spawners_and_room_to_arrive() -> void:
 			check(map.layouts[d].room_at(at) > 0, "%s: camp %d stands in a room" % [def.display_name, s])
 			check(at.distance_to(map.arrival_point(d)) >= config.keep_clear_radius * 0.99,
 					"%s: no camp where the player arrives" % def.display_name)
-			check_eq(sites.levels[s], def.level, "dungeon level")
+			check(sites.levels[s] >= def.level, "dungeon camps are at least the dungeon's level")
 			spawners += sites.is_spawner[s]
 			bosses += sites.has_boss[s]
 		check_eq(spawners, def.spawner_count, "%s spawners" % def.display_name)

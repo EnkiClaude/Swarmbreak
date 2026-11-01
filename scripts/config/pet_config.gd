@@ -15,7 +15,8 @@ extends Resource
 @export var xp_first_level: float = 20.0
 @export var xp_growth: float = 1.1
 @export var stage_xp_multiplier: float = 1.6
-## Share of the player's kill XP the pet gets: base plus per stage.
+## The pet earns this fraction of the player's kill XP as a bonus (base plus
+## per stage); the player's own XP is never reduced.
 @export var xp_share_base: float = 0.08
 @export var xp_share_per_stage: float = 0.04
 ## Loot within this distance of the player is collected, per stage (0 = egg).

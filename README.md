@@ -24,7 +24,7 @@ and its frame rate says little about the Deck.
   MultiMesh rendering) with a debug overlay.
 - **M11:** pets, more gear and real dungeons. Helm, gloves, pants and boots
   slots; a pet slot for an egg from the first quest (or the Egg Keeper in
-  town) that takes a share of your XP, hatches at level 10, evolves every
+  town) that earns bonus XP from your kills (yours isn't reduced), hatches at level 10, evolves every
   10 levels and, once hatched, collects drops around you. Dungeons are a
   hallway with rooms on both sides, harder and richer the deeper you go,
   with walls you and the monsters can't pass. Rare Blessed Stones make a

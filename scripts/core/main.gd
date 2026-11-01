@@ -164,11 +164,11 @@ func _check_data() -> void:
 ## Every space's camps share the swarm's camp ids, so size them for the biggest.
 func _max_sites() -> int:
 	var most := 1
-	# Upper bound: every region's camps, or a dungeon's camps, spawners and boss.
+	# Upper bound: every region's camps, or one camp per dungeon room.
 	for region in world_config.regions:
 		most += region.camp_count
 	for dungeon in world_config.dungeons:
-		most = maxi(most, dungeon.camp_count + dungeon.spawner_count + 1)
+		most = maxi(most, dungeon.rooms_per_side * 2 + 2)
 	return most
 
 

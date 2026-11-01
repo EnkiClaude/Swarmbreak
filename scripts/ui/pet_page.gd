@@ -51,7 +51,7 @@ func _build_pet(parent: VBoxContainer) -> void:
 		head.add_child(MenuWidgets.label("%s\nLevel %d   -   %s" % [item.item_name, item.pet_level,
 				"egg" if stage == 0 else "stage %d" % stage], MenuWidgets.SMALL_FONT + 2, def.color))
 		if item.pet_level < _pets.max_level:
-			parent.add_child(MenuWidgets.label("XP %d / %d   (takes %d%% of your kill XP)" % [
+			parent.add_child(MenuWidgets.label("XP %d / %d   (earns %d%% of your kill XP as a bonus; yours isn't reduced)" % [
 					floori(item.pet_xp), ceili(PetRules.xp_to_next(_pets, item.pet_level)),
 					roundi(PetRules.xp_share(_pets, item.pet_level) * 100.0)]))
 		if stage < _pets.max_stage:

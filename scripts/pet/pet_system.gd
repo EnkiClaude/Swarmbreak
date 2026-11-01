@@ -1,8 +1,9 @@
 class_name PetSystem
 extends Node3D
 ## The pet in the inventory's pet slot, brought to life: it follows the
-## player (an egg floats, a hatched pet walks), takes its share of the
-## player's kill XP (PetRules), levels, hatches and evolves (rebuilding its
+## player (an egg floats, a hatched pet walks), earns a share of the
+## player's kill XP as a bonus (the player still gets all of theirs;
+## PetRules), levels, hatches and evolves (rebuilding its
 ## model), and once hatched sets how far around the player LootSystem
 ## collects drops by itself.
 
@@ -41,7 +42,8 @@ func pet() -> ItemData:
 	return _inventory.equipped[Inventory.Equip.PET]
 
 
-## Gives the pet its share of XP the player just earned.
+## Gives the pet a bonus worth its share of the XP the player just earned.
+## Never takes anything from the player.
 func gain_kill_xp(player_xp: float) -> void:
 	var item := pet()
 	if item == null or player_xp <= 0.0:

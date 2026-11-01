@@ -616,9 +616,13 @@ func _keeper_and_pet() -> void:
 	_go_to_town()
 	await _frames(10)
 	_check(pets.visible, "the egg follows the player")
+	var progress := _main_var("progress") as PlayerProgress
+	var player_before := [progress.level, progress.xp]
 	var before := pet.pet_xp + pet.pet_level * 1000.0
 	pets.gain_kill_xp(200.0)
 	_check(pet.pet_xp + pet.pet_level * 1000.0 > before, "kills give the pet XP")
+	_check(progress.level == player_before[0] and progress.xp == player_before[1],
+			"the pet's XP is a bonus: the player's isn't touched")
 	pet.pet_level = 10
 	PetRules.refresh(config, pet)
 	await _frames(3)
