@@ -28,6 +28,10 @@ extends Resource
 ## Where the pet floats or walks: behind and beside the player.
 @export var follow_offset: Vector2 = Vector2(0.9, 1.4)
 @export var follow_sharpness: float = 6.0
+## A hatched pet flies to drops in its range at this speed (m/s) and picks
+## one up within fetch_reach of it.
+@export var fetch_speed: float = 18.0
+@export var fetch_reach: float = 1.0
 ## Rarity color an egg item shows in (LootConfig.rarity_colors).
 @export var egg_rarity: int = 2
 

@@ -85,7 +85,8 @@ func test_dungeons_have_a_boss_spawners_and_room_to_arrive() -> void:
 			check(sites.levels[s] >= def.level, "dungeon camps are at least the dungeon's level")
 			spawners += sites.is_spawner[s]
 			bosses += sites.has_boss[s]
-		check_eq(spawners, def.spawner_count, "%s spawners" % def.display_name)
+		check_eq(spawners, def.spawner_count + def.boss_room_spawners, "%s spawners" %
+				def.display_name)
 		check_eq(bosses, 1, "%s has a boss" % def.display_name)
 		# Arriving must not land on the way-out gate, or leaving bounce back in.
 		check(map.arrival_point(d).distance_to(map.exit_position(d)) > config.gate_radius,
@@ -336,6 +337,15 @@ func test_room_monsters_stay_in_their_room() -> void:
 		var swap := leashed_pos
 		leashed_pos = free_pos
 		free_pos = swap
-	check_eq(layout.room_at(leashed_pos), 1, "the leashed one stays in its room (%s)" % leashed_pos)
-	check(layout.room_at(free_pos) != 1, "the free one walks out to the player (%s)" % free_pos)
+	# Steering works on 2 m cells: judge by the cell each one stands in.
+	check_eq(layout.room_at(_cell_center(leashed_pos)), 1,
+			"the leashed one stays in its room (%s)" % leashed_pos)
+	check(layout.room_at(_cell_center(free_pos)) != 1,
+			"the free one walks out to the player (%s)" % free_pos)
 	swarm.free()
+
+
+## The center of the 2 m flow-field cell p is in (grid corner at -72, -72).
+func _cell_center(p: Vector2) -> Vector2:
+	var corner := Vector2(-72.0, -72.0)
+	return corner + (((p - corner) / 2.0).floor() + Vector2(0.5, 0.5)) * 2.0

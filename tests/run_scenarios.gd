@@ -633,6 +633,21 @@ func _keeper_and_pet() -> void:
 	var loot := _main.get_node("Loot") as LootSystem
 	_check(loot.collect_radius > 3.0, "a hatched pet collects loot around the player (%.1f m)" %
 			loot.collect_radius)
+	# A pile past the player's own magnet but in the pet's range: the pet
+	# flies over and brings it in.
+	var inventory_now := _main_var("inventory") as Inventory
+	var geon_before := inventory_now.stones
+	var away := _player.ground_position() + Vector2(-9.0, 0.0)
+	loot.place_geon(5, away)
+	var closest := INF
+	for n in 90:
+		await _frames(1)
+		closest = minf(closest, Vector2(pets.position.x, pets.position.z).distance_to(away))
+		if inventory_now.stones > geon_before:
+			break
+	_check(closest < 1.5, "the pet flew to the drop (got within %.1f m)" % closest)
+	_check(inventory_now.stones >= geon_before + 5, "and picked it up (%d -> %d)" % [geon_before,
+			inventory_now.stones])
 
 
 func _double_click() -> void:
@@ -1115,6 +1130,7 @@ func _talisman_menu() -> void:
 	gear.rarity = 4
 	gear.item_name = "Test Helm"
 	inventory.equipped[Inventory.Equip.HELM] = gear
+	inventory.notify_changed()
 	menu.open(CharacterMenu.Tab.INVENTORY)
 	await _frames(1)
 	var stat := PlayerStat.Id.MAX_HEALTH
@@ -1199,7 +1215,11 @@ func _room_leash() -> void:
 	for i in _swarm.state.count:
 		if _swarm.state.camp_ids[i] == camp:
 			members += 1
-			if layout.room_at(_swarm.state.positions[i]) != 1:
+			# Judged by the 2 m steering cell it stands in (grid corner at -72).
+			var p: Vector2 = _swarm.state.positions[i]
+			var cell := Vector2(-72.0, -72.0) + (((p + Vector2(72.0, 72.0)) / 2.0).floor()
+					+ Vector2(0.5, 0.5)) * 2.0
+			if layout.room_at(cell) != 1:
 				outside += 1
 	_check(members > 0, "the camp is there (%d)" % members)
 	_check(outside == 0, "none of it left its room (%d outside)" % outside)

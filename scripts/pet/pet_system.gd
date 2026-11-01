@@ -4,8 +4,9 @@ extends Node3D
 ## player (an egg floats, a hatched pet walks), earns a share of the
 ## player's kill XP as a bonus (the player still gets all of theirs;
 ## PetRules), levels, hatches and evolves (rebuilding its
-## model), and once hatched sets how far around the player LootSystem
-## collects drops by itself.
+## model), and once hatched fetches drops around the player: it flies to
+## the nearest one in range (LootSystem.nearest_to_fetch()) and LootSystem
+## collects it when the pet gets there.
 
 signal leveled(item: ItemData)
 signal evolved(item: ItemData, stage: int)
@@ -64,20 +65,33 @@ func tick(delta: float) -> void:
 	if item == null:
 		visible = false
 		_loot.collect_radius = 0.0
+		_loot.collector_reach = 0.0
 		return
 	var stage := PetRules.stage(config, item.pet_level)
 	if item.pet_type != _shown_type or stage != _shown_stage:
 		_rebuild(item, stage)
 	visible = true
 	_loot.collect_radius = PetRules.pickup_radius(config, item.pet_level)
-	# Behind the player and off to its right, turning with it.
-	var facing := _player.facing
-	var right := Vector3(-facing.z, 0.0, facing.x)
-	var goal := _player.position + right * config.follow_offset.x - facing * config.follow_offset.y
-	if stage <= 0:
-		goal.y += 1.1
+	_loot.collector_reach = config.fetch_reach if stage >= 1 else 0.0
 	var before := position
-	position = position.lerp(goal, 1.0 - exp(-config.follow_sharpness * delta))
+	var fetching := -1
+	if stage >= 1:
+		fetching = _loot.nearest_to_fetch(Vector2(position.x, position.z))
+	if fetching >= 0:
+		# Off to the drop, straight and quick.
+		var drop := _loot.item_position(fetching)
+		var target := Vector3(drop.x, 0.0, drop.y)
+		position = position.move_toward(target, config.fetch_speed * delta)
+	else:
+		# Behind the player and off to its right, turning with it.
+		var facing := _player.facing
+		var right := Vector3(-facing.z, 0.0, facing.x)
+		var goal := _player.position + right * config.follow_offset.x \
+				- facing * config.follow_offset.y
+		if stage <= 0:
+			goal.y += 1.1
+		position = position.lerp(goal, 1.0 - exp(-config.follow_sharpness * delta))
+	_loot.collector_position = Vector2(position.x, position.z)
 	var moved := Vector2(position.x - before.x, position.z - before.z)
 	var speed := moved.length() / maxf(delta, 0.0001)
 	if moved.length_squared() > 0.000001:
