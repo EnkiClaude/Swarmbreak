@@ -35,7 +35,10 @@ func test_rolls_respect_rarity_and_slot() -> void:
 				failures.append("stat %d not allowed on slot %d" % [item.stats[k], item.slot])
 		check_eq(unique.size(), item.stats.size(), "no duplicate stats on one item")
 		check(item.item_name != "", "item has a name")
-	check_eq(seen_rarities.size(), 3, "all rarities drop over 300 rolls")
+	# Epic and legendary are rare enough to miss in 300 (test_sets_talismans).
+	check(seen_rarities.has(0) and seen_rarities.has(1) and seen_rarities.has(2),
+			"common, magic and rare all drop over 300 rolls")
+	check(not seen_rarities.has(5), "set rarity never rolls")
 
 
 func test_values_grow_with_zone_level() -> void:
