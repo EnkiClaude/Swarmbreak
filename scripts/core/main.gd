@@ -80,6 +80,7 @@ func _ready() -> void:
 	inventory.sets = set_list
 	stats = PlayerStats.new(progress, skill_tree, inventory, progression_config, job_tree)
 	inventory.changed.connect(stats.recompute)
+	inventory.changed.connect(_dress_hero)
 	progress.leveled_up.connect(_on_leveled_up)
 	progress.attributes_changed.connect(stats.recompute)
 	_player.setup(_camera_rig, flow_half)
@@ -144,6 +145,7 @@ func _ready() -> void:
 	save.load_game()
 	_build_keeper()
 	stats.recompute()
+	_dress_hero()
 	_connect_autosave()
 	world.return_to_town()
 	_jump_from_url()
@@ -402,6 +404,11 @@ func _on_job_chosen(job: int) -> void:
 	_hud.banner(job_tree.jobs[job].display_name.to_upper(), job_tree.jobs[job].color, 2.0)
 	_effects.spawn(_pillar_effect, _player.position, 1.0)
 	_feedback.level_up()
+
+
+## The hero wears what's equipped (rebuilt only when the look changes).
+func _dress_hero() -> void:
+	_player.set_look(HeroLook.from_inventory(inventory, loot_config))
 
 
 func _on_talisman_applied(success: bool, _gear: ItemData) -> void:

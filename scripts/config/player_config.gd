@@ -15,6 +15,9 @@ extends Resource
 ## Walk cycle radians per meter walked, and how fast the casting arm rises.
 @export var stride_per_meter: float = 2.2
 @export var raise_speed: float = 10.0
+## How hard the weapon's gem and refined blade glow: base plus per +.
+@export var weapon_glow_base: float = 0.8
+@export var weapon_glow_per_refine: float = 0.35
 @export var max_health: float = 100.0
 @export var health_regen: float = 1.5
 @export var max_mana: float = 100.0

@@ -58,6 +58,43 @@ func test_hero_has_legs_arms_and_a_staff_in_the_right_hand() -> void:
 	check(right_arm_high > 1.5, "the staff rises above the shoulder (%.2f)" % right_arm_high)
 
 
+func _vertex_count(mesh: ArrayMesh) -> int:
+	return (_arrays(mesh)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+
+
+func test_hero_wears_what_is_equipped() -> void:
+	var loot := load("res://data/rpg/loot.tres") as LootConfig
+	var inventory := Inventory.new(16)
+	var bare := HeroLook.from_inventory(inventory, loot)
+	var bare_mesh := CharacterModels.hero(1.8, Color.BLUE, Color.GOLD, Color.CYAN, null, bare)
+	var kinds := {}
+	for k in loot.item_kinds.size():
+		kinds[loot.item_kinds[k].display_name] = k
+	for name: String in ["Plate", "Helm", "Greatblade", "Gloves", "Boots", "Pants"]:
+		var item := ItemData.new()
+		item.kind = kinds[name]
+		item.slot = loot.item_kinds[item.kind].slot
+		item.two_handed = loot.item_kinds[item.kind].two_handed
+		item.rarity = 4
+		check(inventory.equip_item(item), "wore the %s" % name)
+	var geared := HeroLook.from_inventory(inventory, loot)
+	check(geared.signature() != bare.signature(), "gear changes the look")
+	check_eq(geared.armor, int(ItemKindDef.Icon.PLATE), "plate armor shows")
+	check(geared.helm and geared.gloves and geared.boots and geared.pants, "every piece shows")
+	var geared_mesh := CharacterModels.hero(1.8, Color.BLUE, Color.GOLD, Color.CYAN, null, geared)
+	check(_vertex_count(geared_mesh) > _vertex_count(bare_mesh), "more parts when geared")
+	# The blade glows, more once refined.
+	var glowing := 0
+	for c in (_arrays(geared_mesh)[Mesh.ARRAY_COLOR] as PackedColorArray):
+		if c.a < 0.99:
+			glowing += 1
+	check(glowing > 0, "the weapon has glowing parts")
+	inventory.equipped[Inventory.Equip.MAIN_HAND].upgrade_level = 7
+	var refined := HeroLook.from_inventory(inventory, loot)
+	check(refined.signature() != geared.signature(), "refining changes the look (glow)")
+	check_eq(refined.weapon_glow, 7, "glow follows the refine level")
+
+
 func test_regions_field_their_own_monsters() -> void:
 	var config := load("res://data/world/world.tres") as WorldConfig
 	var map := WorldMap.new(config)
