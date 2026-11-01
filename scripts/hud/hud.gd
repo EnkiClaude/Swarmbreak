@@ -1,11 +1,11 @@
 class_name Hud
 extends Control
 ## Player-facing HUD. Top left, a framed character panel: level and job,
-## zone and camps left, health, mana and XP bars, with hints below it when
+## where the player is (region or dungeon and its level), health, mana and XP bars, with hints below it when
 ## skill points or a job choice are waiting. Top right, a round minimap
 ## (HudMinimap). Right edge, the skill column with cooldowns (HudSkills),
 ## hidden while the touch buttons show. Also pickup messages, a banner for
-## level-ups and zone names, a boss health bar while a boss is awake nearby,
+## level-ups and place names, a boss health bar while a boss is awake nearby,
 ## and a red edge flash when the player is hurt.
 ## Redraws every frame from the live game state; owns no game state itself.
 
@@ -31,9 +31,8 @@ const SKILL_ROWS := 4
 @export var config: HudConfig
 
 var _vitals: PlayerVitals
-var _zone: ZoneDirector
+var _world: WorldDirector
 var _player: Player
-var _half_extent := 1.0
 var _hurt := 0.0
 var _progress: PlayerProgress
 var _toast_texts: PackedStringArray = []
@@ -52,13 +51,12 @@ var _combat: PlayerCombat
 var show_skills := true
 
 
-func setup(vitals: PlayerVitals, zone: ZoneDirector, player: Player, half_extent: float,
+func setup(vitals: PlayerVitals, world: WorldDirector, player: Player,
 		progress: PlayerProgress = null) -> void:
 	_vitals = vitals
 	_progress = progress
-	_zone = zone
+	_world = world
 	_player = player
-	_half_extent = half_extent
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -135,6 +133,8 @@ func _draw() -> void:
 				BANNER_SIZE)
 	if _hurt > 0.0:
 		_draw_vignette()
+	if _world != null and _world.fade > 0.0:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.0, 0.0, 0.0, _world.fade))
 
 
 func _draw_panel() -> void:
@@ -157,10 +157,11 @@ func _draw_panel() -> void:
 		draw_string(font, Vector2(x + title_w + 10.0, at.y + PANEL_PADDING + TEXT_SIZE - 2.0),
 				_progress.job_title(_jobs), HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE,
 				_jobs.jobs[_progress.job].color)
-	if _zone != null:
+	if _world != null:
+		var place := "%s   -   %s" % [_world.location_name(),
+				"Safe" if _world.is_town() else "Lv %d" % _world.level()]
 		draw_string(font, Vector2(x, at.y + PANEL_PADDING + TEXT_SIZE + SMALL_TEXT_SIZE + 2.0),
-				"Zone %d   -   %d camps left" % [_zone.level, _zone.camps_left()],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_TEXT_SIZE, Color(1, 1, 1, 0.7))
+				place, HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_TEXT_SIZE, Color(1, 1, 1, 0.7))
 	var bar := Rect2(x, bars_top, inner, config.bar_height)
 	_draw_bar(bar, _vitals.health / _vitals.max_health, config.health_color, _health_text())
 	bar.position.y += config.bar_height + config.bar_gap
@@ -216,8 +217,7 @@ func _draw_minimap() -> void:
 	var center := Vector2(size.x - config.minimap_margin - r, config.minimap_margin + r)
 	var yaw := _camera.yaw() if _camera != null else 0.0
 	var facing := Vector2(_player.facing.x, _player.facing.z)
-	HudMinimap.draw(self, center, config, _zone, _player.ground_position(), facing, yaw,
-			_half_extent)
+	HudMinimap.draw(self, center, config, _world, _player.ground_position(), facing, yaw)
 
 
 func _draw_skills() -> void:

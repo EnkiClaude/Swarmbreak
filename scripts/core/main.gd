@@ -1,24 +1,25 @@
 extends Node3D
 ## Wires the game together and runs the frame. Order each frame:
 ##   player -> swarm.simulate -> player attacks -> bolts -> swarm.resolve_deaths
-##   -> zone (camp wake-ups, deaths) -> player damage -> swarm.draw -> effects
-##   -> damage numbers -> corpses -> popup -> hud -> camera
+##   -> camps (deaths, wake-ups, streaming) -> bosses -> loot -> player damage
+##   -> world (regions, gates) -> swarm.draw -> effects -> damage numbers
+##   -> corpses -> popup -> hud -> camera
 ## Damage has to land between simulate() and resolve_deaths(), while enemy
 ## indices still match the spatial hash. During hit-stop only the camera
 ## (shake), popup and HUD advance.
 ##
-## Zone flow: a zone starts with all camps asleep. Clearing every camp moves
-## on to the next level after a short pause; dying restarts the current one.
-## Character progress (level, skills, items) carries across both. Clearing a
-## camp drops loot; kills give XP. Progress autosaves (SaveManager) and the
-## game resumes at the saved zone.
+## The world (WorldDirector) is an open map of regions around a town, with
+## dungeons behind gates. Camps stream in near the player and come back a
+## minute after clearing; dungeon spawners refill at once. Clearing a camp
+## drops loot by its level (better in dungeons); kills give XP scaled by the
+## level where the player is. Dying sends the player back to town. Progress
+## autosaves (SaveManager); the game always resumes in town.
 
-const ZONE_MESSAGE_TIME := 2.0
-const START_POSITION := Vector3.ZERO
+const LOCATION_MESSAGE_TIME := 2.0
 
 @export var feedback_config: FeedbackConfig
 @export var audio_config: AudioConfig
-@export var zone_config: ZoneConfig
+@export var world_config: WorldConfig
 @export var progression_config: ProgressionConfig
 @export var skill_tree: SkillTree
 @export var loot_config: LootConfig
@@ -28,7 +29,8 @@ const START_POSITION := Vector3.ZERO
 @export var damage_numbers_config: DamageNumbersConfig
 
 var combat: PlayerCombat
-var zone: ZoneDirector
+var world: WorldDirector
+var camps: CampDirector
 var progress: PlayerProgress
 var inventory: Inventory
 var stats: PlayerStats
@@ -39,11 +41,10 @@ var save: SaveManager
 var _loot_rng := RandomNumberGenerator.new()
 var _pillar_effect := -1
 
-## Seconds until the pending zone (re)start, or < 0 when none is pending.
-var _restart_in := -1.0
-var _restart_level := 1
+## Seconds until the player respawns in town, or < 0 when not dead.
+var _respawn_in := -1.0
 
-@onready var _arena: Arena = $Arena
+@onready var _scenery: Node3D = $World
 @onready var _player: Player = $Player
 @onready var _camera_rig: CameraRig = $CameraRig
 @onready var _swarm: SwarmManager = $Swarm
@@ -64,29 +65,32 @@ var _restart_level := 1
 
 
 func _ready() -> void:
-	var half_extent := _arena.config.half_extent
+	var flow_half := _swarm.config.flow_half_extent
 	progress = PlayerProgress.new(progression_config, skill_tree)
 	inventory = Inventory.new(loot_config.backpack_size)
 	stats = PlayerStats.new(progress, skill_tree, inventory, progression_config, job_tree)
 	inventory.changed.connect(stats.recompute)
 	progress.leveled_up.connect(_on_leveled_up)
-	_player.setup(_camera_rig, half_extent)
+	_player.setup(_camera_rig, flow_half)
 	_player.set_stats(stats)
-	_camera_rig.set_bounds(half_extent)
-	_camera_rig.follow(_player)
 	_corpses.setup(_swarm.config.enemy_types, feedback_config)
-	_swarm.setup(half_extent, _effects, _corpses, zone_config.max_camps, boss_config.max_per_zone)
-	_projectiles.setup(_player.config.bolt, _effects, half_extent)
+	_swarm.setup(flow_half, _effects, _corpses, _max_sites(), boss_config.max_active)
+	_projectiles.setup(_player.config.bolt, _effects, flow_half)
 	_numbers.setup(damage_numbers_config, _swarm)
 	_pillar_effect = _effects.register(feedback_config.pillar_effect)
 	bosses = BossSystem.new(boss_config, _swarm, _effects)
 	bosses.slammed.connect(_on_boss_slammed)
 	bosses.boss_killed.connect(_on_boss_killed)
-	zone = ZoneDirector.new(zone_config, _swarm, half_extent, bosses, boss_config)
-	combat = PlayerCombat.new(_player, _swarm, _projectiles, _effects, zone, stats)
-	zone.camp_cleared.connect(_on_camp_cleared)
+	world = WorldDirector.new(world_config, _swarm, bosses, boss_config, _scenery,
+			_environment.environment, _sun)
+	camps = world.camps
+	combat = PlayerCombat.new(_player, _swarm, _projectiles, _effects, camps, stats)
+	camps.camp_cleared.connect(_on_camp_cleared)
+	camps.spawner_kill.connect(_on_spawner_kill)
+	world.location_entered.connect(_on_location_entered)
 	_loot_rng.randomize()
 	_loot.setup(loot_config, inventory, ItemGenerator.new(loot_config))
+	world.setup_actors(_player, _camera_rig, _projectiles, _loot)
 	_loot.picked_up.connect(_on_item_picked_up)
 	_loot.backpack_full.connect(_on_backpack_full)
 	refinery = Refinery.new(loot_config)
@@ -99,30 +103,46 @@ func _ready() -> void:
 	_popup.setup(feedback_config)
 	_feedback.setup(feedback_config, audio_config, _camera_rig, _popup, _sfx, _swarm, combat,
 			_projectiles, _player)
-	_hud.setup(_player.vitals, zone, _player, half_extent, progress)
+	_hud.setup(_player.vitals, world, _player, progress)
 	_hud.setup_bosses_and_jobs(bosses, boss_config.display_name, job_tree)
 	_hud.setup_camera_and_skills(_camera_rig, combat)
 	_overlay.swarm = _swarm
 	_overlay.combat = combat
 	save = SaveManager.new(save_config, progress, inventory, job_tree,
 			progression_config.max_level, loot_config.upgrade_max)
-	var level := save.load_game()
-	var previewed := _url_zone()
-	if previewed > 0:
-		level = previewed
+	save.load_game()
 	stats.recompute()
 	_connect_autosave()
-	start_zone(level)
+	world.return_to_town()
+	_jump_from_url()
 	_greet()
 
 
-## Web only: index.html?zone=N starts at zone N, to preview a zone's look.
-func _url_zone() -> int:
+## Every space's camps share the swarm's camp ids, so size them for the biggest.
+func _max_sites() -> int:
+	var most := 1
+	# Upper bound: every region's camps, or a dungeon's camps, spawners and boss.
+	for region in world_config.regions:
+		most += region.camp_count
+	for dungeon in world_config.dungeons:
+		most = maxi(most, dungeon.camp_count + dungeon.spawner_count + 1)
+	return most
+
+
+## Web only, for previewing: index.html?region=N starts in region N (0 is the
+## north-west corner, row by row), ?dungeon=N inside dungeon N (from 1).
+func _jump_from_url() -> void:
 	if not OS.has_feature("web"):
-		return 0
+		return
 	var query := str(JavaScriptBridge.eval("window.location.search", true))
-	var found := RegEx.create_from_string("zone=(\\d+)").search(query)
-	return int(found.get_string(1)) if found != null else 0
+	var region := RegEx.create_from_string("region=(\\d+)").search(query)
+	if region != null:
+		var r := clampi(int(region.get_string(1)), 0, world_config.regions.size() - 1)
+		world.enter(WorldMap.OVERWORLD, world.map.region_center(r) + Vector2(0.0, 20.0))
+	var dungeon := RegEx.create_from_string("dungeon=(\\d+)").search(query)
+	if dungeon != null:
+		var d := clampi(int(dungeon.get_string(1)) - 1, 0, world_config.dungeons.size() - 1)
+		world.enter(d, world.map.arrival_point(d))
 
 
 ## Every change worth keeping schedules an autosave.
@@ -147,13 +167,13 @@ func _greet() -> void:
 					Color(1.0, 0.6, 0.4))
 
 
-## Erases the save and starts a brand-new character at zone 1.
+## Erases the save and starts a brand-new character in town.
 func new_game() -> void:
 	save.erase()
 	progress.reset()
 	inventory.reset()
 	stats.recompute()
-	start_zone(1)
+	_respawn()
 	save.save_now()
 	_hud.toast("New game started", Color(0.75, 0.9, 1.0))
 
@@ -167,23 +187,11 @@ func _notification(what: int) -> void:
 		save.save_now()
 
 
-## Resets the player, dresses the arena in the level's theme and spawns its camps.
-func start_zone(level: int) -> void:
-	_restart_in = -1.0
-	var theme := zone_config.theme_for(level)
-	if theme != null and theme != _arena.theme:
-		_arena.apply_theme(theme, _environment.environment, _sun, zone_config.zone_seed + level)
-	zone.generate(level, Vector2(START_POSITION.x, START_POSITION.z))
-	_loot.clear()
-	_player.reset_to(START_POSITION)
+## Back to town at full health.
+func _respawn() -> void:
+	_respawn_in = -1.0
+	world.return_to_town()
 	_player.vitals.reset()
-	_camera_rig.reset_view()
-	_camera_rig.follow(_player)
-	if save != null:
-		save.set_zone_level(level)
-	_popup.show_message("ZONE %d" % level, Color(0.85, 0.9, 1.0), ZONE_MESSAGE_TIME)
-	if theme != null:
-		_hud.banner(theme.display_name.to_upper(), Color(1.0, 0.85, 0.55), ZONE_MESSAGE_TIME)
 
 
 func _process(delta: float) -> void:
@@ -203,14 +211,17 @@ func _process(delta: float) -> void:
 	if alive:
 		combat.tick(dt)
 	_projectiles.tick(dt, _swarm)
-	zone.record_deaths(_swarm.resolve_deaths())
-	progress.add_xp(_swarm.last_xp)
-	zone.tick(player_pos)
+	camps.record_deaths(_swarm.resolve_deaths())
+	progress.add_xp(_swarm.last_xp * world.xp_multiplier())
+	camps.tick(player_pos)
 	if alive:
 		bosses.tick(dt, player_pos, _player.vitals)
 	_loot.tick(dt, player_pos)
+	_swarm.damage_multiplier = world.damage_multiplier()
 	_update_player_health(dt, now, alive)
-	_update_zone_flow(dt)
+	_update_respawn(dt)
+	if alive:
+		world.tick(dt, _player.ground_position())
 	_swarm.draw()
 	_effects.tick(dt)
 	_numbers.tick(dt)
@@ -237,37 +248,56 @@ func _update_player_health(dt: float, now: float, alive: bool) -> void:
 
 
 func _on_player_died() -> void:
-	if _restart_in >= 0.0:
+	if _respawn_in >= 0.0:
 		return
 	_popup.show_message("YOU DIED", Color(1.0, 0.3, 0.25), _player.config.respawn_delay)
-	_restart_in = _player.config.respawn_delay
-	_restart_level = zone.level
+	_respawn_in = _player.config.respawn_delay
 
 
-func _update_zone_flow(dt: float) -> void:
-	if _restart_in < 0.0 and zone.is_cleared() and not _player.vitals.is_dead():
-		_popup.show_message("ZONE CLEARED", Color(1.0, 0.85, 0.35), ZONE_MESSAGE_TIME)
-		_restart_in = ZONE_MESSAGE_TIME
-		_restart_level = zone.level + 1
-	if _restart_in >= 0.0:
-		_restart_in -= dt
-		if _restart_in < 0.0:
-			start_zone(_restart_level)
+func _update_respawn(dt: float) -> void:
+	if _respawn_in < 0.0:
+		return
+	_respawn_in -= dt
+	if _respawn_in < 0.0:
+		_respawn()
+		_hud.toast("You wake up in %s" % world.location_name(), Color(0.75, 0.9, 1.0))
 
 
-func _on_camp_cleared(_camp: int, at: Vector2, last_camp: bool) -> void:
+## Loot by the camp's level; dungeons add drops, rarity and stones.
+func _on_camp_cleared(_camp: int, at: Vector2, level: int, _had_boss: bool) -> void:
 	var amount := _loot_rng.randi_range(loot_config.camp_drop_min, loot_config.camp_drop_max)
-	if last_camp:
-		amount += loot_config.zone_clear_bonus_drops
-	_loot.drop(at, amount, zone.level)
 	var stones := _loot_rng.randi_range(loot_config.camp_stones_min, loot_config.camp_stones_max)
+	var min_rarity := 0
+	var dungeon := world.dungeon()
+	if dungeon != null:
+		amount += dungeon.extra_drops
+		min_rarity = dungeon.min_drop_rarity
+		stones = roundi(stones * dungeon.stones_multiplier)
+	_loot.drop(at, amount, level, min_rarity)
 	inventory.add_stones(stones)
 	_hud.toast("+%d Refining Stones" % stones, Color(0.75, 0.85, 1.0))
 
 
+## Spawner monsters drop rarely, one at a time: farming adds up.
+func _on_spawner_kill(_camp: int, at: Vector2, level: int) -> void:
+	var dungeon := world.dungeon()
+	if dungeon == null:
+		return
+	if _loot_rng.randf() < dungeon.spawner_item_chance:
+		_loot.drop(at, 1, level, dungeon.min_drop_rarity)
+	if _loot_rng.randf() < dungeon.spawner_stone_chance:
+		inventory.add_stones(1)
+
+
+func _on_location_entered(title: String, level: int, is_town: bool) -> void:
+	var detail := "Safe haven" if is_town else "Level %d" % level
+	_hud.banner("%s  -  %s" % [title.to_upper(), detail], Color(1.0, 0.85, 0.55),
+			LOCATION_MESSAGE_TIME)
+
+
 func _on_boss_killed(_slot: int, at: Vector2) -> void:
 	_effects.spawn(_pillar_effect, Vector3(at.x, 0.0, at.y), 2.0)
-	_loot.drop(at, boss_config.extra_drops, zone.level, boss_config.min_drop_rarity)
+	_loot.drop(at, boss_config.extra_drops, world.level(), boss_config.min_drop_rarity)
 	inventory.add_stones(boss_config.stones)
 	_hud.banner("%s SLAIN" % boss_config.display_name.to_upper(), Color(1.0, 0.7, 0.3), 2.0)
 	_hud.toast("+%d Refining Stones" % boss_config.stones, Color(0.75, 0.85, 1.0))

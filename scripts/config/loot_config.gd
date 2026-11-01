@@ -5,8 +5,6 @@ extends Resource
 ## Items dropped when a camp's last member dies.
 @export var camp_drop_min: int = 1
 @export var camp_drop_max: int = 2
-## Extra items dropped by the last camp of a zone.
-@export var zone_clear_bonus_drops: int = 2
 ## Rarity weights for common, magic, rare.
 @export var rarity_weights: PackedFloat32Array = [60.0, 30.0, 10.0]
 ## Affixes rolled for common, magic, rare.
@@ -15,7 +13,7 @@ extends Resource
 @export var rarity_colors: PackedColorArray = [
 	Color(0.92, 0.92, 0.92), Color(0.4, 0.6, 1.0), Color(1.0, 0.85, 0.3),
 ]
-## Affix rolls grow by this fraction per zone level above 1.
+## Affix rolls grow by this fraction per item level (camp level) above 1.
 @export var value_growth_per_zone: float = 0.15
 @export var slot_names: PackedStringArray = ["Wand", "Charm", "Vest"]
 @export var rare_prefixes: PackedStringArray = [

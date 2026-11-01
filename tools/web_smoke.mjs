@@ -112,11 +112,12 @@ await page.waitForTimeout(12000);
 await shot("reloaded");
 await page.waitForTimeout(500);
 
-// Every zone theme: index.html?zone=N starts there.
-for (const zone of [2, 3, 4, 5]) {
-  await page.goto(`http://localhost:8060/index.html?zone=${zone}`);
+// A few open-world regions and both dungeons: ?region=N and ?dungeon=N
+// start there.
+for (const place of ["region=3", "region=0", "region=8", "dungeon=1", "dungeon=2"]) {
+  await page.goto(`http://localhost:8060/index.html?${place}`);
   await page.waitForTimeout(10000);
-  await shot(`zone${zone}`);
+  await shot(place.replace("=", ""));
 }
 
 await browser.close();

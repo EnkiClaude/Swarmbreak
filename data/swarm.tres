@@ -16,6 +16,7 @@ hash_cell_size = 1.2
 hash_buckets = 4096
 max_attackers = 10
 flow_cell_size = 2.0
+flow_half_extent = 64.0
 max_separation_neighbours = 8
 direct_chase_distance = 3.0
 max_tick_delta = 0.05

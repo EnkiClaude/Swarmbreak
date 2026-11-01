@@ -1,8 +1,8 @@
 class_name ZoneTheme
 extends Resource
-## How a zone looks: floor pattern, walls, pillars, lanterns, scenery outside
+## How a place looks: floor pattern, walls, pillars, lanterns, scenery outside
 ## the walls, sky, fog and light. Purely visual; gameplay never reads it.
-## ZoneConfig.themes lists them, and zone levels cycle through the list.
+## Open-world regions (RegionDef) and dungeons (DungeonDef) each use one.
 
 enum FloorPattern { TILES, FLAGSTONES, GROUND }
 

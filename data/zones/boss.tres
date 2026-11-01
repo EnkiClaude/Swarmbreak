@@ -7,10 +7,7 @@
 script = ExtResource("1_boss")
 display_name = "Camp Warlord"
 type_index = 2
-min_camp_size = 20
-chance = 0.45
-guaranteed_per_zone = 1
-max_per_zone = 8
+max_active = 8
 health_growth = 0.3
 slam_trigger_range = 6.0
 slam_radius = 4.5

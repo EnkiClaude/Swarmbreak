@@ -1,6 +1,6 @@
 class_name BreakPopup
 extends CanvasLayer
-## The "x274 BREAK!" callout, also used for zone messages. A single reused
+## The "x274 BREAK!" callout, also used for messages like YOU DIED. A single reused
 ## label: a bigger break replaces a smaller one still on screen, and a
 ## message is never replaced by a break. It pops in large, settles, then fades.
 

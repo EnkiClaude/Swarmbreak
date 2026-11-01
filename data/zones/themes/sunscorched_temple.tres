@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_theme")
-display_name = "Sunscorched Temple"
+display_name = "Sunscorched Steps"
 floor_pattern = 1
 floor_color = Color(0.45, 0.33, 0.19, 1)
 floor_alt_color = Color(0.38, 0.27, 0.15, 1)
@@ -23,8 +23,8 @@ pillar_color = Color(0.45, 0.32, 0.18, 1)
 pillar_trim_color = Color(0.35, 0.24, 0.13, 1)
 lantern_every = 1
 lantern_color = Color(1, 0.6, 0.25, 1)
-house_count = 0
-tree_count = 0
+house_count = 4
+tree_count = 6
 show_sky = true
 sky_top_color = Color(0.55, 0.45, 0.35, 1)
 sky_horizon_color = Color(0.85, 0.7, 0.5, 1)
@@ -37,3 +37,7 @@ sun_energy = 1.1
 sun_elevation = 38.0
 sun_azimuth = -30.0
 glow_strength = 0.8
+house_color = Color(0.6, 0.48, 0.32, 1)
+roof_color = Color(0.38, 0.22, 0.14, 1)
+trunk_color = Color(0.32, 0.24, 0.16, 1)
+leaf_color = Color(0.36, 0.42, 0.2, 1)

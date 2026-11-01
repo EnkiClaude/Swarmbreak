@@ -165,7 +165,7 @@ func _build_details(parent: VBoxContainer) -> Control:
 	var color := _loot.rarity_colors[item.rarity]
 	var equipped := is_equipped(item)
 	parent.add_child(MenuWidgets.label(item.display_name(), MenuWidgets.FONT_SIZE, color))
-	parent.add_child(MenuWidgets.label("%s %s   -   zone %d%s" % [_loot.rarity_names[item.rarity],
+	parent.add_child(MenuWidgets.label("%s %s   -   item lv %d%s" % [_loot.rarity_names[item.rarity],
 			_loot.slot_names[item.slot], item.item_level, "   -   EQUIPPED" if equipped else ""],
 			MenuWidgets.SMALL_FONT - 1, MenuWidgets.DIM_COLOR))
 	if equipped:

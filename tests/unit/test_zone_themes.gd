@@ -1,22 +1,25 @@
 extends TestSuite
 
 
-func test_zone_levels_cycle_through_themes() -> void:
-	var config := load("res://data/zones/zone.tres") as ZoneConfig
-	var count := config.themes.size()
-	check(count >= 2, "several themes (%d)" % count)
-	check(config.theme_for(1) == config.themes[0], "level 1 uses the first theme")
-	check(config.theme_for(2) == config.themes[1], "level 2 uses the second")
-	check(config.theme_for(count + 1) == config.themes[0], "then it wraps around")
+const THEME_DIR := "res://data/zones/themes/"
+
+
+func _themes() -> Array[ZoneTheme]:
+	var themes: Array[ZoneTheme] = []
+	for file in DirAccess.get_files_at(THEME_DIR):
+		if file.ends_with(".tres"):
+			themes.append(load(THEME_DIR + file) as ZoneTheme)
+	return themes
+
+
+func test_every_theme_loads_with_its_own_name() -> void:
 	var names := {}
-	for theme in config.themes:
+	var themes := _themes()
+	check(themes.size() >= 5, "%d themes" % themes.size())
+	for theme in themes:
 		check(theme != null, "every theme loads")
 		names[theme.display_name] = true
-	check_eq(names.size(), count, "every theme has its own name")
-
-
-func test_no_themes_means_no_theme() -> void:
-	check(ZoneConfig.new().theme_for(3) == null, "null without themes")
+	check_eq(names.size(), themes.size(), "every theme has its own name")
 
 
 func test_pillars_stand_inside_the_walls() -> void:
@@ -28,8 +31,7 @@ func test_pillars_stand_inside_the_walls() -> void:
 
 
 func test_every_theme_builds() -> void:
-	var config := load("res://data/zones/zone.tres") as ZoneConfig
-	for theme in config.themes:
+	for theme in _themes():
 		var parent := Node3D.new()
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 1

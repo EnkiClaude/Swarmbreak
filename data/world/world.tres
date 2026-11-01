@@ -1,0 +1,208 @@
+[gd_resource type="Resource" script_class="WorldConfig" load_steps=26 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/world_config.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/config/region_def.gd" id="2_region"]
+[ext_resource type="Script" path="res://scripts/config/dungeon_def.gd" id="3_dungeon"]
+[ext_resource type="Resource" path="res://data/zones/themes/ashen_wastes.tres" id="10_ashen_wastes"]
+[ext_resource type="Resource" path="res://data/zones/themes/bamboo_meadow.tres" id="11_bamboo_meadow"]
+[ext_resource type="Resource" path="res://data/zones/themes/cedar_hollow.tres" id="12_cedar_hollow"]
+[ext_resource type="Resource" path="res://data/zones/themes/ember_ridge.tres" id="13_ember_ridge"]
+[ext_resource type="Resource" path="res://data/zones/themes/jade_village.tres" id="14_jade_village"]
+[ext_resource type="Resource" path="res://data/zones/themes/mistfen.tres" id="15_mistfen"]
+[ext_resource type="Resource" path="res://data/zones/themes/moonstone_crypt.tres" id="16_moonstone_crypt"]
+[ext_resource type="Resource" path="res://data/zones/themes/red_dust_flats.tres" id="17_red_dust_flats"]
+[ext_resource type="Resource" path="res://data/zones/themes/sunscorched_temple.tres" id="18_sunscorched_temple"]
+[ext_resource type="Resource" path="res://data/zones/themes/vermilion_hall.tres" id="19_vermilion_hall"]
+[ext_resource type="Resource" path="res://data/zones/themes/willow_banks.tres" id="20_willow_banks"]
+
+[sub_resource type="Resource" id="Region_0"]
+script = ExtResource("2_region")
+display_name = "Ashen Wastes"
+theme = ExtResource("10_ashen_wastes")
+level = 5
+is_town = false
+camp_count = 8
+camp_size_min = 18
+camp_size_max = 36
+heavy_chance = 0.2
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_1"]
+script = ExtResource("2_region")
+display_name = "Sunscorched Steps"
+theme = ExtResource("18_sunscorched_temple")
+level = 3
+is_town = false
+camp_count = 7
+camp_size_min = 14
+camp_size_max = 30
+heavy_chance = 0.12
+boss_camps = 1
+
+[sub_resource type="Resource" id="Region_2"]
+script = ExtResource("2_region")
+display_name = "Red Dust Flats"
+theme = ExtResource("17_red_dust_flats")
+level = 4
+is_town = false
+camp_count = 8
+camp_size_min = 16
+camp_size_max = 32
+heavy_chance = 0.15
+boss_camps = 1
+
+[sub_resource type="Resource" id="Region_3"]
+script = ExtResource("2_region")
+display_name = "Bamboo Meadow"
+theme = ExtResource("11_bamboo_meadow")
+level = 1
+is_town = false
+camp_count = 6
+camp_size_min = 10
+camp_size_max = 22
+heavy_chance = 0.05
+boss_camps = 0
+
+[sub_resource type="Resource" id="Region_4"]
+script = ExtResource("2_region")
+display_name = "Jade Village"
+theme = ExtResource("14_jade_village")
+level = 1
+is_town = true
+camp_count = 0
+camp_size_min = 0
+camp_size_max = 0
+heavy_chance = 0.0
+boss_camps = 0
+
+[sub_resource type="Resource" id="Region_5"]
+script = ExtResource("2_region")
+display_name = "Willow Banks"
+theme = ExtResource("20_willow_banks")
+level = 2
+is_town = false
+camp_count = 7
+camp_size_min = 12
+camp_size_max = 26
+heavy_chance = 0.08
+boss_camps = 1
+
+[sub_resource type="Resource" id="Region_6"]
+script = ExtResource("2_region")
+display_name = "Mistfen"
+theme = ExtResource("15_mistfen")
+level = 4
+is_town = false
+camp_count = 8
+camp_size_min = 16
+camp_size_max = 32
+heavy_chance = 0.15
+boss_camps = 1
+
+[sub_resource type="Resource" id="Region_7"]
+script = ExtResource("2_region")
+display_name = "Cedar Hollow"
+theme = ExtResource("12_cedar_hollow")
+level = 2
+is_town = false
+camp_count = 7
+camp_size_min = 12
+camp_size_max = 26
+heavy_chance = 0.08
+boss_camps = 1
+
+[sub_resource type="Resource" id="Region_8"]
+script = ExtResource("2_region")
+display_name = "Ember Ridge"
+theme = ExtResource("13_ember_ridge")
+level = 5
+is_town = false
+camp_count = 8
+camp_size_min = 18
+camp_size_max = 36
+heavy_chance = 0.2
+boss_camps = 2
+
+[sub_resource type="Resource" id="Dungeon_0"]
+script = ExtResource("3_dungeon")
+display_name = "Crimson Sanctum"
+theme = ExtResource("19_vermilion_hall")
+half_extent = 40.0
+level = 4
+region = 5
+gate_offset = Vector2(18, -14)
+gate_color = Color(1, 0.35, 0.2, 1)
+camp_count = 6
+camp_size_min = 16
+camp_size_max = 30
+heavy_chance = 0.25
+damage_multiplier = 1.25
+has_boss = true
+boss_camp_size = 24
+spawner_count = 2
+spawner_population = 30
+spawner_interval = 0.4
+spawner_item_chance = 0.03
+spawner_stone_chance = 0.08
+min_drop_rarity = 1
+extra_drops = 1
+stones_multiplier = 2.0
+
+[sub_resource type="Resource" id="Dungeon_1"]
+script = ExtResource("3_dungeon")
+display_name = "Moonstone Crypt"
+theme = ExtResource("16_moonstone_crypt")
+half_extent = 40.0
+level = 7
+region = 0
+gate_offset = Vector2(0, 8)
+gate_color = Color(0.35, 0.85, 1, 1)
+camp_count = 7
+camp_size_min = 20
+camp_size_max = 36
+heavy_chance = 0.35
+damage_multiplier = 1.4
+has_boss = true
+boss_camp_size = 24
+spawner_count = 2
+spawner_population = 30
+spawner_interval = 0.4
+spawner_item_chance = 0.03
+spawner_stone_chance = 0.08
+min_drop_rarity = 1
+extra_drops = 1
+stones_multiplier = 2.0
+
+[resource]
+script = ExtResource("1_world")
+world_seed = 20261101
+region_size = 128.0
+grid_size = 3
+regions = Array[ExtResource("2_region")]([SubResource("Region_0"), SubResource("Region_1"), SubResource("Region_2"), SubResource("Region_3"), SubResource("Region_4"), SubResource("Region_5"), SubResource("Region_6"), SubResource("Region_7"), SubResource("Region_8")])
+dungeons = Array[ExtResource("3_dungeon")]([SubResource("Dungeon_0"), SubResource("Dungeon_1")])
+spawn_radius = 90.0
+despawn_radius = 115.0
+camp_respawn_time = 60.0
+respawn_min_distance = 30.0
+spawner_range = 32.0
+aggro_radius = 11.0
+member_spacing = 0.95
+camp_spacing = 18.0
+edge_margin = 10.0
+keep_clear_radius = 16.0
+placement_attempts = 300
+health_growth = 0.25
+damage_growth = 0.12
+xp_growth = 0.2
+gate_radius = 2.5
+fade_time = 0.3
+atmosphere_blend_time = 2.0
+region_blend = 0.12
+edge_wall_height = 5.0
+edge_wall_color = Color(0.36, 0.32, 0.28, 1)
+edge_wall_trim_color = Color(0.25, 0.22, 0.2, 1)
+plaza_size = 44.0
+plaza_color = Color(0.5, 0.47, 0.42, 1)
+plaza_grout_color = Color(0.3, 0.27, 0.24, 1)
+prop_clearance = 12.0
+prop_spacing = 7.0

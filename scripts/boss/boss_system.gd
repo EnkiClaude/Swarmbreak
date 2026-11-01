@@ -30,7 +30,7 @@ func _init(config: BossConfig, swarm: SwarmManager, effects: EffectSystem) -> vo
 	_swarm = swarm
 	_effects = effects
 	_telegraph = effects.register(config.telegraph_effect) if effects != null else -1
-	var n := config.max_per_zone
+	var n := config.max_active
 	_alive.resize(n)
 	_last_pos.resize(n)
 	_max_health.resize(n)
@@ -47,12 +47,20 @@ func reset() -> void:
 	_cooldown.fill(0.0)
 
 
-## Turns enemy `index` into the next boss. Returns its slot, or -1 if full.
+## Turns enemy `index` into a boss in the first free slot. Returns the slot,
+## or -1 if every slot holds a living boss.
 func add(index: int, health: float) -> int:
-	if _count >= _config.max_per_zone:
-		return -1
-	var slot := _count
-	_count += 1
+	var slot := -1
+	for k in _count:
+		if _alive[k] == 0:
+			slot = k
+			break
+	if slot < 0:
+		if _count >= _config.max_active:
+			return -1
+		slot = _count
+		_count += 1
+	_windup[slot] = 0.0
 	_swarm.state.make_boss(index, slot)
 	_swarm.state.health[index] = health
 	_alive[slot] = 1
@@ -92,7 +100,10 @@ func tick(delta: float, player_pos: Vector2, vitals: PlayerVitals) -> void:
 		var i: int = state.boss_index[slot]
 		if i < 0:
 			_alive[slot] = 0
-			boss_killed.emit(slot, _last_pos[slot])
+			if state.boss_despawned[slot] != 0:
+				state.boss_despawned[slot] = 0  # streamed out, not killed
+			else:
+				boss_killed.emit(slot, _last_pos[slot])
 			continue
 		var pos: Vector2 = state.positions[i]
 		_last_pos[slot] = pos

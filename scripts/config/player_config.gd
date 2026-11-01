@@ -20,7 +20,7 @@ extends Resource
 @export var dash_cooldown: float = 0.7
 ## Invulnerable for the dash plus this long after it.
 @export var dash_grace: float = 0.12
-## After dying, seconds before the zone restarts.
+## After dying, seconds before the player wakes up in town.
 @export var respawn_delay: float = 2.0
 @export var nova: NovaConfig
 @export var bolt: BoltConfig

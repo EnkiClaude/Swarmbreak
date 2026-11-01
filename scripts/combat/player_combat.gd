@@ -4,7 +4,7 @@ extends RefCounted
 ## player (costs mana) and the lure war cry (costs mana: wakes camps in range
 ## and hurries awake enemies toward the player). Kills give mana back.
 ## Owns only cooldowns and costs; damage goes through SwarmManager, bolts
-## through ProjectileSystem and camp waking through ZoneDirector.
+## through ProjectileSystem and camp waking through CampDirector.
 ## Job perks change the abilities: aftershocks after the nova (Stormcaller),
 ## marks, faster cooldown and armor from the lure (Warlord), piercing
 ## bigger bolts (Arcanist).
@@ -26,7 +26,7 @@ var _player: Player
 var _swarm: SwarmManager
 var _projectiles: ProjectileSystem
 var _effects: EffectSystem
-var _zone: ZoneDirector
+var _camps: CampDirector
 var _nova: NovaConfig
 var _bolt: BoltConfig
 var _lure: LureConfig
@@ -44,12 +44,12 @@ var _shock_count := 0
 
 
 func _init(player: Player, swarm: SwarmManager, projectiles: ProjectileSystem,
-		effects: EffectSystem, zone: ZoneDirector = null, stats: PlayerStats = null) -> void:
+		effects: EffectSystem, camps: CampDirector = null, stats: PlayerStats = null) -> void:
 	_player = player
 	_swarm = swarm
 	_projectiles = projectiles
 	_effects = effects
-	_zone = zone
+	_camps = camps
 	_stats = stats
 	_nova = player.config.nova
 	_bolt = player.config.bolt
@@ -132,7 +132,7 @@ func _try_lure() -> void:
 	lure_cooldown.trigger()
 	var center := _player.ground_position()
 	var radius := _lure.radius * _mult(PlayerStat.Id.LURE_RADIUS)
-	var woken := _zone.lure(center, radius) if _zone != null else 0
+	var woken := _camps.lure(center, radius) if _camps != null else 0
 	_swarm.boost_within(center, radius, _lure.boost_duration)
 	_effects.spawn(_lure_effect, Vector3(center.x, 0.0, center.y), radius)
 	var perks := _perks()

@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ZoneTheme" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/zone_theme.gd" id="1_theme"]
+
+[resource]
+script = ExtResource("1_theme")
+display_name = "Mistfen"
+floor_pattern = 2
+floor_noise = 0.25
+floor_roughness = 0.95
+show_sky = true
+glow_strength = 0.5
+floor_color = Color(0.26, 0.3, 0.22, 1)
+floor_alt_color = Color(0.2, 0.26, 0.24, 1)
+grout_color = Color(0.18, 0.2, 0.18, 1)
+tree_count = 30
+trunk_color = Color(0.2, 0.2, 0.17, 1)
+leaf_color = Color(0, 0, 0, 0)
+house_count = 0
+sky_top_color = Color(0.4, 0.45, 0.44, 1)
+sky_horizon_color = Color(0.55, 0.6, 0.56, 1)
+fog_color = Color(0.45, 0.52, 0.48, 1)
+fog_density = 0.025
+ambient_color = Color(0.5, 0.6, 0.55, 1)
+ambient_energy = 0.6
+sun_color = Color(0.8, 0.88, 0.82, 1)
+sun_energy = 0.7
+sun_elevation = 40.0
+sun_azimuth = 140.0

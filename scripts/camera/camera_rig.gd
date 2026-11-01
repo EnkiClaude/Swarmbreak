@@ -44,7 +44,7 @@ func follow(new_target: Node3D) -> void:
 	_place(1.0)
 
 
-## Back to the starting angle, e.g. when a zone starts.
+## Back to the starting angle, e.g. after going through a gate.
 func reset_view() -> void:
 	_yaw = deg_to_rad(config.yaw_degrees)
 	_pitch = deg_to_rad(config.pitch_degrees)

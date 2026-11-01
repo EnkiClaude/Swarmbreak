@@ -5,12 +5,12 @@ extends Resource
 
 ## Field of view in degrees (vertical).
 @export var fov_degrees: float = 55.0
-## Degrees below the horizon the camera looks down when a zone starts.
+## Degrees below the horizon the camera looks down after going through a gate.
 @export var pitch_degrees: float = 26.0
 ## Tilt limits for the right stick and mouse.
 @export var min_pitch_degrees: float = 10.0
 @export var max_pitch_degrees: float = 60.0
-## Rotation around the vertical axis when a zone starts; 0 looks toward -Z.
+## Rotation around the vertical axis after going through a gate; 0 looks toward -Z.
 @export var yaw_degrees: float = 0.0
 ## Distance from the look point to the camera.
 @export var distance: float = 11.0

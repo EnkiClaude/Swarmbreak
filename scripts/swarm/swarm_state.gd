@@ -21,7 +21,7 @@ var awake: PackedByteArray
 var camp_ids: PackedInt32Array
 ## Swarm time until which a lure speed boost applies.
 var boost_until: PackedFloat32Array
-## Set to 1 by damage to any member of a camp; ZoneDirector wakes the camp.
+## Set to 1 by damage to any member of a camp; CampDirector wakes the camp.
 var camp_alarm: PackedByteArray
 ## Swarm time until which the enemy takes extra damage (Warlord's lure mark).
 var mark_until: PackedFloat32Array
@@ -32,6 +32,9 @@ var boss_ids: PackedInt32Array
 ## Current enemy index of each boss slot, or -1 once dead. Kept up to date
 ## through despawns and compaction, since enemy indices move.
 var boss_index: PackedInt32Array
+## 1 for a boss slot whose enemy left without dying (its camp streamed out,
+## or the swarm was cleared), so BossSystem frees the slot without a kill.
+var boss_despawned: PackedByteArray
 ## Filled by remove_dead(): the enemies removed this frame.
 var dead_positions: PackedVector2Array
 var dead_types: PackedInt32Array
@@ -68,6 +71,8 @@ func _init(p_capacity: int, max_camps: int = 1, max_bosses: int = 1) -> void:
 	boss_ids.fill(-1)
 	boss_index.resize(maxi(max_bosses, 1))
 	boss_index.fill(-1)
+	boss_despawned.resize(maxi(max_bosses, 1))
+	boss_despawned.fill(0)
 	dead_positions.resize(capacity)
 	dead_positions.fill(Vector2.ZERO)
 	dead_types.resize(capacity)
@@ -104,6 +109,7 @@ func spawn(pos: Vector2, type_id: int, max_health: float = 1.0, camp_id: int = -
 func make_boss(i: int, slot: int) -> void:
 	boss_ids[i] = slot
 	boss_index[slot] = i
+	boss_despawned[slot] = 0
 
 
 ## Indices are not stable: the enemy that was last now lives at i.
@@ -138,9 +144,31 @@ func remove_dead() -> int:
 	return dead
 
 
+## Removes every member of a camp without killing it (no dead_* entries),
+## keeping the others in order. Returns how many left.
+func remove_camp(camp: int) -> int:
+	var write := 0
+	for read in count:
+		if camp_ids[read] != camp:
+			if write != read:
+				_move(read, write)
+			write += 1
+		elif boss_ids[read] >= 0:
+			boss_index[boss_ids[read]] = -1
+			boss_despawned[boss_ids[read]] = 1
+	var removed := count - write
+	count = write
+	if camp >= 0 and camp < camp_alarm.size():
+		camp_alarm[camp] = 0
+	return removed
+
+
 func clear() -> void:
 	count = 0
 	camp_alarm.fill(0)
+	for slot in boss_index.size():
+		if boss_index[slot] >= 0:
+			boss_despawned[slot] = 1
 	boss_index.fill(-1)
 
 
