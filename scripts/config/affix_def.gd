@@ -1,8 +1,10 @@
 class_name AffixDef
 extends Resource
-## One stat an item can roll, which slots it can appear on, and its range.
+## One stat an item can roll, which item slots it can appear on, and its range.
 
-enum Slot { WEAPON, CHARM, ARMOR }
+## What part of the body an item is for. WEAPON goes in the main hand, RING
+## in either ring position (see Inventory.Equip).
+enum Slot { WEAPON, AMULET, ARMOR, OFF_HAND, BELT, RING }
 
 @export var stat: PlayerStat.Id = PlayerStat.Id.MAX_HEALTH
 @export var min_value: float = 1.0

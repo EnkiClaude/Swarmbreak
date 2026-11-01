@@ -175,12 +175,17 @@ func _draw_panel() -> void:
 		_draw_hints(Vector2(at.x, panel.end.y + 20.0))
 
 
-## Skill-point and job-choice hints under the panel.
+## Job-choice, attribute-point and skill-point hints under the panel.
 func _draw_hints(at: Vector2) -> void:
 	var font := ThemeDB.fallback_font
 	if _jobs != null and _progress.can_choose_job(_jobs):
 		draw_string(font, at, "Choose your path - open CHAR", HORIZONTAL_ALIGNMENT_LEFT, -1,
 				SMALL_TEXT_SIZE + 2, Color(1.0, 0.85, 0.35))
+		at.y += SMALL_TEXT_SIZE + 8.0
+	if _progress.attribute_points > 0:
+		draw_string(font, at, "%d attribute point%s - open CHAR" % [_progress.attribute_points,
+				"" if _progress.attribute_points == 1 else "s"], HORIZONTAL_ALIGNMENT_LEFT, -1,
+				SMALL_TEXT_SIZE + 2, Color(1.0, 0.75, 0.5))
 		at.y += SMALL_TEXT_SIZE + 8.0
 	if _progress.skill_points > 0:
 		draw_string(font, at, "%d skill point%s - open CHAR" % [_progress.skill_points,

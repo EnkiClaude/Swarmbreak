@@ -4,7 +4,7 @@ extends Control
 ## is a floating move stick. On the right, the FIRE button is also a stick:
 ## hold it to fire and drag from it to aim (no drag fires where the player
 ## faces). Around it: NOVA, LURE and DODGE; at the top, HUD, CHAR, +100
-## and BAG (straight to the inventory).
+## BAG (straight to the inventory) and ZOOM (steps the camera out).
 ##
 ## Everything is translated into the same input actions a controller presses,
 ## so gameplay code never knows the input came from touch.
@@ -156,6 +156,7 @@ func _button_at(at: Vector2) -> String:
 		[config.overlay_button_position, config.small_button_radius, "debug_toggle_overlay"],
 		[config.character_button_position, config.small_button_radius, "character_menu"],
 		[config.bag_button_position, config.small_button_radius, "menu_inventory"],
+		[config.zoom_button_position, config.small_button_radius, "camera_zoom_cycle"],
 	]
 	for button in buttons:
 		if at.distance_to(_screen(button[0])) <= float(button[1]):
@@ -184,6 +185,8 @@ func _draw() -> void:
 			"character_menu", config.lure_color)
 	_draw_button(config.bag_button_position, config.small_button_radius, "BAG",
 			"menu_inventory", config.lure_color)
+	_draw_button(config.zoom_button_position, config.small_button_radius, "ZOOM",
+			"camera_zoom_cycle", config.color)
 
 
 func _draw_stick(stick: VirtualStick, hint: Vector2, label: String) -> void:

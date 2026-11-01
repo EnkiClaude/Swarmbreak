@@ -20,6 +20,27 @@ func test_camera_never_closer_than_min_distance() -> void:
 	check_near(d, 3.0, 0.0001, "min distance")
 
 
+func test_zoom_stays_between_closest_and_farthest() -> void:
+	var rig := CameraRig.new()
+	rig.config = load("res://data/camera.tres") as CameraConfig
+	rig.reset_zoom()
+	var near := rig.config.distance
+	var far := rig.config.max_distance
+	check_near(rig.zoom_distance(), near, 0.001, "starts at the closest zoom")
+	rig.zoom(-3.0)
+	check_near(rig.zoom_distance(), near, 0.001, "can't zoom in past the closest")
+	rig.zoom(1.0)
+	check_near(rig.zoom_distance(), near + rig.config.zoom_step, 0.001, "one notch out")
+	rig.zoom(100.0)
+	check_near(rig.zoom_distance(), far, 0.001, "stops at the farthest")
+	rig.cycle_zoom()
+	check_near(rig.zoom_distance(), near, 0.001, "cycling from the farthest wraps to the closest")
+	for n in rig.config.zoom_levels - 1:
+		rig.cycle_zoom()
+	check_near(rig.zoom_distance(), far, 0.001, "cycling reaches the farthest")
+	rig.free()
+
+
 func test_minimap_puts_the_camera_view_up() -> void:
 	for yaw: float in [0.0, 0.7, -2.0, PI]:
 		var forward := Vector2(-sin(yaw), -cos(yaw))

@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3]
+[gd_scene load_steps=36 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="4_player"]
@@ -23,6 +23,7 @@
 [ext_resource type="Resource" path="res://data/hud.tres" id="23_hud_cfg"]
 [ext_resource type="Resource" path="res://data/rpg/progression.tres" id="24_progression"]
 [ext_resource type="Resource" path="res://data/rpg/skills.tres" id="25_skills"]
+[ext_resource type="Resource" path="res://data/rpg/attributes.tres" id="34_attributes"]
 [ext_resource type="Resource" path="res://data/rpg/loot.tres" id="26_loot"]
 [ext_resource type="Script" path="res://scripts/loot/loot_system.gd" id="27_loot_system"]
 [ext_resource type="Script" path="res://scripts/ui/character_menu.gd" id="28_menu"]
@@ -55,6 +56,7 @@ audio_config = ExtResource("20_audio_cfg")
 world_config = ExtResource("21_world_cfg")
 progression_config = ExtResource("24_progression")
 skill_tree = ExtResource("25_skills")
+attribute_table = ExtResource("34_attributes")
 loot_config = ExtResource("26_loot")
 job_tree = ExtResource("29_jobs")
 boss_config = ExtResource("30_boss")

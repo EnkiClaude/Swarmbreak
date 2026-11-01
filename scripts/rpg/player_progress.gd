@@ -1,11 +1,13 @@
 class_name PlayerProgress
 extends RefCounted
-## Level, XP and skill points, how many points sit in each skill, and the
-## chosen job and its rank. Survives death and travel.
+## Level, XP and skill points, how many points sit in each skill, attribute
+## points and how many sit in each attribute (AttributeTable), and the chosen
+## job and its rank. Survives death and travel.
 
 signal leveled_up(level: int)
 signal job_changed(job: int, rank: int)
 signal skills_changed
+signal attributes_changed
 
 var level := 1
 var xp := 0.0
@@ -16,16 +18,25 @@ var ranks: PackedInt32Array = []
 var job := -1
 ## 0 = no job, 1 = first rank, 2 = promoted.
 var job_rank := 0
+var attribute_points := 0
+## Points per attribute, indexed like AttributeTable.attributes.
+var attributes: PackedInt32Array = []
+## Null when the game has no attributes (some tests).
+var attribute_table: AttributeTable
 
 var _config: ProgressionConfig
 var _tree: SkillTree
 
 
-func _init(config: ProgressionConfig, tree: SkillTree) -> void:
+func _init(config: ProgressionConfig, tree: SkillTree, table: AttributeTable = null) -> void:
 	_config = config
 	_tree = tree
+	attribute_table = table
 	ranks.resize(tree.skills.size())
 	ranks.fill(0)
+	attributes.resize(table.attributes.size() if table != null else 0)
+	attributes.fill(0)
+	attribute_points = table.starting_points if table != null else 0
 
 
 func is_max_level() -> bool:
@@ -44,6 +55,8 @@ func add_xp(amount: float) -> void:
 		xp -= xp_to_next()
 		level += 1
 		skill_points += _config.skill_points_per_level
+		if attribute_table != null:
+			attribute_points += attribute_table.points_per_level
 		leveled_up.emit(level)
 
 
@@ -100,12 +113,34 @@ func rank_up(skill: int) -> bool:
 	return true
 
 
+## Attribute points a character of this level has earned in total.
+func earned_attribute_points() -> int:
+	if attribute_table == null:
+		return 0
+	return attribute_table.starting_points + attribute_table.points_per_level * (level - 1)
+
+
+## Puts up to amount points into an attribute. Returns how many went in.
+func raise_attribute(attribute: int, amount: int = 1) -> int:
+	if attribute < 0 or attribute >= attributes.size():
+		return 0
+	var spent := mini(amount, attribute_points)
+	if spent <= 0:
+		return 0
+	attributes[attribute] += spent
+	attribute_points -= spent
+	attributes_changed.emit()
+	return spent
+
+
 ## Back to a brand-new level 1 character (New Game).
 func reset() -> void:
 	level = 1
 	xp = 0.0
 	skill_points = 0
 	ranks.fill(0)
+	attributes.fill(0)
+	attribute_points = attribute_table.starting_points if attribute_table != null else 0
 	job = -1
 	job_rank = 0
 	job_changed.emit(job, job_rank)

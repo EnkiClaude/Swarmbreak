@@ -118,7 +118,9 @@ XP or loot; a boss slot freed that way is flagged in
 range, when any member is hit (`SwarmState.camp_alarm`), or when the lure
 reaches them, and come back `camp_respawn_time` after clearing. Spawner sites
 (dungeons only for now) never clear: near the player they add one awake
-monster every `spawn_interval`, for builds that farm standing still.
+monster every `spawn_interval` (0 in dungeons: one per frame), for builds
+that farm standing still. Dungeon camps, bosses included, also come back at
+once (`DungeonDef.camp_respawn_time` 0), asleep, right where they were.
 The swarm's camp id is the site index in the active space.
 
 Levels: monster health, contact damage and XP grow with the level where the
@@ -130,11 +132,25 @@ from the north-west) or `?dungeon=N` (from 1) starts there.
 
 ## Progression and loot
 
-Kills give XP (`EnemyType.xp`); each level adds health and mana and a skill
-point. Points go into passive skills (`data/rpg/skills.tres`) on the
-character screen, which pauses the game. Clearing a camp drops items where
-its last member died: a slot (weapon, charm, armor), a rarity, and that many
-affixes rolled from `data/rpg/loot.tres`, growing with the camp's level.
+Kills give XP (`EnemyType.xp`); each level adds health and mana, a skill
+point and `points_per_level` attribute points. Skill points go into passive
+skills (`data/rpg/skills.tres`); attribute points go into five attributes
+(`data/rpg/attributes.tres`: Strength, Health, Intelligence, Wisdom,
+Agility), each feeding stats per point. Both are spent on the character
+screen, which pauses the game. Saves from before attributes get their
+level's points to spend.
+
+Clearing a camp drops items where its last member died: a base kind
+(`ItemKindDef` in `data/rpg/loot.tres`: wand, blade, staff, greatblade,
+tome, shield, robe, plate, pendant, belt, ring) that sets the slot, whether
+it takes both hands, its icon and an implicit stat; then a rarity and that
+many affixes from the slot's pool, growing with the camp's level.
+`Inventory` wears items in seven positions (`Inventory.Equip`: main hand,
+off hand, armor, amulet, belt, two rings); the first five equal their
+`AffixDef.Slot`. A two-handed weapon and an off-hand item exclude each
+other, so equipping one moves the other to the backpack. Salvage All works
+per rarity or on everything, never on worn items. Item icons are drawn in
+code (`ItemIcon`); hovering or focusing an item shows `ItemTooltip`.
 `PlayerStats` totals level, skills and equipment; gameplay reads stats only
 through it (`value()`, `multiplier()`), and must call `recompute()` after
 changing any of them. Every stat is a `PlayerStat.Id` with a cap.
@@ -266,11 +282,13 @@ run, except errors from the headless dummy renderer.
 | Inventory       | Y                   | I                 |
 | Switch menu tab | LB / RB             | Q / E             |
 | Spawn 100       | View / Back         | `=` or keypad `+` |
+| Zoom camera     | D-pad up/down       | Mouse wheel       |
+| Zoom steps      | R3 (right stick)    | Z                 |
 | Toggle overlay  | L3 (left stick)     | F3                |
 
 On touchscreens: the left half of the screen is a floating move stick; FIRE
 (bottom right) is held to fire and dragged sideways to turn the camera; NOVA,
-LURE and DODGE sit around it; HUD, CHAR, +100 and BAG at the top.
+LURE and DODGE sit around it; ZOOM, HUD, CHAR, +100 and BAG at the top.
 
 ## Git
 

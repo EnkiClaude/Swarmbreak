@@ -26,6 +26,8 @@ static func encode(progress: PlayerProgress, inventory: Inventory, zone_level: i
 			"ranks": Array(progress.ranks),
 			"job": progress.job,
 			"job_rank": progress.job_rank,
+			"attribute_points": progress.attribute_points,
+			"attributes": Array(progress.attributes),
 		},
 		"inventory": {
 			"stones": inventory.stones,
@@ -49,27 +51,57 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 	var job := _int(p.get("job"), -1)
 	progress.job = job if jobs != null and job >= 0 and job < jobs.jobs.size() else -1
 	progress.job_rank = clampi(_int(p.get("job_rank"), 0), 1, 2) if progress.job >= 0 else 0
+	_decode_attributes(p, progress)
 
 	var inv := _dict(data.get("inventory"))
 	inventory.stones = maxi(_int(inv.get("stones"), 0), 0)
+	# Equipment is saved by position. Saves from before the extra slots had
+	# three (weapon, charm, armor), which are still positions 0-2.
 	var equipped := _array(inv.get("equipped"))
-	for slot in inventory.equipped.size():
-		var item: ItemData = null
-		if slot < equipped.size() and equipped[slot] is Dictionary:
-			item = item_from_dict(equipped[slot], upgrade_max)
-		inventory.equipped[slot] = item if item != null and item.slot == slot else null
+	inventory.equipped.fill(null)
 	inventory.backpack.clear()
+	var unfit: Array[ItemData] = []
+	for position in inventory.equipped.size():
+		if position >= equipped.size() or not equipped[position] is Dictionary:
+			continue
+		var item := item_from_dict(equipped[position], upgrade_max)
+		if Inventory.positions_for(item.slot).has(position):
+			inventory.equipped[position] = item
+		else:
+			unfit.append(item)
+	# A two-handed weapon and an off-hand item can't both be worn.
+	var main := inventory.equipped[Inventory.Equip.MAIN_HAND]
+	var off := inventory.equipped[Inventory.Equip.OFF_HAND]
+	if main != null and main.two_handed and off != null:
+		inventory.equipped[Inventory.Equip.OFF_HAND] = null
+		unfit.append(off)
 	for entry in _array(inv.get("backpack")):
+		if entry is Dictionary:
+			unfit.append(item_from_dict(entry, upgrade_max))
+	for item in unfit:
 		if inventory.backpack.size() >= inventory.backpack_size:
 			break
-		if entry is Dictionary:
-			inventory.backpack.append(item_from_dict(entry, upgrade_max))
+		inventory.backpack.append(item)
 	return maxi(_int(data.get("zone_level"), 1), 1)
+
+
+## Saves from before attributes existed get the points their level earned.
+static func _decode_attributes(p: Dictionary, progress: PlayerProgress) -> void:
+	progress.attributes.fill(0)
+	if not p.has("attributes"):
+		progress.attribute_points = progress.earned_attribute_points()
+		return
+	var saved := _array(p.get("attributes"))
+	for k in progress.attributes.size():
+		progress.attributes[k] = maxi(_int(saved[k], 0), 0) if k < saved.size() else 0
+	progress.attribute_points = maxi(_int(p.get("attribute_points"), 0), 0)
 
 
 static func item_to_dict(item: ItemData) -> Dictionary:
 	return {
 		"slot": item.slot,
+		"kind": item.kind,
+		"two_handed": item.two_handed,
 		"rarity": item.rarity,
 		"name": item.item_name,
 		"stats": Array(item.stats),
@@ -83,7 +115,9 @@ static func item_to_dict(item: ItemData) -> Dictionary:
 
 static func item_from_dict(d: Dictionary, upgrade_max: int) -> ItemData:
 	var item := ItemData.new()
-	item.slot = clampi(_int(d.get("slot"), 0), 0, 2)
+	item.slot = clampi(_int(d.get("slot"), 0), 0, AffixDef.Slot.size() - 1)
+	item.kind = maxi(_int(d.get("kind"), -1), -1)
+	item.two_handed = d.get("two_handed", false) == true
 	item.rarity = clampi(_int(d.get("rarity"), 0), 0, MAX_RARITY)
 	item.item_name = str(d.get("name", "Item"))
 	var stats := _array(d.get("stats"))

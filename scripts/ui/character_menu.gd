@@ -36,6 +36,9 @@ var _panel: PanelContainer
 var _content: VBoxContainer
 ## New Game needs a second press to confirm.
 var _confirm_new_game := false
+## The floating item tooltip and the control it belongs to.
+var _tooltip: Control
+var _tooltip_owner: Control
 
 
 func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stats: PlayerStats,
@@ -99,6 +102,7 @@ func close() -> void:
 	if not visible:
 		return
 	visible = false
+	_clear_tooltip()
 	get_tree().paused = false
 	Input.emulate_mouse_from_touch = false
 	closed.emit()
@@ -142,6 +146,12 @@ func rank_up(skill: int) -> void:
 	_rebuild()
 
 
+## Puts up to amount points into an attribute.
+func raise_attribute(attribute: int, amount: int = 1) -> void:
+	_progress.raise_attribute(attribute, amount)
+	_rebuild()
+
+
 func choose_job(index: int) -> void:
 	if _jobs != null and _progress.choose_job(_jobs, index):
 		_stats.recompute()
@@ -158,12 +168,61 @@ func selected_item() -> ItemData:
 	return _inventory_page.selected
 
 
-func equip_item(item: ItemData) -> void:
-	_inventory.equip_item(item)
+## Wears an item at position (-1: where it goes by default).
+func equip_item(item: ItemData, position: int = -1) -> void:
+	if _inventory.equip_item(item, position):
+		_inventory_page.result_text = "Equipped %s" % item.display_name()
+		_inventory_page.result_color = MenuWidgets.GOOD_COLOR
+	else:
+		_inventory_page.result_text = "No room in the backpack for what comes off"
+		_inventory_page.result_color = MenuWidgets.BAD_COLOR
 	_inventory.sort_backpack()
-	_inventory_page.result_text = "Equipped %s" % item.display_name()
-	_inventory_page.result_color = MenuWidgets.GOOD_COLOR
 	_rebuild()
+
+
+func unequip(position: int) -> void:
+	var item := _inventory.equipped[position]
+	if item != null and _inventory.unequip(position):
+		_inventory_page.result_text = "Took off %s" % item.display_name()
+		_inventory_page.result_color = MenuWidgets.TEXT_COLOR
+	_inventory.sort_backpack()
+	_rebuild()
+
+
+## Floats an item's tooltip beside the control that shows it.
+func show_tooltip(item: ItemData, owner: Control) -> void:
+	_clear_tooltip()
+	if not is_instance_valid(owner) or not owner.is_inside_tree():
+		return
+	_tooltip = ItemTooltip.build(item, _inventory, _loot)
+	_tooltip_owner = owner
+	add_child(_tooltip)
+	var screen := get_viewport().get_visible_rect().size
+	var rect := owner.get_global_rect()
+	var tip := _tooltip.get_combined_minimum_size()
+	var at := Vector2(rect.end.x + 8.0, rect.position.y)
+	if at.x + tip.x > screen.x:
+		at.x = rect.position.x - tip.x - 8.0
+	at.x = clampf(at.x, 0.0, maxf(screen.x - tip.x, 0.0))
+	at.y = clampf(at.y, 0.0, maxf(screen.y - tip.y, 0.0))
+	_tooltip.position = at
+
+
+func hide_tooltip(owner: Control) -> void:
+	if owner == _tooltip_owner:
+		_clear_tooltip()
+
+
+func tooltip_showing() -> bool:
+	return _tooltip != null
+
+
+func _clear_tooltip() -> void:
+	if _tooltip != null:
+		remove_child(_tooltip)
+		_tooltip.queue_free()
+	_tooltip = null
+	_tooltip_owner = null
 
 
 func salvage_item(item: ItemData) -> void:
@@ -174,7 +233,8 @@ func salvage_item(item: ItemData) -> void:
 	_rebuild()
 
 
-## Salvage All for a rarity (magic needs a second press). Returns stones gained.
+## Salvage All for a rarity, or -1 for everything (all but commons need a
+## second press). Returns stones gained.
 func salvage_all(rarity: int) -> int:
 	var gained := _inventory_page.press_salvage_all(rarity)
 	_rebuild()
@@ -221,6 +281,7 @@ func press_new_game() -> void:
 # --- Building ---
 
 func _rebuild() -> void:
+	_clear_tooltip()
 	for child in _content.get_children():
 		_content.remove_child(child)
 		child.queue_free()

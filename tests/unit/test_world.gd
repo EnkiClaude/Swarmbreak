@@ -183,15 +183,43 @@ func test_spawners_refill_while_the_player_is_near() -> void:
 			spawner = s
 			break
 	var spot := sites.centers[spawner] + Vector2(-4.0, 0.0)
-	var interval := sites.spawn_interval[spawner]
-	_run(director, swarm, spot, interval * 6.0)
+	_run(director, swarm, spot, 0.6)
 	var count := sites.alive[spawner]
 	check(count >= 4, "a spawner adds monsters steadily (%d)" % count)
 	for i in swarm.state.count:
 		if swarm.state.camp_ids[i] == spawner:
 			check_eq(swarm.state.awake[i], 1, "spawner monsters come awake")
 			swarm.state.health[i] = 0.0
-	_run(director, swarm, spot, interval * 3.0)
+	_run(director, swarm, spot, 0.3)
 	check_eq(sites.state[spawner], CampSites.State.SPAWNED, "a spawner never clears")
 	check(sites.alive[spawner] >= 1, "and starts refilling at once (%d)" % sites.alive[spawner])
+	swarm.free()
+
+
+func test_dungeon_camps_come_back_at_once() -> void:
+	var config := _config()
+	var map := WorldMap.new(config)
+	var swarm := _swarm()
+	swarm.set_bounds(config.dungeons[0].half_extent)
+	var director := CampDirector.new(config, swarm)
+	var sites := map.dungeon_sites[0]
+	director.use_sites(sites)
+	var camp := -1
+	for s in sites.size():
+		if sites.is_spawner[s] == 0:
+			camp = s
+			break
+	check_near(sites.respawn_time[camp], 0.0, 0.0001, "dungeon camps respawn instantly")
+	var spot := sites.centers[camp]
+	var cleared: Array[int] = []
+	director.camp_cleared.connect(func(s: int, _at: Vector2, _level: int, _boss: bool) -> void:
+		cleared.append(s))
+	_run(director, swarm, spot, 0.4)
+	for i in swarm.state.count:
+		if swarm.state.camp_ids[i] == camp:
+			swarm.state.health[i] = 0.0
+	_run(director, swarm, spot, 0.5)
+	check(cleared.has(camp), "camp cleared")
+	check_eq(sites.state[camp], CampSites.State.SPAWNED, "back while the player stands on it")
+	check(sites.alive[camp] > 0, "with monsters (%d)" % sites.alive[camp])
 	swarm.free()

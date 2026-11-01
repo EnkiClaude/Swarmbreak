@@ -121,7 +121,8 @@ func _place_region_camps(region: int, rng: RandomNumberGenerator,
 		sizes.append(rng.randi_range(def.camp_size_min, def.camp_size_max))
 	var bosses := _biggest(sizes, def.boss_camps)
 	for k in placed.size():
-		overworld_sites.add(placed[k], sizes[k], def.level, def.heavy_chance, bosses.has(k))
+		overworld_sites.add(placed[k], sizes[k], def.level, def.heavy_chance, bosses.has(k),
+				false, 0.0, config.camp_respawn_time)
 
 
 func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
@@ -131,7 +132,7 @@ func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
 	var arrival := arrival_point(d)
 	if def.has_boss:
 		sites.add(Vector2(0.0, -h + config.edge_margin + 2.0), def.boss_camp_size, def.level,
-				def.heavy_chance, true)
+				def.heavy_chance, true, false, 0.0, def.camp_respawn_time)
 	# Spawners stand on the side walls in the far half of the hall, out of
 	# range of the arrival point.
 	for k in def.spawner_count:
@@ -150,7 +151,7 @@ func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
 				or too_close(at, sites.centers, spacing):
 			continue
 		sites.add(at, rng.randi_range(def.camp_size_min, def.camp_size_max), def.level,
-				def.heavy_chance)
+				def.heavy_chance, false, false, 0.0, def.camp_respawn_time)
 		placed += 1
 	return sites
 

@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="AttributeTable" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/attribute_def.gd" id="1_attr"]
+[ext_resource type="Script" path="res://scripts/config/attribute_table.gd" id="2_table"]
+
+[sub_resource type="Resource" id="Attr_0"]
+script = ExtResource("1_attr")
+display_name = "Strength"
+short_name = "STR"
+description = "Power behind your bolts."
+color = Color(1, 0.55, 0.4, 1)
+stats = Array[int]([5])
+per_point = PackedFloat32Array(0.012)
+
+[sub_resource type="Resource" id="Attr_1"]
+script = ExtResource("1_attr")
+display_name = "Health"
+short_name = "HTH"
+description = "More health, and it comes back faster."
+color = Color(1, 0.4, 0.4, 1)
+stats = Array[int]([0, 2])
+per_point = PackedFloat32Array(5.0, 0.05)
+
+[sub_resource type="Resource" id="Attr_2"]
+script = ExtResource("1_attr")
+display_name = "Intelligence"
+short_name = "INT"
+description = "Power behind your nova."
+color = Color(0.5, 0.75, 1, 1)
+stats = Array[int]([7])
+per_point = PackedFloat32Array(0.012)
+
+[sub_resource type="Resource" id="Attr_3"]
+script = ExtResource("1_attr")
+display_name = "Wisdom"
+short_name = "WIS"
+description = "More mana, and it comes back faster."
+color = Color(0.55, 0.55, 1, 1)
+stats = Array[int]([1, 3])
+per_point = PackedFloat32Array(3.0, 0.006)
+
+[sub_resource type="Resource" id="Attr_4"]
+script = ExtResource("1_attr")
+display_name = "Agility"
+short_name = "AGI"
+description = "Faster bolts, feet and dodges."
+color = Color(0.6, 1, 0.55, 1)
+stats = Array[int]([6, 4, 11])
+per_point = PackedFloat32Array(0.005, 0.003, 0.003)
+
+[resource]
+script = ExtResource("2_table")
+attributes = Array[ExtResource("1_attr")]([SubResource("Attr_0"), SubResource("Attr_1"), SubResource("Attr_2"), SubResource("Attr_3"), SubResource("Attr_4")])
+points_per_level = 5
+starting_points = 0
