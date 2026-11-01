@@ -309,6 +309,14 @@ func _clear_tooltip() -> void:
 	_tooltip_owner = null
 
 
+## Orders the backpack the next way (slot, rarity, level, newest).
+func cycle_sort() -> void:
+	var mode := _inventory.cycle_sort()
+	_inventory_page.result_text = "Sorted by %s" % Inventory.SORT_NAMES[mode].to_lower()
+	_inventory_page.result_color = MenuWidgets.TEXT_COLOR
+	_rebuild()
+
+
 func salvage_item(item: ItemData) -> void:
 	var gained := _inventory.salvage_item(item, _loot.salvage_stones)
 	_inventory_page.select(null)

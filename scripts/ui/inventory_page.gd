@@ -13,8 +13,8 @@ extends RefCounted
 ## After any action, focus goes back to the item the player was on, so a
 ## controller's A never lands on a button by itself.
 
-const TILE_SIZE := Vector2(70, 70)
-const GRID_COLUMNS := 6
+const TILE_SIZE := Vector2(60, 60)
+const GRID_COLUMNS := 8
 const CARD_SIZE := Vector2(170, 58)
 const EQUIPPED_WIDTH := 350.0
 const DETAILS_WIDTH := 330.0
@@ -157,8 +157,18 @@ func _remember(item: ItemData) -> void:
 
 
 func _build_backpack(parent: VBoxContainer) -> Control:
-	parent.add_child(MenuWidgets.title("BACKPACK  %d/%d" % [_inventory.backpack.size(),
-			_inventory.backpack_size]))
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	parent.add_child(head)
+	var title := MenuWidgets.title("BACKPACK  %d/%d" % [_inventory.backpack.size(),
+			_inventory.backpack_size])
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
+	var sort := MenuWidgets.button("SORT: %s" % Inventory.SORT_NAMES[_inventory.sort_mode].to_upper(),
+			MenuWidgets.SMALL_FONT - 2)
+	sort.tooltip_text = "Change how the backpack is ordered"
+	sort.pressed.connect(_menu.cycle_sort)
+	head.add_child(sort)
 	var grid := GridContainer.new()
 	grid.columns = GRID_COLUMNS
 	grid.add_theme_constant_override("h_separation", 6)

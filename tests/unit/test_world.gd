@@ -349,3 +349,26 @@ func test_room_monsters_stay_in_their_room() -> void:
 func _cell_center(p: Vector2) -> Vector2:
 	var corner := Vector2(-72.0, -72.0)
 	return corner + (((p - corner) / 2.0).floor() + Vector2(0.5, 0.5)) * 2.0
+
+
+func test_higher_level_dungeon_monsters_are_a_little_faster() -> void:
+	var config := _config()
+	var swarm := _swarm()
+	var director := CampDirector.new(config, swarm)
+	director.speed_by_level = false
+	check_eq(director.speed_multiplier(40), 1.0, "open-world monsters keep their speed")
+	director.speed_by_level = true
+	check_eq(director.speed_multiplier(1), 1.0, "level 1 is the base speed")
+	var mid := director.speed_multiplier(20)
+	check(mid > 1.0 and mid < 1.3, "level 20 is a little faster (%.2f)" % mid)
+	check(director.speed_multiplier(30) > mid, "and level 30 faster still")
+	check_eq(director.speed_multiplier(500), config.dungeon_speed_max, "capped")
+	# The steering uses it.
+	var slow := swarm.spawn_at(Vector2(0.0, 10.0), 0, -1, true)
+	var fast := swarm.spawn_at(Vector2(30.0, 10.0), 0, -1, true)
+	swarm.state.speed_scale[fast] = 1.3
+	for _n in 60:
+		swarm.simulate(1.0 / 60.0, Vector2(15.0, -40.0), 0.5)
+	check(swarm.state.velocities[fast].length() > swarm.state.velocities[slow].length() * 1.2,
+			"a faster monster moves faster")
+	swarm.free()

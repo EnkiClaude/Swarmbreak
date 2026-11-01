@@ -31,6 +31,8 @@ const SPAWNER_SCATTER := 3.0
 
 ## The active space's sites (CampSites); the HUD and tests read them.
 var sites: CampSites
+## True in dungeons: monsters spawn faster the higher their level.
+var speed_by_level := false
 
 var _config: WorldConfig
 var _swarm: SwarmManager
@@ -140,6 +142,14 @@ func health_multiplier(level: int) -> float:
 	return 1.0 + _config.health_growth * (level - 1)
 
 
+## Speed multiplier for a monster of a level: 1 in the open world; in
+## dungeons (speed_by_level) a little faster per level, up to a cap.
+func speed_multiplier(level: int) -> float:
+	if not speed_by_level:
+		return 1.0
+	return minf(1.0 + _config.dungeon_speed_per_level * (level - 1), _config.dungeon_speed_max)
+
+
 func _stream(player_pos: Vector2, now: float) -> void:
 	_counted.fill(0)
 	var camp_ids := _swarm.state.camp_ids
@@ -207,6 +217,7 @@ func _spawn_member(s: int, is_awake: bool, at: Vector2) -> int:
 	var i := _swarm.spawn_at(at, type_id, s, is_awake)
 	if i >= 0:
 		_swarm.state.health[i] *= health_multiplier(sites.levels[s])
+		_swarm.state.speed_scale[i] = speed_multiplier(sites.levels[s])
 		if is_awake:
 			sites.alive[s] += 1
 	return i

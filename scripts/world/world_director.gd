@@ -74,6 +74,7 @@ func enter(new_space: int, at: Vector2) -> void:
 	space = new_space
 	region = -1
 	_swarm.clear()
+	camps.speed_by_level = space != WorldMap.OVERWORLD
 	camps.use_sites(map.sites(space))
 	var h := map.half_extent(space)
 	_swarm.set_bounds(h)

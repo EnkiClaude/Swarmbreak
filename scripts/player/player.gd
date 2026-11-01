@@ -29,6 +29,8 @@ var _dash_direction := Vector3.ZERO
 var _camera_rig: CameraRig
 var _half_extent: float
 var _hero_material: ShaderMaterial
+var _body: MeshInstance3D
+var _look_signature := ""
 ## Walk cycle angle and how far the casting arm is raised (0..1).
 var _stride := 0.0
 var _raise := 0.0
@@ -174,8 +176,23 @@ func _animate(delta: float) -> void:
 func _build_visuals() -> void:
 	_hero_material = ShaderMaterial.new()
 	_hero_material.shader = HERO_SHADER
-	var body := MeshInstance3D.new()
-	body.name = "Body"
-	body.mesh = CharacterModels.hero(config.height, config.color, config.secondary_color,
+	_body = MeshInstance3D.new()
+	_body.name = "Body"
+	_body.mesh = CharacterModels.hero(config.height, config.color, config.secondary_color,
 			config.accent_color, _hero_material)
-	add_child(body)
+	add_child(_body)
+
+
+## Dresses the hero in what it wears. Rebuilds the model only when the look
+## changed (equipping happens in menus, never per frame). Returns true if it
+## rebuilt.
+func set_look(look: HeroLook) -> bool:
+	var signature := look.signature()
+	if signature == _look_signature or _body == null:
+		return false
+	_look_signature = signature
+	_body.mesh = CharacterModels.hero(config.height, config.color, config.secondary_color,
+			config.accent_color, _hero_material, look)
+	_hero_material.set_shader_parameter("glow_power", config.weapon_glow_base
+			+ config.weapon_glow_per_refine * look.weapon_glow)
+	return true

@@ -9,6 +9,10 @@ extends RefCounted
 
 signal changed
 
+## How sort_backpack() orders the backpack (talismans always last).
+enum SortMode { SLOT, RARITY, LEVEL, NEWEST }
+const SORT_NAMES: PackedStringArray = ["Slot", "Rarity", "Level", "Newest"]
+
 ## Where an item can be worn. The first five equal their AffixDef.Slot;
 ## from HELM on, each is its slot + 1 (rings take two positions).
 enum Equip {
@@ -31,6 +35,9 @@ var stones: int = 0
 var blessed_stones: int = 0
 ## Item sets, for set bonuses (null: no sets).
 var sets: SetList
+var sort_mode: SortMode = SortMode.SLOT
+## Stamp for the next item that arrives (ItemData.acquired).
+var next_acquired: int = 1
 
 
 func _init(p_backpack_size: int) -> void:
@@ -152,6 +159,9 @@ func can_accept(item: ItemData) -> bool:
 ## Wears the item if a position is free (and nothing would come off),
 ## otherwise stores it in the backpack. False if full.
 func add(item: ItemData) -> bool:
+	if item.acquired <= 0:
+		item.acquired = next_acquired
+		next_acquired += 1
 	var position := free_position(item)
 	if position >= 0:
 		equipped[position] = item
@@ -206,16 +216,44 @@ func salvage_all(rarity: int, salvage_table: PackedInt32Array) -> int:
 	return gained
 
 
-## Orders the backpack by slot (talismans last), then best rarity and refine level first.
+## Orders the backpack by sort_mode, talismans always last:
+##   SLOT    by slot, then best rarity and refine level first
+##   RARITY  best rarity first, then highest level, then slot
+##   LEVEL   highest item level first, then best rarity
+##   NEWEST  most recently picked up first
 func sort_backpack() -> void:
+	var mode := sort_mode
 	backpack.sort_custom(func(a: ItemData, b: ItemData) -> bool:
 		if a.is_talisman != b.is_talisman:
 			return b.is_talisman
+		match mode:
+			SortMode.RARITY:
+				if a.rarity != b.rarity:
+					return a.rarity > b.rarity
+				if a.item_level != b.item_level:
+					return a.item_level > b.item_level
+				return a.slot < b.slot
+			SortMode.LEVEL:
+				if a.item_level != b.item_level:
+					return a.item_level > b.item_level
+				if a.rarity != b.rarity:
+					return a.rarity > b.rarity
+				return a.slot < b.slot
+			SortMode.NEWEST:
+				return a.acquired > b.acquired
 		if a.slot != b.slot:
 			return a.slot < b.slot
 		if a.rarity != b.rarity:
 			return a.rarity > b.rarity
 		return a.upgrade_level > b.upgrade_level)
+
+
+## Switches to the next sort mode and sorts. Returns the new mode.
+func cycle_sort() -> SortMode:
+	sort_mode = ((sort_mode + 1) % SORT_NAMES.size()) as SortMode
+	sort_backpack()
+	changed.emit()
+	return sort_mode
 
 
 ## Breaks a backpack item down into stones. Returns how many it gave.

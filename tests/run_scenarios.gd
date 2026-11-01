@@ -88,6 +88,7 @@ func _run() -> void:
 	await _scenario_async("a talisman applied from the inventory adds its stats", _talisman_menu)
 	await _scenario_async("in menus the controller's A presses and B closes", _menu_controller)
 	await _scenario_async("dungeon room monsters stay in their room", _room_leash)
+	await _scenario_async("the hero wears the gear it equips", _visible_gear)
 	await _scenario_async("dying sends the player back to town", _death_returns_to_town)
 	await _scenario_async("New Game erases the save and starts over", _new_game)
 
@@ -1233,3 +1234,28 @@ func _room_leash() -> void:
 	_check(outside == 0, "none of it left its room (%d outside)" % outside)
 	_world.return_to_town()
 	await _frames(2)
+
+
+func _visible_gear() -> void:
+	var inventory := _main_var("inventory") as Inventory
+	var body := _player.get_node("Body") as MeshInstance3D
+	var saved := inventory.equipped[Inventory.Equip.HELM]
+	inventory.equipped[Inventory.Equip.HELM] = null
+	inventory.notify_changed()
+	await _frames(1)
+	var before := body.mesh
+	var helm := ItemData.new()
+	helm.slot = AffixDef.Slot.HELM
+	helm.rarity = 3
+	helm.item_name = "Test Helm"
+	inventory.equipped[Inventory.Equip.HELM] = helm
+	inventory.notify_changed()
+	await _frames(1)
+	_check(body.mesh != before, "putting on a helm rebuilds the hero's model")
+	var with_helm := body.mesh
+	inventory.notify_changed()
+	await _frames(1)
+	_check(body.mesh == with_helm, "nothing visible changed: no rebuild")
+	inventory.equipped[Inventory.Equip.HELM] = saved
+	inventory.notify_changed()
+	await _frames(1)

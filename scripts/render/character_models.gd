@@ -35,39 +35,201 @@ static func enemy(t: EnemyType, material: Material = null) -> ArrayMesh:
 	return b.build(material)
 
 
-## The player: a robed battle-mage with shoulder guards, a wide hat and a
-## staff topped by a glowing orb in the right hand.
+## The player, dressed in what it wears (HeroLook; null: the default staff
+## and robe). Gear is dark metal and cloth trimmed in its rarity color.
+## Parts painted with alpha below 1 glow (hero.gdshader): the weapon's gem
+## always, and a refined weapon's blade more with every +.
 static func hero(height: float, main: Color, second: Color, accent: Color,
-		material: Material = null) -> ArrayMesh:
+		material: Material = null, look: HeroLook = null) -> ArrayMesh:
+	if look == null:
+		look = HeroLook.default_look(accent)
+		look.armor_color = main
 	var b := ModelBuilder.new()
 	var s := height / 1.8
 	var hip := 0.82 * s
 	var shoulder := 1.36 * s
-	b.pair("cylinder", Vector3(0.11 * s, hip * 0.5, 0.0), Vector3(0.07 * s, 0.08 * s, hip),
-			SKIN_DARK, L.LEFT_LEG, L.RIGHT_LEG, hip)
-	b.pair("box", Vector3(0.11 * s, 0.06 * s, -0.04 * s), Vector3(0.14, 0.12, 0.26) * s,
-			second.darkened(0.4), L.LEFT_LEG, L.RIGHT_LEG, hip)
-	# Robe: a flared skirt and a chest.
-	b.cylinder(Vector3(0.0, 0.72 * s, 0.0), 0.34 * s, 0.22 * s, 0.6 * s, main)
-	b.cylinder(Vector3(0.0, 1.14 * s, 0.0), 0.22 * s, 0.26 * s, 0.46 * s, main)
-	b.cylinder(Vector3(0.0, 0.96 * s, 0.0), 0.24 * s, 0.24 * s, 0.08 * s, second)
-	b.box(Vector3(0.0, 1.0 * s, -0.24 * s), Vector3(0.08, 0.34, 0.04) * s, accent)
-	b.pair("sphere", Vector3(0.28 * s, shoulder, 0.0), Vector3(0.14, 0.09, 0.14) * s, second)
-	b.pair("cylinder", Vector3(0.31 * s, shoulder - 0.24 * s, 0.0),
-			Vector3(0.06 * s, 0.07 * s, 0.46 * s), main, L.LEFT_ARM, L.RIGHT_ARM, shoulder)
-	b.pair("sphere", Vector3(0.31 * s, shoulder - 0.5 * s, 0.0), Vector3(0.06, 0.06, 0.06) * s,
-			Color(0.85, 0.7, 0.58), L.LEFT_ARM, L.RIGHT_ARM, shoulder)
-	# Head and a wide-brimmed hat.
-	b.sphere(Vector3(0.0, 1.53 * s, 0.0), Vector3(0.12, 0.13, 0.12) * s, Color(0.85, 0.7, 0.58))
-	b.cylinder(Vector3(0.0, 1.62 * s, 0.0), 0.3 * s, 0.26 * s, 0.03 * s, second)
-	b.cylinder(Vector3(0.0, 1.73 * s, 0.0), 0.15 * s, 0.03 * s, 0.22 * s, second)
-	# Staff in the right hand, swinging with the arm.
-	var hand := Vector3(0.31 * s, shoulder - 0.5 * s, -0.06 * s)
-	b.cylinder(hand + Vector3(0.0, 0.1 * s, 0.0), 0.025 * s, 0.025 * s, 1.5 * s, WOOD,
-			L.RIGHT_ARM, shoulder)
-	b.sphere(hand + Vector3(0.0, 0.88 * s, 0.0), Vector3(0.09, 0.09, 0.09) * s, accent,
-			L.RIGHT_ARM, shoulder)
+	var skin := Color(0.72, 0.58, 0.5)
+	_hero_legs(b, s, hip, look)
+	_hero_body(b, s, shoulder, look, main, second)
+	_hero_arms(b, s, shoulder, look, main, skin)
+	_hero_head(b, s, look, second, skin)
+	_hero_weapon(b, s, shoulder, look, accent)
+	_hero_off_hand(b, s, shoulder, look)
 	return b.build(material)
+
+
+## Dark base for a piece of gear in a rarity color, and its trim.
+static func _gear_base(rarity_color: Color) -> Color:
+	return rarity_color.darkened(0.72).lerp(Color(0.12, 0.11, 0.12), 0.35)
+
+
+static func _metal(rarity_color: Color) -> Color:
+	return STEEL.darkened(0.45).lerp(rarity_color, 0.18)
+
+
+## A color that glows: amount 0 (none) to 1 (full).
+static func _glowing(c: Color, amount: float) -> Color:
+	return Color(c.r, c.g, c.b, 1.0 - clampf(amount, 0.0, 1.0))
+
+
+static func _hero_legs(b: ModelBuilder, s: float, hip: float, look: HeroLook) -> void:
+	if look.pants:
+		var base := _gear_base(look.pants_color)
+		b.pair("cylinder", Vector3(0.11 * s, hip * 0.5, 0.0), Vector3(0.085 * s, 0.1 * s, hip),
+				base, L.LEFT_LEG, L.RIGHT_LEG, hip)
+		b.pair("cylinder", Vector3(0.11 * s, hip * 0.48, 0.0), Vector3(0.095 * s, 0.095 * s,
+				0.05 * s), look.pants_color.darkened(0.2), L.LEFT_LEG, L.RIGHT_LEG, hip)
+	else:
+		b.pair("cylinder", Vector3(0.11 * s, hip * 0.5, 0.0), Vector3(0.07 * s, 0.08 * s, hip),
+				SKIN_DARK, L.LEFT_LEG, L.RIGHT_LEG, hip)
+	if look.boots:
+		var base := _gear_base(look.boots_color)
+		b.pair("box", Vector3(0.11 * s, 0.07 * s, -0.04 * s), Vector3(0.16, 0.14, 0.3) * s, base,
+				L.LEFT_LEG, L.RIGHT_LEG, hip)
+		b.pair("cylinder", Vector3(0.11 * s, 0.2 * s, 0.0), Vector3(0.1 * s, 0.09 * s, 0.16 * s),
+				base, L.LEFT_LEG, L.RIGHT_LEG, hip)
+		b.pair("cylinder", Vector3(0.11 * s, 0.29 * s, 0.0), Vector3(0.105 * s, 0.105 * s,
+				0.04 * s), look.boots_color.darkened(0.15), L.LEFT_LEG, L.RIGHT_LEG, hip)
+	else:
+		b.pair("box", Vector3(0.11 * s, 0.06 * s, -0.04 * s), Vector3(0.14, 0.12, 0.26) * s,
+				Color(0.14, 0.11, 0.09), L.LEFT_LEG, L.RIGHT_LEG, hip)
+
+
+static func _hero_body(b: ModelBuilder, s: float, shoulder: float, look: HeroLook, main: Color,
+		second: Color) -> void:
+	match look.armor:
+		ItemKindDef.Icon.PLATE:
+			var metal := _metal(look.armor_color)
+			var trim := look.armor_color.darkened(0.1)
+			b.box(Vector3(0.0, 1.14 * s, 0.0), Vector3(0.5, 0.5, 0.32) * s, metal)
+			b.box(Vector3(0.0, 1.16 * s, -0.165 * s), Vector3(0.12, 0.36, 0.02) * s, trim)
+			b.box(Vector3(0.0, 0.9 * s, 0.0), Vector3(0.44, 0.1, 0.28) * s, trim.darkened(0.3))
+			# Tassets over the hips.
+			b.pair("box", Vector3(0.14 * s, 0.74 * s, -0.02 * s), Vector3(0.18, 0.24, 0.3) * s,
+					metal.darkened(0.15), L.BODY, L.BODY, 0.0, Vector3(0, 0, 8))
+			# Big pauldrons with a spike.
+			b.pair("sphere", Vector3(0.3 * s, shoulder + 0.02 * s, 0.0), Vector3(0.18, 0.12, 0.18) * s,
+					metal)
+			b.pair("cylinder", Vector3(0.34 * s, shoulder + 0.14 * s, 0.0), Vector3(0.04 * s,
+					0.0, 0.16 * s), trim)
+		ItemKindDef.Icon.ROBE:
+			var cloth := _gear_base(look.armor_color)
+			var trim := look.armor_color.darkened(0.15)
+			b.cylinder(Vector3(0.0, 0.7 * s, 0.0), 0.36 * s, 0.22 * s, 0.64 * s, cloth)
+			b.cylinder(Vector3(0.0, 1.14 * s, 0.0), 0.22 * s, 0.26 * s, 0.46 * s, cloth)
+			b.cylinder(Vector3(0.0, 0.4 * s, 0.0), 0.365 * s, 0.36 * s, 0.05 * s, trim)
+			b.cylinder(Vector3(0.0, 0.96 * s, 0.0), 0.24 * s, 0.24 * s, 0.08 * s, trim)
+			b.box(Vector3(0.0, 1.0 * s, -0.24 * s), Vector3(0.08, 0.34, 0.04) * s, trim)
+			b.pair("sphere", Vector3(0.28 * s, shoulder, 0.0), Vector3(0.14, 0.09, 0.14) * s, trim)
+		_:
+			# No armor: a plain dark tunic.
+			var tunic := main.darkened(0.55)
+			b.cylinder(Vector3(0.0, 0.78 * s, 0.0), 0.27 * s, 0.22 * s, 0.4 * s, tunic)
+			b.cylinder(Vector3(0.0, 1.14 * s, 0.0), 0.21 * s, 0.24 * s, 0.46 * s, tunic)
+			b.cylinder(Vector3(0.0, 0.96 * s, 0.0), 0.23 * s, 0.23 * s, 0.06 * s,
+					second.darkened(0.5))
+
+
+static func _hero_arms(b: ModelBuilder, s: float, shoulder: float, look: HeroLook, main: Color,
+		skin: Color) -> void:
+	var sleeve := main.darkened(0.55)
+	if look.armor == ItemKindDef.Icon.PLATE:
+		sleeve = _metal(look.armor_color).darkened(0.1)
+	elif look.armor == ItemKindDef.Icon.ROBE:
+		sleeve = _gear_base(look.armor_color)
+	b.pair("cylinder", Vector3(0.31 * s, shoulder - 0.24 * s, 0.0),
+			Vector3(0.06 * s, 0.07 * s, 0.46 * s), sleeve, L.LEFT_ARM, L.RIGHT_ARM, shoulder)
+	if look.gloves:
+		var base := _gear_base(look.gloves_color)
+		b.pair("cylinder", Vector3(0.31 * s, shoulder - 0.4 * s, 0.0), Vector3(0.075 * s,
+				0.08 * s, 0.16 * s), base, L.LEFT_ARM, L.RIGHT_ARM, shoulder)
+		b.pair("cylinder", Vector3(0.31 * s, shoulder - 0.33 * s, 0.0), Vector3(0.085 * s,
+				0.085 * s, 0.03 * s), look.gloves_color.darkened(0.15), L.LEFT_ARM, L.RIGHT_ARM,
+				shoulder)
+		b.pair("sphere", Vector3(0.31 * s, shoulder - 0.5 * s, 0.0), Vector3(0.075, 0.07, 0.075)
+				* s, base, L.LEFT_ARM, L.RIGHT_ARM, shoulder)
+	else:
+		b.pair("sphere", Vector3(0.31 * s, shoulder - 0.5 * s, 0.0), Vector3(0.06, 0.06, 0.06)
+				* s, skin, L.LEFT_ARM, L.RIGHT_ARM, shoulder)
+
+
+static func _hero_head(b: ModelBuilder, s: float, look: HeroLook, second: Color,
+		skin: Color) -> void:
+	b.sphere(Vector3(0.0, 1.53 * s, 0.0), Vector3(0.12, 0.13, 0.12) * s, skin)
+	if look.helm:
+		var metal := _metal(look.helm_color)
+		var trim := look.helm_color.darkened(0.1)
+		b.sphere(Vector3(0.0, 1.58 * s, 0.0), Vector3(0.15, 0.15, 0.15) * s, metal)
+		b.box(Vector3(0.0, 1.5 * s, -0.12 * s), Vector3(0.2, 0.08, 0.06) * s, metal.darkened(0.2))
+		# Eye slit and a crest.
+		b.box(Vector3(0.0, 1.56 * s, -0.145 * s), Vector3(0.16, 0.02, 0.02) * s,
+				_glowing(trim.lightened(0.3), 0.6))
+		b.box(Vector3(0.0, 1.75 * s, 0.02 * s), Vector3(0.03, 0.1, 0.26) * s, trim)
+		b.pair("cylinder", Vector3(0.13 * s, 1.68 * s, 0.0), Vector3(0.03 * s, 0.0, 0.16 * s),
+				trim, L.BODY, L.BODY, 0.0, Vector3(0, 0, -35))
+	else:
+		# A wide-brimmed hat.
+		var hat := second.darkened(0.45)
+		b.cylinder(Vector3(0.0, 1.62 * s, 0.0), 0.3 * s, 0.26 * s, 0.03 * s, hat)
+		b.cylinder(Vector3(0.0, 1.73 * s, 0.0), 0.15 * s, 0.03 * s, 0.22 * s, hat)
+
+
+## The weapon in the right hand, swinging with the arm.
+static func _hero_weapon(b: ModelBuilder, s: float, shoulder: float, look: HeroLook,
+		accent: Color) -> void:
+	var hand := Vector3(0.31 * s, shoulder - 0.5 * s, -0.06 * s)
+	var color := look.weapon_color
+	var refine := look.weapon_glow / 10.0
+	var gem := _glowing(color.lightened(0.25), 1.0)
+	var arm := L.RIGHT_ARM
+	match look.weapon:
+		ItemKindDef.Icon.STAFF:
+			b.cylinder(hand + Vector3(0.0, 0.1 * s, 0.0), 0.025 * s, 0.025 * s, 1.5 * s,
+					WOOD.darkened(0.35), arm, shoulder)
+			b.cylinder(hand + Vector3(0.0, 0.8 * s, 0.0), 0.06 * s, 0.03 * s, 0.14 * s,
+					_metal(color), arm, shoulder)
+			b.sphere(hand + Vector3(0.0, 0.92 * s, 0.0), Vector3(0.09, 0.09, 0.09) * s, gem, arm,
+					shoulder)
+		ItemKindDef.Icon.WAND:
+			b.cylinder(hand + Vector3(0.0, 0.2 * s, 0.0), 0.02 * s, 0.03 * s, 0.55 * s,
+					Color(0.12, 0.1, 0.12), arm, shoulder)
+			b.sphere(hand + Vector3(0.0, 0.5 * s, 0.0), Vector3(0.05, 0.07, 0.05) * s, gem, arm,
+					shoulder)
+		ItemKindDef.Icon.SWORD, ItemKindDef.Icon.GREATSWORD:
+			var big := look.weapon == ItemKindDef.Icon.GREATSWORD
+			var length := (1.15 if big else 0.75) * s
+			var width := (0.1 if big else 0.06) * s
+			b.cylinder(hand + Vector3(0.0, 0.02 * s, 0.0), 0.025 * s, 0.025 * s, 0.2 * s,
+					Color(0.16, 0.1, 0.07), arm, shoulder)
+			b.box(hand + Vector3(0.0, 0.13 * s, 0.0), Vector3(0.05, 0.04, (0.32 if big else 0.22))
+					* s, color.darkened(0.2), arm, shoulder)
+			b.box(hand + Vector3(0.0, 0.15 * s + length * 0.5, 0.0), Vector3(0.02 * s, length,
+					width), _glowing(STEEL.lerp(color, 0.25), refine), arm, shoulder)
+			b.sphere(hand + Vector3(0.0, 0.13 * s, 0.0), Vector3(0.03, 0.03, 0.03) * s, gem, arm,
+					shoulder)
+		_:
+			# Bare hand: a faint orb of magic.
+			b.sphere(hand + Vector3(0.0, 0.08 * s, 0.0), Vector3(0.05, 0.05, 0.05) * s,
+					_glowing(accent, 0.8), arm, shoulder)
+
+
+## A shield on the left forearm, or a tome in the left hand.
+static func _hero_off_hand(b: ModelBuilder, s: float, shoulder: float, look: HeroLook) -> void:
+	var hand := Vector3(-0.31 * s, shoulder - 0.5 * s, -0.06 * s)
+	var color := look.off_hand_color
+	match look.off_hand:
+		ItemKindDef.Icon.SHIELD:
+			var at := Vector3(-0.4 * s, shoulder - 0.36 * s, -0.04 * s)
+			b.box(at, Vector3(0.05, 0.5, 0.4) * s, _metal(color), L.LEFT_ARM, shoulder)
+			b.box(at + Vector3(-0.03 * s, 0.0, 0.0), Vector3(0.02, 0.42, 0.06) * s,
+					color.darkened(0.15), L.LEFT_ARM, shoulder)
+			b.sphere(at + Vector3(-0.04 * s, 0.04 * s, 0.0), Vector3(0.03, 0.06, 0.06) * s,
+					_glowing(color, 0.5), L.LEFT_ARM, shoulder)
+		ItemKindDef.Icon.TOME:
+			b.box(hand + Vector3(0.0, 0.02 * s, -0.04 * s), Vector3(0.06, 0.22, 0.17) * s,
+					_gear_base(color), L.LEFT_ARM, shoulder)
+			b.box(hand + Vector3(-0.035 * s, 0.02 * s, -0.04 * s), Vector3(0.01, 0.1, 0.08) * s,
+					_glowing(color, 0.9), L.LEFT_ARM, shoulder)
 
 
 ## A hunched little raider: big head with long ears, glowing eyes, a club.

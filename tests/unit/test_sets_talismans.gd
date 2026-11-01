@@ -36,7 +36,7 @@ func test_epic_and_legendary_roll_rarely_and_hit_harder() -> void:
 func test_dungeon_bosses_each_have_a_set() -> void:
 	var world := load("res://data/world/world.tres") as WorldConfig
 	var sets := _sets()
-	check_eq(world.dungeons.size(), 6, "six dungeons")
+	check_eq(world.dungeons.size(), 10, "ten dungeons")
 	var used := {}
 	var last_level := 0
 	for def in world.dungeons:
