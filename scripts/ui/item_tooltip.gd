@@ -49,7 +49,18 @@ static func build(item: ItemData, inventory: Inventory, loot: LootConfig) -> Pan
 		add_comparison(box, item, inventory, loot, MenuWidgets.SMALL_FONT - 2)
 	box.add_child(_label("Salvage: %d %s" % [Inventory.salvage_value(item, loot.salvage_stones),
 			loot.currency_name], MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
+	_unwrap(box)
 	return panel
+
+
+## Turns wrapping off in the card: a wrapped label is measured before it has
+## a width (one word per line), which stretched the card down the screen.
+## Its lines are short, so the card just fits its text.
+static func _unwrap(node: Node) -> void:
+	for child in node.get_children():
+		if child is Label:
+			(child as Label).autowrap_mode = TextServer.AUTOWRAP_OFF
+		_unwrap(child)
 
 
 ## "Rare Staff - two-handed - item lv 4".

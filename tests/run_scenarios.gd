@@ -1041,6 +1041,9 @@ func _inventory_tab() -> void:
 	var anchor := menu.get_child(0) as Control
 	menu.show_tooltip(worn, anchor)
 	_check(menu.tooltip_showing(), "hovering an item shows its tooltip")
+	var tip := menu.get("_tooltip") as Control
+	_check(tip.size.y < 400.0 and tip.size.y <= tip.get_combined_minimum_size().y + 1.0,
+			"the tooltip only reaches as far as its text (%d px tall)" % roundi(tip.size.y))
 	menu.hide_tooltip(anchor)
 	_check(not menu.tooltip_showing(), "and leaving hides it")
 	var rare := ItemData.new()
