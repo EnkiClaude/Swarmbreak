@@ -32,6 +32,8 @@ static func encode(progress: PlayerProgress, inventory: Inventory, zone_level: i
 		"inventory": {
 			"stones": inventory.stones,
 			"blessed_stones": inventory.blessed_stones,
+			"sort_mode": inventory.sort_mode,
+			"next_acquired": inventory.next_acquired,
 			"equipped": equipped,
 			"backpack": backpack,
 		},
@@ -57,6 +59,9 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 	var inv := _dict(data.get("inventory"))
 	inventory.stones = maxi(_int(inv.get("stones"), 0), 0)
 	inventory.blessed_stones = maxi(_int(inv.get("blessed_stones"), 0), 0)
+	inventory.sort_mode = clampi(_int(inv.get("sort_mode"), 0), 0,
+			Inventory.SORT_NAMES.size() - 1) as Inventory.SortMode
+	inventory.next_acquired = maxi(_int(inv.get("next_acquired"), 1), 1)
 	# Equipment is saved by position. Saves from before the extra slots had
 	# three (weapon, charm, armor), which are still positions 0-2.
 	var equipped := _array(inv.get("equipped"))
@@ -135,6 +140,7 @@ static func item_to_dict(item: ItemData) -> Dictionary:
 		"pet_level": item.pet_level,
 		"pet_xp": item.pet_xp,
 		"set_id": item.set_id,
+		"acquired": item.acquired,
 		"talisman": item.is_talisman,
 		"talisman_stats": Array(item.talisman_stats),
 		"talisman_values": Array(item.talisman_values),
@@ -164,6 +170,7 @@ static func item_from_dict(d: Dictionary, upgrade_max: int) -> ItemData:
 	item.pet_level = maxi(_int(d.get("pet_level"), 1), 1)
 	item.pet_xp = maxf(_float(d.get("pet_xp"), 0.0), 0.0)
 	item.set_id = maxi(_int(d.get("set_id"), -1), -1)
+	item.acquired = maxi(_int(d.get("acquired"), 0), 0)
 	item.is_talisman = d.get("talisman", false) == true
 	var t_stats := _array(d.get("talisman_stats"))
 	var t_values := _array(d.get("talisman_values"))

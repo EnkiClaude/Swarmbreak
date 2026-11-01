@@ -246,3 +246,47 @@ func test_old_saves_fit_the_new_slots() -> void:
 	check(inventory.equipped[Inventory.Equip.OFF_HAND] == null, "no off hand beside a staff")
 	check_eq(inventory.backpack.size(), 1, "the shield went to the backpack")
 	check(inventory.equipped[Inventory.Equip.MAIN_HAND].two_handed, "two-handed survives a save")
+
+
+func test_backpack_sorts_by_each_mode() -> void:
+	var inventory := Inventory.new(8)
+	var old_rare := _rolled(AffixDef.Slot.RING, 2)
+	old_rare.item_level = 3
+	var new_common := _rolled(AffixDef.Slot.WEAPON, 0)
+	new_common.item_level = 9
+	var mid_magic := _rolled(AffixDef.Slot.ARMOR, 1)
+	mid_magic.item_level = 5
+	var talisman := ItemData.new()
+	talisman.is_talisman = true
+	talisman.rarity = 4
+	old_rare.item_name = "rare"
+	new_common.item_name = "common"
+	mid_magic.item_name = "magic"
+	talisman.item_name = "talisman"
+	for item in [old_rare, talisman, mid_magic, new_common]:
+		inventory.backpack.append(item)
+		item.acquired = inventory.next_acquired
+		inventory.next_acquired += 1
+	inventory.sort_mode = Inventory.SortMode.RARITY
+	inventory.sort_backpack()
+	check_eq(_names(inventory), ["rare", "magic", "common", "talisman"],
+			"rarity: best first, talismans last")
+	inventory.sort_mode = Inventory.SortMode.LEVEL
+	inventory.sort_backpack()
+	check_eq(_names(inventory), ["common", "magic", "rare", "talisman"], "level: highest first")
+	inventory.sort_mode = Inventory.SortMode.NEWEST
+	inventory.sort_backpack()
+	check_eq(_names(inventory), ["common", "magic", "rare", "talisman"],
+			"newest first, talismans still last")
+	check_eq(inventory.cycle_sort(), Inventory.SortMode.SLOT, "cycling wraps around to slot")
+	var picked := _rolled(AffixDef.Slot.BELT, 0)
+	var fresh := Inventory.new(8)
+	fresh.add(picked)
+	check(picked.acquired > 0, "picking up stamps the item")
+
+
+func _names(inventory: Inventory) -> Array:
+	var names := []
+	for item in inventory.backpack:
+		names.append(item.item_name)
+	return names

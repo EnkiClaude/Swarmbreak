@@ -26,6 +26,8 @@ var fail_streak: int = 0
 var pet_type: int = -1
 var pet_level: int = 1
 var pet_xp: float = 0.0
+## Order it reached the inventory (higher is newer), for sorting by newest.
+var acquired: int = 0
 ## Set items: index into SetList.sets, else -1.
 var set_id: int = -1
 ## A talisman (not gear): its stats and values are what it gives the gear
