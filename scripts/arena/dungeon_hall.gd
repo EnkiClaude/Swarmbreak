@@ -10,6 +10,10 @@ const FLOOR_SHADER := preload("res://shaders/zone_floor.gdshader")
 const CELL := 2.0
 const LANTERN_EVERY := 5
 const LANTERN_HEIGHT := 2.6
+const TRIM_HEIGHT := 0.4
+## How far the trim's top stands above the wall block's top.
+const TRIM_RISE := 0.12
+const TRIM_OVERHANG := 0.1
 
 var theme: ZoneTheme
 var layout: DungeonLayout
@@ -95,8 +99,11 @@ func _build_walls() -> void:
 			var c := origin + Vector2((x + 0.5) * CELL, (z + 0.5) * CELL)
 			blocks.append(Transform3D(Basis.from_scale(Vector3(CELL, height, CELL)),
 					Vector3(c.x, height * 0.5, c.y)))
-			trims.append(Transform3D(Basis.from_scale(Vector3(CELL + 0.1, 0.4, CELL + 0.1)),
-					Vector3(c.x, height - 0.2, c.y)))
+			# The trim caps the block and stands a little above it: a top face
+			# flush with the block's would z-fight (flicker) with it.
+			trims.append(Transform3D(Basis.from_scale(Vector3(CELL + TRIM_OVERHANG,
+					TRIM_HEIGHT, CELL + TRIM_OVERHANG)),
+					Vector3(c.x, height + TRIM_RISE - TRIM_HEIGHT * 0.5, c.y)))
 			if facing != Vector2.ZERO:
 				faced += 1
 				if faced % LANTERN_EVERY == 0:
