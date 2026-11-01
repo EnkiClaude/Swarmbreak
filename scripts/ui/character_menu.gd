@@ -268,6 +268,7 @@ func show_tooltip(item: ItemData, owner: Control) -> void:
 	_tooltip = ItemTooltip.build(item, _inventory, _loot)
 	_tooltip_owner = owner
 	add_child(_tooltip)
+	_tooltip.reset_size()
 	var screen := get_viewport().get_visible_rect().size
 	var rect := owner.get_global_rect()
 	var tip := _tooltip.get_combined_minimum_size()
