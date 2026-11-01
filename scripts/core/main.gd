@@ -113,6 +113,9 @@ func _ready() -> void:
 	save = SaveManager.new(save_config, progress, inventory, job_tree,
 			progression_config.max_level, loot_config.upgrade_max)
 	save.load_game()
+	print("DIAG attr ", attribute_table.attributes[0].per_point, " ",
+			attribute_table.attributes[1].per_point, " perks ", job_tree.jobs[0].rank1.values,
+			" chances ", loot_config.upgrade_chances, " kind ", loot_config.item_kinds[0].implicit_max)
 	stats.recompute()
 	_connect_autosave()
 	world.return_to_town()
