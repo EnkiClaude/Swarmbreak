@@ -112,15 +112,29 @@ func _ready() -> void:
 	_overlay.combat = combat
 	save = SaveManager.new(save_config, progress, inventory, job_tree,
 			progression_config.max_level, loot_config.upgrade_max)
+	_check_data()
 	save.load_game()
-	print("DIAG attr ", attribute_table.attributes[0].per_point, " ",
-			attribute_table.attributes[1].per_point, " perks ", job_tree.jobs[0].rank1.values,
-			" chances ", loot_config.upgrade_chances, " kind ", loot_config.item_kinds[0].implicit_max)
 	stats.recompute()
 	_connect_autosave()
 	world.return_to_town()
 	_jump_from_url()
 	_greet()
+
+
+## Stat lists inside nested data (attributes, job perks) must pair a value
+## with each stat. An export that loses those lists (binary-converted
+## resources in Godot 4.3 did) shows up here as an error, which the web
+## smoke test catches.
+func _check_data() -> void:
+	for def in attribute_table.attributes:
+		if def.per_point.size() != def.stats.size():
+			push_error("Attribute %s has %d values for %d stats" % [def.display_name,
+					def.per_point.size(), def.stats.size()])
+	for job in job_tree.jobs:
+		for perks: JobPerks in [job.rank1, job.rank2]:
+			if perks != null and perks.values.size() != perks.stats.size():
+				push_error("Job %s perks have %d values for %d stats" % [job.display_name,
+						perks.values.size(), perks.stats.size()])
 
 
 ## Every space's camps share the swarm's camp ids, so size them for the biggest.
