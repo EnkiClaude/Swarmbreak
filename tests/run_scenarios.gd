@@ -490,13 +490,14 @@ func _death_returns_to_town() -> void:
 
 func _camp_respawns() -> void:
 	var config := _world_config()
-	var saved_time := config.camp_respawn_time
-	config.camp_respawn_time = 0.5
 	_teleport(_world.map.region_center(_easy_region()))
 	await _frames(20)
 	var camp := _sleeping_camp()
 	_check(camp >= 0, "a camp to clear")
 	if camp >= 0:
+		# Each site keeps its own respawn time; shorten this one's.
+		var saved_time := _camps.sites.respawn_time[camp]
+		_camps.sites.respawn_time[camp] = 0.5
 		for i in _swarm.state.count:
 			if _swarm.state.camp_ids[i] == camp:
 				_swarm.state.health[i] = 0.0
@@ -506,7 +507,7 @@ func _camp_respawns() -> void:
 		await _frames(60)
 		_check(_camps.sites.state[camp] == CampSites.State.SPAWNED,
 				"camp %d came back (state %d)" % [camp, _camps.sites.state[camp]])
-	config.camp_respawn_time = saved_time
+		_camps.sites.respawn_time[camp] = saved_time
 
 
 func _camps_stream_out() -> void:
