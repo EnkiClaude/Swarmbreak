@@ -4,12 +4,17 @@ extends Node3D
 ## camp was cleared; each is an item at LootConfig.item_drop_chance, otherwise
 ## a pile of Geon growing with the level. Loot near the player drifts toward
 ## it and is picked up on touch. Items the inventory can't take right now stay
-## put (no magnet) until there's room; Geon always fits. Gems bob and spin;
+## put (no magnet) until there's room; Geon and Blessed Stones always fit
+## (a Blessed Stone shows as a pale gem with a beam). Gems bob and spin;
 ## magic and rare items also show a light beam; Geon shows as gold coins.
 ## Ground slots are a fixed pool drawn with three InstanceBatches.
 
 signal picked_up(item: ItemData)
 signal picked_up_geon(amount: int)
+signal picked_up_blessed
+## Within this distance of the player, loot is collected at once (a hatched
+## pet fetching it). 0: only the normal pickup.
+var collect_radius := 0.0
 ## Walked over an item with a full backpack.
 signal backpack_full
 
@@ -27,6 +32,8 @@ var _positions: PackedVector3Array = []
 var _items: Array[ItemData] = []
 ## Geon in each ground slot; 0 for an item.
 var _geon := PackedInt32Array()
+## 1 for a Blessed Stone (no item, no Geon).
+var _blessed := PackedByteArray()
 var _count := 0
 var _time := 0.0
 var _full_warning_in := 0.0
@@ -46,6 +53,8 @@ func setup(config: LootConfig, inventory: Inventory, generator: ItemGenerator) -
 	_items.resize(config.ground_capacity)
 	_geon.resize(config.ground_capacity)
 	_geon.fill(0)
+	_blessed.resize(config.ground_capacity)
+	_blessed.fill(0)
 	_gems = InstanceBatch.new()
 	_gems.name = "Gems"
 	_gems.setup(_make_gem_mesh(), config.ground_capacity)
@@ -96,6 +105,14 @@ func place_geon(amount: int, at: Vector2) -> bool:
 	return true
 
 
+## Puts a Blessed Stone on the ground. False if the ground pool is full.
+func place_blessed(at: Vector2) -> bool:
+	if not place(null, at):
+		return false
+	_blessed[_count - 1] = 1
+	return true
+
+
 ## Geon lying on the ground in total.
 func ground_geon() -> int:
 	var total := 0
@@ -115,6 +132,7 @@ func place(item: ItemData, at: Vector2) -> bool:
 	_positions[_count] = Vector3(at.x, 0.0, at.y)
 	_items[_count] = item
 	_geon[_count] = 0
+	_blessed[_count] = 0
 	_count += 1
 	return true
 
@@ -137,8 +155,10 @@ func item_position(i: int) -> Vector2:
 func tick(delta: float, player_pos: Vector2) -> void:
 	_time += delta
 	_full_warning_in -= delta
-	var magnet_sq := _config.magnet_radius * _config.magnet_radius
-	var pickup_sq := _config.pickup_radius * _config.pickup_radius
+	var magnet := maxf(_config.magnet_radius, collect_radius)
+	var pickup := maxf(_config.pickup_radius, collect_radius)
+	var magnet_sq := magnet * magnet
+	var pickup_sq := pickup * pickup
 	for i in range(_count - 1, -1, -1):
 		var p: Vector3 = _positions[i]
 		var to_player := player_pos - Vector2(p.x, p.z)
@@ -156,6 +176,9 @@ func tick(delta: float, player_pos: Vector2) -> void:
 			if item != null:
 				_inventory.add(item)
 				picked_up.emit(item)
+			elif _blessed[i] != 0:
+				_inventory.add_blessed_stones(1)
+				picked_up_blessed.emit()
 			else:
 				var amount := _geon[i]
 				_inventory.add_stones(amount)
@@ -172,8 +195,10 @@ func _remove(i: int) -> void:
 	_positions[i] = _positions[last]
 	_items[i] = _items[last]
 	_geon[i] = _geon[last]
+	_blessed[i] = _blessed[last]
 	_items[last] = null
 	_geon[last] = 0
+	_blessed[last] = 0
 	_count = last
 
 
@@ -186,6 +211,14 @@ func _draw() -> void:
 		var p: Vector3 = _positions[i]
 		var item := _items[i]
 		var bob := sin(_time * BOB_SPEED + i) * BOB_HEIGHT
+		if item == null and _blessed[i] != 0:
+			var stone := Basis(Vector3.UP, _time * SPIN_SPEED + i).scaled(Vector3(s, s * 1.4, s))
+			_gems.add_basis(Vector3(p.x, 0.6 + bob, p.z), stone, _config.blessed_color)
+			var shine := _config.blessed_color
+			shine.a = BEAM_ALPHA
+			_beams.add(Vector3(p.x, _config.beam_height * 0.5, p.z),
+					Vector3(0.16, _config.beam_height, 0.16), shine)
+			continue
 		if item == null:
 			# A short stack of coins, bigger for bigger piles.
 			var size := s * clampf(0.8 + _geon[i] * 0.02, 0.8, 1.6)

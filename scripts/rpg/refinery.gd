@@ -3,7 +3,8 @@ extends RefCounted
 ## Risky item upgrades. Each attempt costs Geon; success raises the item
 ## one level, failure drops it one level (never below +0, never destroyed).
 ## Odds fall as the level rises, and each failure in a row adds a little
-## "pity" to the next chance, so bad streaks end.
+## "pity" to the next chance, so bad streaks end. A Blessed Stone instead
+## of Geon makes an attempt certain to succeed.
 
 enum Result { SUCCESS, DOWNGRADED, FAILED, NOT_ENOUGH_STONES, MAXED }
 
@@ -57,3 +58,16 @@ func attempt(item: ItemData, inventory: Inventory) -> Result:
 			result = Result.FAILED
 	inventory.notify_changed()
 	return result
+
+
+## Spends one Blessed Stone for a certain success.
+func attempt_blessed(item: ItemData, inventory: Inventory) -> Result:
+	if is_maxed(item):
+		return Result.MAXED
+	if inventory.blessed_stones <= 0:
+		return Result.NOT_ENOUGH_STONES
+	inventory.blessed_stones -= 1
+	item.upgrade_level += 1
+	item.fail_streak = 0
+	inventory.notify_changed()
+	return Result.SUCCESS

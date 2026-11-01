@@ -7,6 +7,14 @@ extends RefCounted
 ## which routes around obstacles and reads smoother than stepping to the
 ## cheapest neighbour. The field only rebuilds when the goal enters a new cell
 ## or the grid moves (set_origin). Positions outside the grid use its edge cells.
+##
+## With rooms set (set_rooms: a dungeon's hallway and side rooms), each cell
+## has a room id (-1 wall, 0 hallway, 1.. rooms) and each room a door, and
+## the field routes through doors instead: a cell in the player's room (or
+## the hallway when the player is in it) points at the player, a cell in
+## another room at its own door, and a hallway cell at the door of the
+## player's room. That's as cheap as open ground, and wall cells are blocked
+## for collision (is_wall).
 
 const UNREACHED := 1.0e9
 const DIAGONAL := 1.41421356
@@ -24,6 +32,9 @@ var blocked: PackedByteArray
 var _cost: PackedFloat32Array
 var _goal_cell: int = -1
 var _blocked_count: int = 0
+## Room id per cell and door per room id, when rooms are set; empty otherwise.
+var _rooms := PackedInt32Array()
+var _doors := PackedVector2Array()
 
 
 func _init(half_extent: float, p_cell_size: float) -> void:
@@ -55,6 +66,40 @@ func set_origin(new_origin: Vector2) -> void:
 	_goal_cell = -1
 
 
+## Routes through rooms (see the class notes) and blocks wall cells. ids is
+## one room id per cell; doors one point per room id (index 0 unused).
+func set_rooms(ids: PackedInt32Array, doors: PackedVector2Array) -> void:
+	_rooms = ids
+	_doors = doors
+	for i in ids.size():
+		blocked[i] = 1 if ids[i] < 0 else 0
+	_goal_cell = -1
+
+
+## Back to open ground: no rooms, nothing blocked.
+func clear_rooms() -> void:
+	_rooms = PackedInt32Array()
+	_doors = PackedVector2Array()
+	blocked.fill(0)
+	_blocked_count = 0
+	_goal_cell = -1
+
+
+func has_rooms() -> bool:
+	return not _rooms.is_empty()
+
+
+## True if p is inside a wall (only with rooms set).
+func is_wall(p: Vector2) -> bool:
+	if _rooms.is_empty():
+		return false
+	var x := int((p.x - origin.x) * inv_cell_size)
+	var z := int((p.y - origin.y) * inv_cell_size)
+	if x < 0 or z < 0 or x >= cols or z >= rows:
+		return true
+	return blocked[z * cols + x] != 0
+
+
 ## Marks a cell as impassable (or clears it). Forces a rebuild on the next update().
 func set_blocked(x: int, z: int, is_blocked: bool) -> void:
 	var i := z * cols + x
@@ -72,7 +117,9 @@ func update(goal: Vector2) -> bool:
 	if goal_cell == _goal_cell:
 		return false
 	_goal_cell = goal_cell
-	if _blocked_count == 0:
+	if not _rooms.is_empty():
+		_point_through_doors(goal)
+	elif _blocked_count == 0:
 		_point_straight_at(goal_cell)
 	else:
 		_compute_costs(goal_cell)
@@ -92,6 +139,33 @@ func _point_straight_at(goal_cell: int) -> void:
 		var row := z * cols
 		for x in cols:
 			dirs[row + x] = Vector2(target.x - (origin.x + x * cell_size + half), dz).normalized()
+
+
+func _point_through_doors(goal: Vector2) -> void:
+	var dirs := directions
+	var rooms := _rooms
+	var doors := _doors
+	var half := cell_size * 0.5
+	var near_sq := cell_size * cell_size
+	var player_room: int = maxi(rooms[cell_index(goal)], 0)
+	var player_door: Vector2 = doors[player_room] if player_room > 0 else goal
+	for z in rows:
+		var cz := origin.y + z * cell_size + half
+		var row := z * cols
+		for x in cols:
+			var i := row + x
+			var room: int = rooms[i]
+			if room < 0:
+				dirs[i] = Vector2.ZERO
+				continue
+			var center := Vector2(origin.x + x * cell_size + half, cz)
+			var target := goal
+			if room != player_room:
+				target = player_door if room == 0 else doors[room]
+				# Standing in the doorway already: go on toward the player.
+				if center.distance_squared_to(target) < near_sq:
+					target = goal
+			dirs[i] = (target - center).normalized()
 
 
 func _compute_costs(goal_cell: int) -> void:

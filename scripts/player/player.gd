@@ -45,6 +45,11 @@ func setup(camera_rig: CameraRig, arena_half_extent: float) -> void:
 	_half_extent = arena_half_extent
 
 
+## Returns true for a ground point inside a wall (dungeons); the player
+## slides along walls instead of entering them. Unset: no walls.
+var wall_check: Callable
+
+
 ## Keeps the player inside -half_extent..half_extent on X and Z.
 func set_bounds(half_extent: float) -> void:
 	_half_extent = half_extent
@@ -84,18 +89,31 @@ func tick(delta: float, now: float = 0.0) -> void:
 		_start_dash(move, yaw, now)
 	if _dash_left > 0.0:
 		_dash_left -= delta
-		position += _dash_direction * (config.dash_distance / config.dash_duration) * delta
+		_move_by(_dash_direction * (config.dash_distance / config.dash_duration) * delta)
 	else:
 		var speed := config.move_speed
 		if stats != null:
 			speed *= stats.multiplier(PlayerStat.Id.MOVE_SPEED)
 		var wish := _screen_to_world(move, yaw) * speed
 		velocity = velocity.move_toward(wish, config.acceleration * delta)
-		position += velocity * delta
+		_move_by(velocity * delta)
 	position.x = clampf(position.x, -_half_extent, _half_extent)
 	position.z = clampf(position.z, -_half_extent, _half_extent)
 	_update_aim(move, yaw)
 	_animate(delta)
+
+
+## Moves by step, sliding along walls: a blocked axis is dropped.
+func _move_by(step: Vector3) -> void:
+	var goal := position + step
+	if wall_check.is_valid() and wall_check.call(Vector2(goal.x, goal.z)):
+		if not wall_check.call(Vector2(goal.x, position.z)):
+			goal.z = position.z
+		elif not wall_check.call(Vector2(position.x, goal.z)):
+			goal.x = position.x
+		else:
+			return
+	position = goal
 
 
 ## Faces the aim right away, e.g. as an attack goes off.

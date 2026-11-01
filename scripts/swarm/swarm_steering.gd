@@ -47,6 +47,12 @@ func _init(state: SwarmState, grid: SpatialHash, flow: FlowField, types: SwarmTy
 	_max_attackers = max_attackers
 
 
+## Inside this distance enemies chase the player straight, ignoring the
+## field (kept short in dungeons, so they don't press into walls).
+func set_direct_chase(distance: float) -> void:
+	_direct_chase_distance = distance
+
+
 ## Enemies stay inside -half_extent..half_extent on X and Z.
 func set_bounds(half_extent: float) -> void:
 	_half_extent = half_extent
@@ -165,9 +171,26 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 	var attackers := 0
 	var dps := 0.0
 	var max_attackers := _max_attackers
+	# Dungeon walls: a move into a wall cell keeps whichever axis is free.
+	var walls := _flow.blocked
+	var has_walls := _flow.has_rooms()
 	for i in count:
 		var t: int = type_ids[i]
 		var p: Vector2 = positions[i] + velocities[i] * delta
+		if has_walls:
+			var old: Vector2 = positions[i]
+			var wx: int = clampi(int((p.x - f_origin.x) * f_inv), 0, f_cols - 1)
+			var wz: int = clampi(int((p.y - f_origin.y) * f_inv), 0, f_rows - 1)
+			if walls[wz * f_cols + wx] != 0:
+				var oz: int = clampi(int((old.y - f_origin.y) * f_inv), 0, f_rows - 1)
+				var ox: int = clampi(int((old.x - f_origin.x) * f_inv), 0, f_cols - 1)
+				if walls[oz * f_cols + wx] == 0:
+					p = Vector2(p.x, old.y)
+				elif walls[wz * f_cols + ox] == 0:
+					p = Vector2(old.x, p.y)
+				else:
+					p = old
+				velocities[i] = Vector2.ZERO
 		var from_player: Vector2 = p - player_pos
 		var min_d: float = player_radius + body_radius[t]
 		var d_sq: float = from_player.length_squared()

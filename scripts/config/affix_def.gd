@@ -3,8 +3,8 @@ extends Resource
 ## One stat an item can roll, which item slots it can appear on, and its range.
 
 ## What part of the body an item is for. WEAPON goes in the main hand, RING
-## in either ring position (see Inventory.Equip).
-enum Slot { WEAPON, AMULET, ARMOR, OFF_HAND, BELT, RING }
+## in either ring position, PET holds a pet egg (see Inventory.Equip).
+enum Slot { WEAPON, AMULET, ARMOR, OFF_HAND, BELT, RING, HELM, GLOVES, PANTS, BOOTS, PET }
 
 @export var stat: PlayerStat.Id = PlayerStat.Id.MAX_HEALTH
 @export var min_value: float = 1.0

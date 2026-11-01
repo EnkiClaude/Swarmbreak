@@ -28,6 +28,8 @@ const LOCATION_MESSAGE_TIME := 2.0
 @export var boss_config: BossConfig
 @export var save_config: SaveConfig
 @export var damage_numbers_config: DamageNumbersConfig
+@export var pet_config: PetConfig
+@export var quest_list: QuestList
 
 var combat: PlayerCombat
 var world: WorldDirector
@@ -38,12 +40,16 @@ var stats: PlayerStats
 var bosses: BossSystem
 var refinery: Refinery
 var save: SaveManager
+var quests: QuestLog
+var pets: PetSystem
 
 var _loot_rng := RandomNumberGenerator.new()
 var _pillar_effect := -1
 
 ## Seconds until the player respawns in town, or < 0 when not dead.
 var _respawn_in := -1.0
+## True from walking up to the Egg Keeper until walking away again.
+var _keeper_engaged := false
 
 @onready var _scenery: Node3D = $World
 @onready var _player: Player = $Player
@@ -75,6 +81,7 @@ func _ready() -> void:
 	progress.attributes_changed.connect(stats.recompute)
 	_player.setup(_camera_rig, flow_half)
 	_player.set_stats(stats)
+	_player.wall_check = _swarm.is_wall
 	_corpses.setup(_swarm.config.enemy_types, feedback_config)
 	_swarm.setup(flow_half, _effects, _corpses, _max_sites(), boss_config.max_active)
 	_projectiles.setup(_player.config.bolt, _effects, flow_half)
@@ -91,15 +98,26 @@ func _ready() -> void:
 	camps.camp_cleared.connect(_on_camp_cleared)
 	camps.spawner_kill.connect(_on_spawner_kill)
 	world.location_entered.connect(_on_location_entered)
+	quests = QuestLog.new(quest_list)
+	quests.completed.connect(_on_quest_completed)
+	pets = PetSystem.new()
+	pets.name = "Pet"
+	add_child(pets)
+	pets.setup(pet_config, inventory, _loot, _player)
+	pets.evolved.connect(_on_pet_evolved)
+	world.space_entered.connect(pets.snap_to_player.unbind(1))
 	_loot_rng.randomize()
 	_loot.setup(loot_config, inventory, ItemGenerator.new(loot_config))
 	world.setup_actors(_player, _camera_rig, _projectiles, _loot)
 	_loot.picked_up.connect(_on_item_picked_up)
 	_loot.picked_up_geon.connect(_on_geon_picked_up)
+	_loot.picked_up_blessed.connect(_on_blessed_picked_up)
 	_loot.backpack_full.connect(_on_backpack_full)
 	refinery = Refinery.new(loot_config)
 	_menu.setup(progress, skill_tree, inventory, stats, loot_config, job_tree, refinery)
 	_menu.job_chosen.connect(_on_job_chosen)
+	_menu.setup_pets(pet_config, quests)
+	_menu.egg_taken.connect(_on_egg_taken)
 	_menu.refined.connect(_on_refined)
 	_menu.opened.connect(_touch.release_all)
 	_menu.opened.connect(_camera_rig.release_mouse)
@@ -110,12 +128,16 @@ func _ready() -> void:
 	_hud.setup(_player.vitals, world, _player, progress)
 	_hud.setup_bosses_and_jobs(bosses, boss_config.display_name, job_tree)
 	_hud.setup_camera_and_skills(_camera_rig, combat)
+	_hud.setup_quests(quests)
 	_overlay.swarm = _swarm
 	_overlay.combat = combat
 	save = SaveManager.new(save_config, progress, inventory, job_tree,
 			progression_config.max_level, loot_config.upgrade_max)
 	_check_data()
+	save.set_quests(quests)
+	quests.changed.connect(save.mark_dirty)
 	save.load_game()
+	_build_keeper()
 	stats.recompute()
 	_connect_autosave()
 	world.return_to_town()
@@ -194,6 +216,7 @@ func new_game() -> void:
 	save.erase()
 	progress.reset()
 	inventory.reset()
+	quests.reset()
 	stats.recompute()
 	_respawn()
 	save.save_now()
@@ -233,8 +256,12 @@ func _process(delta: float) -> void:
 	if alive:
 		combat.tick(dt)
 	_projectiles.tick(dt, _swarm)
-	camps.record_deaths(_swarm.resolve_deaths())
-	progress.add_xp(_swarm.last_xp * world.xp_multiplier())
+	var dead := _swarm.resolve_deaths()
+	camps.record_deaths(dead)
+	_roll_blessed_stones(dead)
+	var xp := _swarm.last_xp * world.xp_multiplier()
+	progress.add_xp(xp)
+	pets.gain_kill_xp(xp)
 	camps.tick(player_pos)
 	if alive:
 		bosses.tick(dt, player_pos, _player.vitals)
@@ -251,6 +278,8 @@ func _process(delta: float) -> void:
 	_popup.tick(dt)
 	_hud.show_skills = not _touch.visible
 	_hud.tick(dt)
+	pets.tick(dt)
+	_check_keeper()
 	_camera_rig.tick(dt)
 	save.tick(dt)
 	_overlay.sim_usec = Time.get_ticks_usec() - start
@@ -287,26 +316,39 @@ func _update_respawn(dt: float) -> void:
 
 ## Loot by the camp's level; dungeons add drops, rarity and Geon.
 ## Drops by the camp's level: mostly Geon, now and then an item. Dungeons add
-## drops, a minimum item rarity and bigger piles.
-func _on_camp_cleared(_camp: int, at: Vector2, level: int, _had_boss: bool) -> void:
+## drops, a minimum item rarity and bigger piles, more so in deeper rooms.
+func _on_camp_cleared(camp: int, at: Vector2, level: int, _had_boss: bool) -> void:
+	quests.on_camp_cleared()
 	var amount := _loot_rng.randi_range(loot_config.camp_drop_min, loot_config.camp_drop_max)
 	var min_rarity := 0
 	var multiplier := 1.0
 	var dungeon := world.dungeon()
 	if dungeon != null:
 		amount += dungeon.extra_drops
-		min_rarity = dungeon.min_drop_rarity
-		multiplier = dungeon.geon_multiplier
+		min_rarity = _dungeon_rarity(dungeon, camp)
+		multiplier = _dungeon_geon(dungeon, camp)
 	_loot.drop_rewards(at, amount, level, min_rarity, multiplier)
 
 
+## A dungeon room's minimum item rarity: one better in the deep rooms.
+func _dungeon_rarity(dungeon: DungeonDef, camp: int) -> int:
+	var deep := camps.sites.depth[camp] >= dungeon.deep_rarity_depth
+	return mini(dungeon.min_drop_rarity + (1 if deep else 0), loot_config.rarity_names.size() - 1)
+
+
+## A dungeon room's Geon multiplier, growing with depth.
+func _dungeon_geon(dungeon: DungeonDef, camp: int) -> float:
+	return dungeon.geon_multiplier + dungeon.depth_geon_step * camps.sites.depth[camp]
+
+
 ## Spawner monsters drop rarely, one at a time: farming adds up.
-func _on_spawner_kill(_camp: int, at: Vector2, level: int) -> void:
+func _on_spawner_kill(camp: int, at: Vector2, level: int) -> void:
 	var dungeon := world.dungeon()
 	if dungeon == null:
 		return
 	if _loot_rng.randf() < dungeon.spawner_drop_chance:
-		_loot.drop_rewards(at, 1, level, dungeon.min_drop_rarity, dungeon.geon_multiplier)
+		_loot.drop_rewards(at, 1, level, _dungeon_rarity(dungeon, camp),
+				_dungeon_geon(dungeon, camp))
 	if _loot_rng.randf() < dungeon.spawner_geon_chance:
 		_loot.place_geon(1, at)
 
@@ -347,6 +389,21 @@ func _on_refined(result: Refinery.Result, _item: ItemData) -> void:
 		_feedback.refined(false)
 
 
+## Any monster, whatever its level, may drop a Blessed Stone where it fell.
+func _roll_blessed_stones(dead: int) -> void:
+	var positions := _swarm.state.dead_positions
+	for k in dead:
+		if _loot_rng.randf() < loot_config.blessed_drop_chance:
+			_loot.place_blessed(positions[k])
+
+
+func _on_blessed_picked_up() -> void:
+	_hud.banner(loot_config.blessed_name.to_upper() + "!", loot_config.blessed_color, 2.0)
+	_hud.toast("+1 %s - refining with it always succeeds" % loot_config.blessed_name,
+			loot_config.blessed_color)
+	_feedback.item_picked_up()
+
+
 func _on_geon_picked_up(amount: int) -> void:
 	_hud.toast("+%d %s" % [amount, loot_config.currency_name], loot_config.geon_color)
 
@@ -370,6 +427,66 @@ func _on_leveled_up(level: int) -> void:
 	_player.vitals.mana = _player.vitals.max_mana
 	_hud.banner("LEVEL %d" % level, progression_config.level_up_color, 1.8)
 	_effects.spawn(_pillar_effect, _player.position, 1.0)
+	_feedback.level_up()
+
+
+## The Egg Keeper in the town square: her model and name, standing with the
+## open world's scenery (so she hides inside dungeons).
+func _build_keeper() -> void:
+	var keeper := Node3D.new()
+	keeper.name = "EggKeeper"
+	var at := world.map.town_spawn() + pet_config.keeper_offset
+	keeper.position = Vector3(at.x, 0.0, at.y)
+	keeper.rotation.y = PI * 0.75
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.vertex_color_is_srgb = true
+	var body := MeshInstance3D.new()
+	body.mesh = CharacterModels.keeper(1.7, pet_config.keeper_color, material)
+	keeper.add_child(body)
+	var label := Label3D.new()
+	label.text = "Egg Keeper"
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 64
+	label.pixel_size = 0.01
+	label.outline_size = 14
+	label.modulate = Color(0.85, 1.0, 0.7)
+	label.position = Vector3(0.0, 2.2, 0.0)
+	keeper.add_child(label)
+	_scenery.get_node("Overworld").add_child(keeper)
+
+
+## Walking up to the Egg Keeper opens her eggs once; step away to reset.
+func _check_keeper() -> void:
+	if world.space != WorldMap.OVERWORLD or world.is_travelling() or _menu.is_open():
+		return
+	var keeper := world.map.town_spawn() + pet_config.keeper_offset
+	var d := _player.ground_position().distance_to(keeper)
+	if d <= pet_config.keeper_radius and not _keeper_engaged:
+		_keeper_engaged = true
+		_menu.open_keeper()
+	elif d > pet_config.keeper_radius * 1.6:
+		_keeper_engaged = false
+
+
+func _on_quest_completed(quest: int) -> void:
+	_hud.banner("QUEST COMPLETE", Color(1.0, 0.85, 0.4), 2.2)
+	_hud.toast("%s - open PET to claim your reward" % quest_list.quests[quest].title,
+			Color(1.0, 0.85, 0.4))
+	_feedback.level_up()
+
+
+func _on_egg_taken(egg: ItemData) -> void:
+	var worn := inventory.is_equipped(egg)
+	_hud.toast("%s %s" % ["Your pet:" if worn else "In your backpack:", egg.item_name],
+			loot_config.rarity_colors[egg.rarity])
+
+
+func _on_pet_evolved(pet: ItemData, stage: int) -> void:
+	var text := "%s HATCHED!" % pet.item_name.to_upper() if stage == 1 \
+			else "EVOLVED INTO %s" % pet.item_name.to_upper()
+	_hud.banner(text, Color(1.0, 0.9, 0.5), 2.4)
+	_effects.spawn(_pillar_effect, pets.position, 0.8)
 	_feedback.level_up()
 
 

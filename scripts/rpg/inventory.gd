@@ -7,20 +7,26 @@ extends RefCounted
 
 signal changed
 
-## Where an item can be worn. The first five equal their AffixDef.Slot.
-enum Equip { MAIN_HAND, AMULET, ARMOR, OFF_HAND, BELT, RING_1, RING_2 }
+## Where an item can be worn. The first five equal their AffixDef.Slot;
+## from HELM on, each is its slot + 1 (rings take two positions).
+enum Equip {
+	MAIN_HAND, AMULET, ARMOR, OFF_HAND, BELT, RING_1, RING_2, HELM, GLOVES, PANTS, BOOTS, PET,
+}
 
-const EQUIP_COUNT := 7
+const EQUIP_COUNT := 12
 const EQUIP_NAMES: PackedStringArray = [
-	"Main hand", "Amulet", "Armor", "Off hand", "Belt", "Left ring", "Right ring",
+	"Main hand", "Amulet", "Armor", "Off hand", "Belt", "Left ring", "Right ring", "Helm",
+	"Gloves", "Pants", "Boots", "Pet",
 ]
 
 ## Indexed by Equip; null when empty.
 var equipped: Array[ItemData] = []
 var backpack: Array[ItemData] = []
 var backpack_size: int
-## Currency for refining items.
+## Currency for refining items (Geon).
 var stones: int = 0
+## Rare stones that make one refine attempt certain to succeed.
+var blessed_stones: int = 0
 
 
 func _init(p_backpack_size: int) -> void:
@@ -32,6 +38,8 @@ func _init(p_backpack_size: int) -> void:
 static func positions_for(slot: int) -> PackedInt32Array:
 	if slot == AffixDef.Slot.RING:
 		return PackedInt32Array([Equip.RING_1, Equip.RING_2])
+	if slot > AffixDef.Slot.RING:
+		return PackedInt32Array([slot + 1])
 	return PackedInt32Array([slot])
 
 
@@ -214,11 +222,17 @@ func add_stones(amount: int) -> void:
 	changed.emit()
 
 
+func add_blessed_stones(amount: int) -> void:
+	blessed_stones += amount
+	changed.emit()
+
+
 ## Empties everything (New Game).
 func reset() -> void:
 	equipped.fill(null)
 	backpack.clear()
 	stones = 0
+	blessed_stones = 0
 	changed.emit()
 
 

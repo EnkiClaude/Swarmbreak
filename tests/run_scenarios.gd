@@ -80,6 +80,10 @@ func _run() -> void:
 	await _scenario_async("far camps leave the swarm, near ones come in", _camps_stream_out)
 	await _scenario_async("a gate leads into a dungeon and its exit back out", _dungeon_round_trip)
 	await _scenario_async("dungeon spawners keep monsters coming", _dungeon_spawners)
+	await _scenario_async("dungeon walls stop the player", _dungeon_walls)
+	await _scenario_async("the Egg Keeper gives an egg that follows and levels", _keeper_and_pet)
+	await _scenario_async("double-clicking an item wears it, again takes it off", _double_click)
+	await _scenario_async("a town gate leads into the dungeon and back to town", _town_gate)
 	await _scenario_async("dying sends the player back to town", _death_returns_to_town)
 	await _scenario_async("New Game erases the save and starts over", _new_game)
 
@@ -576,6 +580,86 @@ func _dungeon_spawners() -> void:
 	_check(_members_of(spawner) >= 1, "and new ones came at once (%d)" % _members_of(spawner))
 	_world.return_to_town()
 	await _frames(2)
+
+
+func _dungeon_walls() -> void:
+	var map := _world.map
+	_world.enter(0, map.arrival_point(0))
+	await _frames(3)
+	var layout := map.layouts[0]
+	var wall_z := layout.rooms[0].position.y + 1.0
+	_teleport(Vector2(-2.5, wall_z))
+	Input.action_press("move_left")
+	await _frames(40)
+	Input.action_release("move_left")
+	_check(_player.position.x > -4.05, "the hallway wall stopped the player (x %.2f)" %
+			_player.position.x)
+	_check(not _swarm.is_wall(_player.ground_position()), "never inside a wall")
+	_world.return_to_town()
+	await _frames(2)
+
+
+func _keeper_and_pet() -> void:
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	var inventory := _main_var("inventory") as Inventory
+	var pets := _main_var("pets") as PetSystem
+	var config := _main_var("pet_config") as PetConfig
+	inventory.equipped[Inventory.Equip.PET] = null
+	_teleport(_world.map.town_spawn() + config.keeper_offset + Vector2(0.0, 1.0))
+	await _frames(3)
+	_check(menu.is_open() and menu.tab == CharacterMenu.Tab.PET,
+			"walking up to the Egg Keeper opens her eggs")
+	menu.take_egg(1)
+	var pet := inventory.equipped[Inventory.Equip.PET]
+	_check(pet != null and pet.pet_type == 1, "her egg is in the pet slot")
+	menu.close()
+	_go_to_town()
+	await _frames(10)
+	_check(pets.visible, "the egg follows the player")
+	var before := pet.pet_xp + pet.pet_level * 1000.0
+	pets.gain_kill_xp(200.0)
+	_check(pet.pet_xp + pet.pet_level * 1000.0 > before, "kills give the pet XP")
+	pet.pet_level = 10
+	PetRules.refresh(config, pet)
+	await _frames(3)
+	var loot := _main.get_node("Loot") as LootSystem
+	_check(loot.collect_radius > 3.0, "a hatched pet collects loot around the player (%.1f m)" %
+			loot.collect_radius)
+
+
+func _double_click() -> void:
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	var inventory := _main_var("inventory") as Inventory
+	var boots := ItemData.new()
+	boots.slot = AffixDef.Slot.BOOTS
+	boots.item_name = "Test Boots"
+	inventory.equipped[Inventory.Equip.BOOTS] = null
+	inventory.backpack.append(boots)
+	menu.open(CharacterMenu.Tab.INVENTORY)
+	await _frames(1)
+	menu.select_item(boots)
+	menu.select_item(boots)
+	_check(inventory.equipped[Inventory.Equip.BOOTS] == boots, "double-click wore the boots")
+	menu.select_item(boots)
+	menu.select_item(boots)
+	_check(inventory.equipped[Inventory.Equip.BOOTS] == null and inventory.backpack.has(boots),
+			"double-click again took them off")
+	inventory.backpack.erase(boots)
+	menu.close()
+	await _frames(1)
+
+
+func _town_gate() -> void:
+	var map := _world.map
+	_go_to_town()
+	await _frames(3)
+	_teleport(map.town_gate_position(0))
+	var config := _world_config()
+	await _frames(roundi(config.fade_time * 60.0) * 2 + 20)
+	_check(_world.space == 0, "the town gate leads into dungeon 0")
+	_teleport(map.exit_position(0))
+	await _frames(roundi(config.fade_time * 60.0) * 2 + 20)
+	_check(_world.is_town(), "and its exit back to town (%s)" % _world.location_name())
 
 
 func _members_of(camp: int) -> int:

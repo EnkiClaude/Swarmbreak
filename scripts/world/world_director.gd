@@ -34,6 +34,9 @@ var _travel_space := WorldMap.OVERWORLD
 var _travel_at := Vector2.ZERO
 var _travelling := false
 var _switched := false
+## Where leaving the current dungeon puts the player: outside the gate they
+## came in through (its own entrance or the one in town).
+var _return_point := Vector2.ZERO
 
 
 func _init(config: WorldConfig, swarm: SwarmManager, bosses: BossSystem,
@@ -48,10 +51,10 @@ func _init(config: WorldConfig, swarm: SwarmManager, bosses: BossSystem,
 	_overworld = OverworldScenery.build(scenery_parent, map)
 	for d in config.dungeons.size():
 		var def := config.dungeons[d]
-		var hall := Arena.new()
+		var hall := DungeonHall.new()
 		hall.name = "Dungeon%d" % d
 		scenery_parent.add_child(hall)
-		hall.build(def.theme, def.half_extent, 0.8, config.world_seed + 101 * (d + 1))
+		hall.build(def.theme, map.layouts[d])
 		GateProp.build(hall, map.exit_position(d), "Exit", def.gate_color)
 		hall.visible = false
 		_dungeons.append(hall)
@@ -77,6 +80,10 @@ func enter(new_space: int, at: Vector2) -> void:
 	_player.set_bounds(h)
 	_camera.set_bounds(h)
 	_projectiles.set_bounds(h)
+	if space == WorldMap.OVERWORLD:
+		_swarm.clear_layout()
+	else:
+		_swarm.set_layout(map.layouts[space], _config.dungeon_chase_distance)
 	_loot.clear()
 	_overworld.visible = space == WorldMap.OVERWORLD
 	for d in _dungeons.size():
@@ -110,11 +117,15 @@ func tick(delta: float, player_pos: Vector2) -> void:
 		if now_in != region:
 			_enter_region(now_in, false)
 		for d in _config.dungeons.size():
-			if player_pos.distance_to(map.gate_position(d)) <= _config.gate_radius:
-				_start_travel(d, map.arrival_point(d))
-				return
+			for gate: Vector2 in [map.gate_position(d), map.town_gate_position(d)]:
+				if player_pos.distance_to(gate) <= _config.gate_radius:
+					_return_point = gate + Vector2(0.0, WorldMap.GATE_STEP_OUT)
+					_start_travel(d, map.arrival_point(d))
+					return
 	elif player_pos.distance_to(map.exit_position(space)) <= _config.gate_radius:
-		_start_travel(WorldMap.OVERWORLD, map.gate_exit_point(space))
+		var back := _return_point if _return_point != Vector2.ZERO \
+				else map.gate_exit_point(space)
+		_start_travel(WorldMap.OVERWORLD, back)
 
 
 func is_travelling() -> bool:
@@ -161,6 +172,7 @@ func gate_positions() -> PackedVector2Array:
 	if space == WorldMap.OVERWORLD:
 		for d in _config.dungeons.size():
 			gates.append(map.gate_position(d))
+			gates.append(map.town_gate_position(d))
 	else:
 		gates.append(map.exit_position(space))
 	return gates

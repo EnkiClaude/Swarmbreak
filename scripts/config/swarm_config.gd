@@ -32,4 +32,7 @@ extends Resource
 ## How long an enemy shows the flash color after taking damage.
 @export var hit_flash_duration: float = 0.08
 @export var hit_flash_color: Color = Color(1, 1, 1)
+## Lured enemies glow faintly along their outline in this color.
+@export var lure_glow_color: Color = Color(1.0, 0.8, 0.35)
+@export var lure_glow: float = 0.6
 @export var enemy_types: Array[EnemyType] = []

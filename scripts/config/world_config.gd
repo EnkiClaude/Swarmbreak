@@ -39,6 +39,9 @@ extends Resource
 @export var xp_growth: float = 0.2
 
 @export_group("Travel")
+## In dungeons, enemies only chase straight at the player inside this
+## distance; further out they follow the hallway and doors.
+@export var dungeon_chase_distance: float = 1.5
 ## Stepping this close to a gate goes through it.
 @export var gate_radius: float = 2.5
 ## Seconds to fade out (and again to fade in) when going through a gate.

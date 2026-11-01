@@ -22,6 +22,15 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M11:** pets, more gear and real dungeons. Helm, gloves, pants and boots
+  slots; a pet slot for an egg from the first quest (or the Egg Keeper in
+  town) that takes a share of your XP, hatches at level 10, evolves every
+  10 levels and, once hatched, collects drops around you. Dungeons are a
+  hallway with rooms on both sides, harder and richer the deeper you go,
+  with walls you and the monsters can't pass. Rare Blessed Stones make a
+  refine certain; double-click gear to wear it or take it off; lured
+  monsters glow faintly instead of turning green; items drop 1 in 10, and
+  the pickup range is larger. Town gates lead straight into each dungeon.
 - **M10:** evasion and Geon. Agility (and some armor, belts and rings) now
   gives evasion, a chance to ignore each hit outright, up to 85%. The
   currency is Geon: camps, bosses and spawners drop piles of it, and items

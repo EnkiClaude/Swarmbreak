@@ -19,6 +19,8 @@ var is_spawner := PackedByteArray()
 var spawn_interval := PackedFloat32Array()
 ## Seconds before a cleared camp comes back; 0 = at once, even next to the player.
 var respawn_time := PackedFloat32Array()
+## Dungeons: how deep the site's room is (0 nearest the entrance).
+var depth := PackedInt32Array()
 ## Swarm enemy types of ordinary and heavy members.
 var light_type := PackedInt32Array()
 var heavy_type := PackedInt32Array()
@@ -47,6 +49,7 @@ func add(center: Vector2, members: int, level: int, heavy: float, boss: bool = f
 	is_spawner.append(1 if spawner else 0)
 	spawn_interval.append(interval)
 	respawn_time.append(respawn)
+	depth.append(0)
 	light_type.append(0)
 	heavy_type.append(1)
 	state.append(State.DORMANT)

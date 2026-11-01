@@ -79,7 +79,7 @@ func test_dungeons_have_a_boss_spawners_and_room_to_arrive() -> void:
 		var bosses := 0
 		for s in sites.size():
 			var at := sites.centers[s]
-			check(absf(at.x) < def.half_extent and absf(at.y) < def.half_extent, "inside the hall")
+			check(map.layouts[d].room_at(at) > 0, "%s: camp %d stands in a room" % [def.display_name, s])
 			check(at.distance_to(map.arrival_point(d)) >= config.keep_clear_radius * 0.99,
 					"%s: no camp where the player arrives" % def.display_name)
 			check_eq(sites.levels[s], def.level, "dungeon level")
@@ -173,7 +173,8 @@ func test_spawners_refill_while_the_player_is_near() -> void:
 	var config := _config()
 	var map := WorldMap.new(config)
 	var swarm := _swarm()
-	swarm.set_bounds(config.dungeons[0].half_extent)
+	swarm.set_bounds(map.half_extent(0))
+	swarm.set_layout(map.layouts[0], config.dungeon_chase_distance)
 	var director := CampDirector.new(config, swarm)
 	director.use_sites(map.dungeon_sites[0])
 	var sites := map.dungeon_sites[0]
@@ -200,7 +201,8 @@ func test_dungeon_camps_come_back_at_once() -> void:
 	var config := _config()
 	var map := WorldMap.new(config)
 	var swarm := _swarm()
-	swarm.set_bounds(config.dungeons[0].half_extent)
+	swarm.set_bounds(map.half_extent(0))
+	swarm.set_layout(map.layouts[0], config.dungeon_chase_distance)
 	var director := CampDirector.new(config, swarm)
 	var sites := map.dungeon_sites[0]
 	director.use_sites(sites)
@@ -223,3 +225,73 @@ func test_dungeon_camps_come_back_at_once() -> void:
 	check_eq(sites.state[camp], CampSites.State.SPAWNED, "back while the player stands on it")
 	check(sites.alive[camp] > 0, "with monsters (%d)" % sites.alive[camp])
 	swarm.free()
+
+
+func test_dungeon_is_a_hallway_with_rooms_both_sides_getting_deeper() -> void:
+	var config := _config()
+	var def := config.dungeons[0]
+	var layout := DungeonLayout.new(def)
+	check_eq(layout.rooms.size(), def.rooms_per_side * 2 + 1, "side rooms plus the boss room")
+	var map := WorldMap.new(config)
+	check_eq(layout.room_at(map.arrival_point(0)), 0, "the player arrives in the hallway")
+	var left := 0
+	var right := 0
+	for room in layout.rooms.size():
+		var center := layout.room_center(room)
+		check_eq(layout.room_at(center), room + 1, "room %d's middle is in it" % room)
+		check_eq(layout.room_at(layout.doors[room]), 0, "room %d's door opens to the hallway" % room)
+		if room == layout.boss_room:
+			check(center.y < layout.hallway.position.y, "the boss room is past the hallway's end")
+			continue
+		if center.x < 0.0:
+			left += 1
+		else:
+			right += 1
+		# Deeper rooms lie further from the entrance (+Z).
+		for other in layout.rooms.size():
+			if other != layout.boss_room and layout.depths[other] > layout.depths[room]:
+				check(layout.room_center(other).y < center.y, "deeper is further in")
+	check_eq(left, def.rooms_per_side, "rooms on the left")
+	check_eq(right, def.rooms_per_side, "rooms on the right")
+	# A wall stands between the hallway and a room away from its door.
+	var room0 := layout.rooms[0]
+	var beside := Vector2(layout.doors[0].x, room0.position.y + 1.0)
+	check_eq(layout.room_at(beside), -1, "wall beside the door")
+	check(layout.half_extent() <= 64.0, "fits the flow field's grid")
+
+
+func test_monsters_route_through_doors() -> void:
+	var config := _config()
+	var map := WorldMap.new(config)
+	var layout := map.layouts[0]
+	var flow := FlowField.new(64.0, 2.0)
+	flow.set_rooms(layout.rasterize(flow.origin, flow.cols, flow.rows, flow.cell_size),
+			layout.door_points())
+	# Player in room 0; a monster in room 2 heads for room 2's door first.
+	var player := layout.room_center(0)
+	flow.update(player)
+	var monster := layout.room_center(2)
+	var dir := flow.directions[flow.cell_index(monster)]
+	var to_door := (layout.doors[2] - monster).normalized()
+	check(dir.dot(to_door) > 0.95, "a monster in another room heads for its door (%s)" % dir)
+	var in_hall := Vector2(0.0, layout.room_center(3).y)
+	var hall_dir := flow.directions[flow.cell_index(in_hall)]
+	check(hall_dir.dot((layout.doors[0] - in_hall).normalized()) > 0.95,
+			"in the hallway it heads for the player's room's door")
+	check(flow.is_wall(Vector2(layout.doors[0].x, layout.rooms[0].position.y + 1.0)),
+			"walls are blocked")
+	check(not flow.is_wall(player), "floor isn't")
+
+
+func test_deeper_rooms_hold_higher_level_camps() -> void:
+	var config := _config()
+	var map := WorldMap.new(config)
+	var sites := map.dungeon_sites[0]
+	var def := config.dungeons[0]
+	for s in sites.size():
+		check_eq(sites.levels[s], def.level + sites.depth[s] * def.depth_level_step,
+				"site %d's level grows with depth" % s)
+	var deepest := 0
+	for s in sites.size():
+		deepest = maxi(deepest, sites.depth[s])
+	check(deepest >= def.rooms_per_side - 1, "camps reach the deep rooms (%d)" % deepest)

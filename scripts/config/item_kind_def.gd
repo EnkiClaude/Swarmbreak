@@ -5,7 +5,10 @@ extends Resource
 ## carries (its implicit) before rolled affixes.
 
 ## Glyphs ItemIcon can draw.
-enum Icon { WAND, SWORD, STAFF, GREATSWORD, TOME, SHIELD, ROBE, PLATE, AMULET, BELT, RING }
+enum Icon {
+	WAND, SWORD, STAFF, GREATSWORD, TOME, SHIELD, ROBE, PLATE, AMULET, BELT, RING, HELM, GLOVES,
+	PANTS, BOOTS, EGG,
+}
 
 @export var display_name: String = "Wand"
 @export var slot: AffixDef.Slot = AffixDef.Slot.WEAPON

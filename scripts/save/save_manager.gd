@@ -15,6 +15,8 @@ var _jobs: JobTree
 var _max_level: int
 var _upgrade_max: int
 var _zone_level := 1
+## Quest progress travels in the same file, when set.
+var _quests: QuestLog
 var _dirty_for := -1.0
 var _since_periodic := 0.0
 
@@ -30,6 +32,10 @@ func _init(config: SaveConfig, progress: PlayerProgress, inventory: Inventory, j
 	_upgrade_max = upgrade_max
 
 
+func set_quests(quests: QuestLog) -> void:
+	_quests = quests
+
+
 ## Loads the save into progress and inventory. Returns the zone level to
 ## start at (1 with no save), and status() says what happened.
 func load_game() -> int:
@@ -38,6 +44,8 @@ func load_game() -> int:
 		return 1
 	_zone_level = SaveCodec.decode(data, _progress, _inventory, _jobs, _max_level,
 			_upgrade_max)
+	if _quests != null:
+		SaveCodec.decode_quests(data.get("quests"), _quests)
 	print("Save loaded: level %d, zone %d" % [_progress.level, _zone_level])
 	return _zone_level
 
@@ -74,7 +82,10 @@ func tick(delta: float) -> void:
 func save_now() -> bool:
 	_dirty_for = -1.0
 	_since_periodic = 0.0
-	var ok := _store.write(SaveCodec.encode(_progress, _inventory, _zone_level))
+	var data := SaveCodec.encode(_progress, _inventory, _zone_level)
+	if _quests != null:
+		data["quests"] = SaveCodec.encode_quests(_quests)
+	var ok := _store.write(data)
 	if ok:
 		saved.emit()
 	return ok

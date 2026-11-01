@@ -46,6 +46,7 @@ var _bosses: BossSystem
 var _boss_name := ""
 var _jobs: JobTree
 var _camera: CameraRig
+var _quests: QuestLog
 var _combat: PlayerCombat
 ## The skill column hides while the touch buttons are on screen.
 var show_skills := true
@@ -64,6 +65,10 @@ func setup(vitals: PlayerVitals, world: WorldDirector, player: Player,
 ## Flashes the screen edges; amount is damage taken this frame.
 func flash_hurt(amount: float) -> void:
 	_hurt = minf(_hurt + amount * 0.08, 1.0)
+
+
+func setup_quests(quests: QuestLog) -> void:
+	_quests = quests
 
 
 func setup_camera_and_skills(camera: CameraRig, combat: PlayerCombat) -> void:
@@ -175,7 +180,8 @@ func _draw_panel() -> void:
 		_draw_hints(Vector2(at.x, panel.end.y + 20.0))
 
 
-## Job-choice, attribute-point and skill-point hints under the panel.
+## Job-choice, attribute-point and skill-point hints and the current quest
+## under the panel.
 func _draw_hints(at: Vector2) -> void:
 	var font := ThemeDB.fallback_font
 	if _jobs != null and _progress.can_choose_job(_jobs):
@@ -191,6 +197,10 @@ func _draw_hints(at: Vector2) -> void:
 		draw_string(font, at, "%d skill point%s - open CHAR" % [_progress.skill_points,
 				"" if _progress.skill_points == 1 else "s"], HORIZONTAL_ALIGNMENT_LEFT, -1,
 				SMALL_TEXT_SIZE + 2, config.xp_color)
+		at.y += SMALL_TEXT_SIZE + 8.0
+	if _quests != null and _quests.current() >= 0:
+		draw_string(font, at, "Quest: " + _quests.summary(_quests.current()),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_TEXT_SIZE, Color(1.0, 0.9, 0.6))
 
 
 ## Thin gold frame with small corner blocks.

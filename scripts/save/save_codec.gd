@@ -31,6 +31,7 @@ static func encode(progress: PlayerProgress, inventory: Inventory, zone_level: i
 		},
 		"inventory": {
 			"stones": inventory.stones,
+			"blessed_stones": inventory.blessed_stones,
 			"equipped": equipped,
 			"backpack": backpack,
 		},
@@ -55,6 +56,7 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 
 	var inv := _dict(data.get("inventory"))
 	inventory.stones = maxi(_int(inv.get("stones"), 0), 0)
+	inventory.blessed_stones = maxi(_int(inv.get("blessed_stones"), 0), 0)
 	# Equipment is saved by position. Saves from before the extra slots had
 	# three (weapon, charm, armor), which are still positions 0-2.
 	var equipped := _array(inv.get("equipped"))
@@ -85,6 +87,25 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 	return maxi(_int(data.get("zone_level"), 1), 1)
 
 
+## Quest progress and states into a dictionary, for the save.
+static func encode_quests(quests: QuestLog) -> Dictionary:
+	return {"progress": Array(quests.progress), "states": Array(quests.states)}
+
+
+## Restores quest progress; missing or odd values leave a quest fresh.
+static func decode_quests(data: Variant, quests: QuestLog) -> void:
+	quests.reset()
+	var d := _dict(data)
+	var progress := _array(d.get("progress"))
+	var states := _array(d.get("states"))
+	for q in quests.progress.size():
+		if q < progress.size():
+			quests.progress[q] = maxi(_int(progress[q], 0), 0)
+		if q < states.size():
+			quests.states[q] = clampi(_int(states[q], 0), QuestLog.State.ACTIVE,
+					QuestLog.State.CLAIMED)
+
+
 ## Saves from before attributes existed get the points their level earned.
 static func _decode_attributes(p: Dictionary, progress: PlayerProgress) -> void:
 	progress.attributes.fill(0)
@@ -110,6 +131,9 @@ static func item_to_dict(item: ItemData) -> Dictionary:
 		"upgrade_level": item.upgrade_level,
 		"upgrade_bonus": item.upgrade_bonus,
 		"fail_streak": item.fail_streak,
+		"pet_type": item.pet_type,
+		"pet_level": item.pet_level,
+		"pet_xp": item.pet_xp,
 	}
 
 
@@ -131,6 +155,9 @@ static func item_from_dict(d: Dictionary, upgrade_max: int) -> ItemData:
 	item.upgrade_level = clampi(_int(d.get("upgrade_level"), 0), 0, upgrade_max)
 	item.upgrade_bonus = maxf(_float(d.get("upgrade_bonus"), 0.0), 0.0)
 	item.fail_streak = maxi(_int(d.get("fail_streak"), 0), 0)
+	item.pet_type = _int(d.get("pet_type"), -1)
+	item.pet_level = maxi(_int(d.get("pet_level"), 1), 1)
+	item.pet_xp = maxf(_float(d.get("pet_xp"), 0.0), 0.0)
 	return item
 
 
