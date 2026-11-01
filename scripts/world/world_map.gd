@@ -13,7 +13,7 @@ const EXIT_INSET := 4.0
 const ARRIVAL_INSET := 17.0
 ## Coming out of a dungeon, the player stands this far south of its gate.
 const GATE_STEP_OUT := 5.0
-const TOWN_GATE_SPACING := 9.0
+const TOWN_GATE_SPACING := 7.0
 const TOWN_GATE_DISTANCE := 16.0
 
 var config: WorldConfig

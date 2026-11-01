@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SetList" load_steps=40 format=3]
+[gd_resource type="Resource" script_class="SetList" load_steps=64 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/set_piece_def.gd" id="1_piece"]
 [ext_resource type="Script" path="res://scripts/config/set_def.gd" id="2_set"]
@@ -262,8 +262,180 @@ bonus_pieces = PackedInt32Array(2, 3, 5, 5, 5)
 bonus_stats = PackedInt32Array(5, 7, 6, 8, 0)
 bonus_values = PackedFloat32Array(0.12, 0.15, 0.15, 0.1, 120)
 
+[sub_resource type="Resource" id="Piece_6_0"]
+script = ExtResource("1_piece")
+piece_name = "Bloodbound Reaver"
+kind = 3
+stats = PackedInt32Array(5, 0)
+values = PackedFloat32Array(0.3, 60)
+
+[sub_resource type="Resource" id="Piece_6_1"]
+script = ExtResource("1_piece")
+piece_name = "Bloodbound Visage"
+kind = 11
+stats = PackedInt32Array(0, 2)
+values = PackedFloat32Array(70, 3)
+
+[sub_resource type="Resource" id="Piece_6_2"]
+script = ExtResource("1_piece")
+piece_name = "Bloodbound Carapace"
+kind = 7
+stats = PackedInt32Array(0, 12)
+values = PackedFloat32Array(90, 0.1)
+
+[sub_resource type="Resource" id="Piece_6_3"]
+script = ExtResource("1_piece")
+piece_name = "Bloodbound Talons"
+kind = 12
+stats = PackedInt32Array(6, 5)
+values = PackedFloat32Array(0.15, 0.12)
+
+[sub_resource type="Resource" id="Piece_6_4"]
+script = ExtResource("1_piece")
+piece_name = "Bloodbound Sabatons"
+kind = 14
+stats = PackedInt32Array(4, 0)
+values = PackedFloat32Array(0.08, 50)
+
+[sub_resource type="Resource" id="Set_6"]
+script = ExtResource("2_set")
+set_name = "Bloodbound Covenant"
+pieces = Array[ExtResource("1_piece")]([SubResource("Piece_6_0"), SubResource("Piece_6_1"), SubResource("Piece_6_2"), SubResource("Piece_6_3"), SubResource("Piece_6_4")])
+bonus_pieces = PackedInt32Array(2, 3, 5, 5)
+bonus_stats = PackedInt32Array(2, 0, 5, 12)
+bonus_values = PackedFloat32Array(5, 180, 0.25, 0.1)
+
+[sub_resource type="Resource" id="Piece_7_0"]
+script = ExtResource("1_piece")
+piece_name = "Gravecaller Scythe-Staff"
+kind = 2
+stats = PackedInt32Array(7, 8)
+values = PackedFloat32Array(0.35, 0.1)
+
+[sub_resource type="Resource" id="Piece_7_1"]
+script = ExtResource("1_piece")
+piece_name = "Gravecaller Cowl"
+kind = 11
+stats = PackedInt32Array(1, 3)
+values = PackedFloat32Array(60, 0.3)
+
+[sub_resource type="Resource" id="Piece_7_2"]
+script = ExtResource("1_piece")
+piece_name = "Gravecaller Shroud"
+kind = 6
+stats = PackedInt32Array(7, 1)
+values = PackedFloat32Array(0.2, 50)
+
+[sub_resource type="Resource" id="Piece_7_3"]
+script = ExtResource("1_piece")
+piece_name = "Gravecaller Phylactery"
+kind = 8
+stats = PackedInt32Array(10, 7)
+values = PackedFloat32Array(4, 0.15)
+
+[sub_resource type="Resource" id="Piece_7_4"]
+script = ExtResource("1_piece")
+piece_name = "Gravecaller Bonering"
+kind = 10
+stats = PackedInt32Array(8, 3)
+values = PackedFloat32Array(0.08, 0.25)
+
+[sub_resource type="Resource" id="Set_7"]
+script = ExtResource("2_set")
+set_name = "Gravecaller Shroud"
+pieces = Array[ExtResource("1_piece")]([SubResource("Piece_7_0"), SubResource("Piece_7_1"), SubResource("Piece_7_2"), SubResource("Piece_7_3"), SubResource("Piece_7_4")])
+bonus_pieces = PackedInt32Array(2, 3, 5, 5)
+bonus_stats = PackedInt32Array(10, 8, 7, 9)
+bonus_values = PackedFloat32Array(5, 0.12, 0.4, 0.3)
+
+[sub_resource type="Resource" id="Piece_8_0"]
+script = ExtResource("1_piece")
+piece_name = "Nightveil Fang"
+kind = 1
+stats = PackedInt32Array(5, 13)
+values = PackedFloat32Array(0.28, 0.05)
+
+[sub_resource type="Resource" id="Piece_8_1"]
+script = ExtResource("1_piece")
+piece_name = "Nightveil Ward"
+kind = 5
+stats = PackedInt32Array(13, 12)
+values = PackedFloat32Array(0.05, 0.08)
+
+[sub_resource type="Resource" id="Piece_8_2"]
+script = ExtResource("1_piece")
+piece_name = "Nightveil Grips"
+kind = 12
+stats = PackedInt32Array(6, 13)
+values = PackedFloat32Array(0.18, 0.04)
+
+[sub_resource type="Resource" id="Piece_8_3"]
+script = ExtResource("1_piece")
+piece_name = "Nightveil Leggings"
+kind = 13
+stats = PackedInt32Array(4, 13)
+values = PackedFloat32Array(0.09, 0.05)
+
+[sub_resource type="Resource" id="Piece_8_4"]
+script = ExtResource("1_piece")
+piece_name = "Nightveil Signet"
+kind = 10
+stats = PackedInt32Array(5, 6)
+values = PackedFloat32Array(0.18, 0.12)
+
+[sub_resource type="Resource" id="Set_8"]
+script = ExtResource("2_set")
+set_name = "Nightveil Raiment"
+pieces = Array[ExtResource("1_piece")]([SubResource("Piece_8_0"), SubResource("Piece_8_1"), SubResource("Piece_8_2"), SubResource("Piece_8_3"), SubResource("Piece_8_4")])
+bonus_pieces = PackedInt32Array(2, 3, 5, 5)
+bonus_stats = PackedInt32Array(13, 4, 6, 11)
+bonus_values = PackedFloat32Array(0.08, 0.1, 0.25, 0.2)
+
+[sub_resource type="Resource" id="Piece_9_0"]
+script = ExtResource("1_piece")
+piece_name = "Hellforged Greatblade"
+kind = 3
+stats = PackedInt32Array(5, 7)
+values = PackedFloat32Array(0.4, 0.3)
+
+[sub_resource type="Resource" id="Piece_9_1"]
+script = ExtResource("1_piece")
+piece_name = "Hellforged Crown"
+kind = 11
+stats = PackedInt32Array(0, 1)
+values = PackedFloat32Array(120, 80)
+
+[sub_resource type="Resource" id="Piece_9_2"]
+script = ExtResource("1_piece")
+piece_name = "Hellforged Warplate"
+kind = 7
+stats = PackedInt32Array(0, 12)
+values = PackedFloat32Array(150, 0.12)
+
+[sub_resource type="Resource" id="Piece_9_3"]
+script = ExtResource("1_piece")
+piece_name = "Hellforged Gauntlets"
+kind = 12
+stats = PackedInt32Array(7, 6)
+values = PackedFloat32Array(0.25, 0.15)
+
+[sub_resource type="Resource" id="Piece_9_4"]
+script = ExtResource("1_piece")
+piece_name = "Hellforged Treads"
+kind = 14
+stats = PackedInt32Array(4, 11)
+values = PackedFloat32Array(0.1, 0.15)
+
+[sub_resource type="Resource" id="Set_9"]
+script = ExtResource("2_set")
+set_name = "Hellforged Dominion"
+pieces = Array[ExtResource("1_piece")]([SubResource("Piece_9_0"), SubResource("Piece_9_1"), SubResource("Piece_9_2"), SubResource("Piece_9_3"), SubResource("Piece_9_4")])
+bonus_pieces = PackedInt32Array(2, 3, 5, 5, 5)
+bonus_stats = PackedInt32Array(5, 7, 6, 8, 0)
+bonus_values = PackedFloat32Array(0.2, 0.25, 0.25, 0.12, 300)
+
 [resource]
 script = ExtResource("3_list")
-sets = Array[ExtResource("2_set")]([SubResource("Set_0"), SubResource("Set_1"), SubResource("Set_2"), SubResource("Set_3"), SubResource("Set_4"), SubResource("Set_5")])
+sets = Array[ExtResource("2_set")]([SubResource("Set_0"), SubResource("Set_1"), SubResource("Set_2"), SubResource("Set_3"), SubResource("Set_4"), SubResource("Set_5"), SubResource("Set_6"), SubResource("Set_7"), SubResource("Set_8"), SubResource("Set_9")])
 boss_drop_chance = 0.5
 set_rarity = 5

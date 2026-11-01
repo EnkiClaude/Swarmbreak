@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="ZoneTheme" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/zone_theme.gd" id="1_theme"]
+
+[resource]
+script = ExtResource("1_theme")
+display_name = "Bloodstone Abyss"
+floor_pattern = 0
+floor_color = Color(0.2, 0.03, 0.03, 1)
+floor_alt_color = Color(0.14, 0.02, 0.02, 1)
+grout_color = Color(0.05, 0.0, 0.0, 1)
+inlay_color = Color(0.7, 0.08, 0.05, 1)
+inlay_every = 4
+tile_size = 2.0
+grout_width = 0.07
+floor_noise = 0.12
+floor_roughness = 0.5
+wall_height = 8.0
+wall_color = Color(0.1, 0.03, 0.03, 1)
+wall_trim_color = Color(0.55, 0.06, 0.04, 1)
+ceiling_height = 12.0
+ceiling_color = Color(0.04, 0.0, 0.0, 1)
+pillar_spacing = 8.0
+pillar_height = 8.0
+pillar_radius = 0.6
+pillar_color = Color(0.16, 0.04, 0.04, 1)
+pillar_trim_color = Color(0.6, 0.08, 0.05, 1)
+lantern_every = 2
+lantern_color = Color(1, 0.2, 0.1, 1)
+show_sky = false
+background_color = Color(0.02, 0.0, 0.0, 1)
+fog_color = Color(0.2, 0.02, 0.02, 1)
+fog_density = 0.012
+ambient_color = Color(0.9, 0.4, 0.35, 1)
+ambient_energy = 0.45
+sun_color = Color(1, 0.5, 0.4, 1)
+sun_energy = 0.7
+sun_elevation = 62.0
+sun_azimuth = 20.0
+glow_strength = 1.2

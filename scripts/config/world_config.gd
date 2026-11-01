@@ -42,6 +42,9 @@ extends Resource
 ## In dungeons, enemies only chase straight at the player inside this
 ## distance; further out they follow the hallway and doors.
 @export var dungeon_chase_distance: float = 1.5
+## Dungeon monsters move this much faster per level above 1, up to the max.
+@export var dungeon_speed_per_level: float = 0.008
+@export var dungeon_speed_max: float = 1.35
 ## Stepping this close to a gate goes through it.
 @export var gate_radius: float = 2.5
 ## Seconds to fade out (and again to fade in) when going through a gate.

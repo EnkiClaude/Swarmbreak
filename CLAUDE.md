@@ -137,8 +137,10 @@ rooms a better minimum rarity. The boss room at the end is one big room:
 the boss, `boss_room_camps` camps around it and `boss_room_spawners`
 spawners. Rooms are separate fights: every camp has a home room
 (`DungeonLayout.homes_for()`, `SwarmSteering.set_homes()`) and its monsters
-are stopped at that room's edge. There are six dungeons, each a higher
-level tier, each boss dropping pieces of its own set.
+are stopped at that room's edge. There are ten dungeons (levels 10 to 80),
+each a higher tier, each boss dropping pieces of its own set. Dungeon
+monsters are a little faster the higher their level
+(`SwarmState.speed_scale`, `WorldConfig.dungeon_speed_per_level`).
 On entry `SwarmManager.set_layout()` rasterizes the plan onto the flow
 field: monsters route through doors (`FlowField` room mode, as cheap as
 open ground) and steering stops them at wall cells; the player
