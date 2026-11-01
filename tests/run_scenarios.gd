@@ -801,9 +801,11 @@ func _refining() -> void:
 		if equipped != null:
 			item = equipped
 			break
-	_check(item != null, "an equipped item to refine")
 	if item == null:
-		return
+		# Items are rare drops now: wear one to refine.
+		item = ItemGenerator.new(_main_var("loot_config") as LootConfig, 3).roll(1)
+		inventory.equipped[inventory.target_for(item)] = item
+		inventory.notify_changed()
 	inventory.stones = 500
 	menu.open()
 	var outcomes := {}
