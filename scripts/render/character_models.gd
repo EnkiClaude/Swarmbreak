@@ -1,7 +1,7 @@
 class_name CharacterModels
 extends RefCounted
-## The game's characters, built from simple parts with ModelBuilder: the hero
-## and one model per EnemyType.Model. Each stands on y = 0 facing -Z, sized
+## The game's characters, built from simple parts with ModelBuilder: the hero,
+## one model per EnemyType.Model, pets at each stage and the Egg Keeper. Each stands on y = 0 facing -Z, sized
 ## to the given height, and is colored from three colors (main, second,
 ## accent) so data can recolor it. Legs and arms are rigged to walk.
 
@@ -191,3 +191,65 @@ static func _wisp(b: ModelBuilder, h: float, main: Color, second: Color, accent:
 	b.pair("cylinder", Vector3(0.22 * s, shoulder - 0.15 * s, 0.0),
 			Vector3(0.05 * s, 0.015 * s, 0.34 * s), second, L.LEFT_ARM, L.RIGHT_ARM, shoulder,
 			Vector3(0.0, 0.0, 20.0))
+
+
+## A pet at a stage: 0 is a speckled egg; then a little four-legged critter
+## with wings and a tail that grows, gains a crest and horns as it evolves.
+static func pet(stage: int, height: float, main: Color, accent: Color,
+		material: Material = null) -> ArrayMesh:
+	var b := ModelBuilder.new()
+	if stage <= 0:
+		b.sphere(Vector3(0.0, height * 0.5, 0.0), Vector3(0.36, 0.5, 0.36) * height,
+				Color(0.95, 0.9, 0.8), L.FLOAT)
+		for k in 6:
+			var a := k * 1.1
+			b.sphere(Vector3(cos(a) * 0.3, 0.3 + 0.08 * k, sin(a) * 0.3) * height,
+					Vector3(0.07, 0.07, 0.05) * height, main, L.FLOAT)
+		return b.build(material)
+	var s := height / 0.55
+	var hip := 0.16 * s
+	b.pair("cylinder", Vector3(0.09 * s, hip * 0.5, 0.08 * s), Vector3(0.035 * s, 0.04 * s, hip),
+			main.darkened(0.25), L.LEFT_LEG, L.RIGHT_LEG, hip)
+	b.pair("cylinder", Vector3(0.09 * s, hip * 0.5, -0.08 * s), Vector3(0.035 * s, 0.04 * s, hip),
+			main.darkened(0.25), L.RIGHT_LEG, L.LEFT_LEG, hip)
+	b.sphere(Vector3(0.0, 0.26 * s, 0.0), Vector3(0.15, 0.13, 0.2) * s, main)
+	b.sphere(Vector3(0.0, 0.25 * s, -0.04 * s), Vector3(0.1, 0.09, 0.13) * s, accent.lightened(0.3))
+	b.sphere(Vector3(0.0, 0.42 * s, -0.17 * s), Vector3(0.11, 0.1, 0.11) * s, main)
+	b.pair("sphere", Vector3(0.05 * s, 0.45 * s, -0.27 * s), Vector3(0.025, 0.03, 0.015) * s,
+			Color(0.1, 0.08, 0.06))
+	b.cylinder(Vector3(0.0, 0.24 * s, 0.26 * s), 0.05 * s, 0.0, 0.26 * s, main, L.FLOAT, 0.0,
+			Vector3(-70.0, 0.0, 0.0))
+	var wing := 0.14 + 0.05 * stage
+	b.pair("box", Vector3(0.16 * s, 0.36 * s, 0.02 * s), Vector3(wing, 0.02, 0.12) * s, accent,
+			L.LEFT_ARM, L.RIGHT_ARM, 0.36 * s, Vector3(0.0, 0.0, 25.0))
+	if stage >= 2:
+		for k in 3:
+			b.cylinder(Vector3(0.0, (0.38 - k * 0.04) * s, (-0.1 + k * 0.1) * s), 0.025 * s, 0.0,
+					0.08 * s, accent)
+	if stage >= 3:
+		b.pair("cylinder", Vector3(0.05 * s, 0.53 * s, -0.15 * s), Vector3(0.02 * s, 0.0, 0.12 * s),
+				Color(0.95, 0.9, 0.8), L.BODY, L.BODY, 0.0, Vector3(25.0, 0.0, -20.0))
+	return b.build(material)
+
+
+## The Egg Keeper: a stooped old caretaker in a green robe and a wide hat,
+## with a basket of eggs on one arm and a crook in the other hand.
+static func keeper(height: float, robe: Color, material: Material = null) -> ArrayMesh:
+	var b := ModelBuilder.new()
+	var s := height / 1.7
+	b.cylinder(Vector3(0.0, 0.5 * s, 0.0), 0.32 * s, 0.2 * s, 1.0 * s, robe)
+	b.cylinder(Vector3(0.0, 1.12 * s, 0.03 * s), 0.2 * s, 0.24 * s, 0.32 * s, robe.lightened(0.1))
+	b.sphere(Vector3(0.0, 1.38 * s, -0.06 * s), Vector3(0.11, 0.12, 0.11) * s,
+			Color(0.82, 0.68, 0.55))
+	b.cylinder(Vector3(0.0, 1.47 * s, -0.05 * s), 0.34 * s, 0.3 * s, 0.03 * s, Color(0.75, 0.6, 0.3))
+	b.cylinder(Vector3(0.0, 1.56 * s, -0.05 * s), 0.13 * s, 0.03 * s, 0.18 * s, Color(0.75, 0.6, 0.3))
+	b.pair("cylinder", Vector3(0.26 * s, 0.98 * s, -0.05 * s), Vector3(0.05 * s, 0.06 * s, 0.4 * s),
+			robe, L.BODY, L.BODY, 0.0, Vector3(30.0, 0.0, 0.0))
+	b.cylinder(Vector3(-0.3 * s, 0.75 * s, -0.22 * s), 0.16 * s, 0.13 * s, 0.14 * s, WOOD)
+	for k in 3:
+		b.sphere(Vector3((-0.36 + k * 0.06) * s, 0.86 * s, -0.22 * s), Vector3(0.05, 0.065, 0.05) * s,
+				Color(0.95, 0.9, 0.8))
+	b.cylinder(Vector3(0.32 * s, 0.85 * s, -0.25 * s), 0.02 * s, 0.02 * s, 1.7 * s, WOOD)
+	b.cylinder(Vector3(0.32 * s, 1.72 * s, -0.33 * s), 0.02 * s, 0.02 * s, 0.2 * s, WOOD,
+			L.BODY, 0.0, Vector3(70.0, 0.0, 0.0))
+	return b.build(material)

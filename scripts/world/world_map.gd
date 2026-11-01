@@ -6,17 +6,21 @@ extends RefCounted
 ## its own hall centered on the origin. Pure data and geometry: no nodes.
 
 const OVERWORLD := -1
-## In a dungeon hall the exit gate stands this far inside the south wall
-## (+Z), and the player arrives in front of it, facing north: far enough
+## In a dungeon the exit gate stands this far up the hallway from its south
+## end (+Z), and the player arrives further up, facing north: far enough
 ## that the camera behind the player is clear of the gate.
 const EXIT_INSET := 4.0
 const ARRIVAL_INSET := 17.0
 ## Coming out of a dungeon, the player stands this far south of its gate.
 const GATE_STEP_OUT := 5.0
+const TOWN_GATE_SPACING := 12.0
+const TOWN_GATE_DISTANCE := 16.0
 
 var config: WorldConfig
 var overworld_sites: CampSites
 var dungeon_sites: Array[CampSites] = []
+## Each dungeon's floor plan.
+var layouts: Array[DungeonLayout] = []
 
 
 func _init(p_config: WorldConfig) -> void:
@@ -27,7 +31,7 @@ func _init(p_config: WorldConfig) -> void:
 func half_extent(space: int) -> float:
 	if space == OVERWORLD:
 		return config.half_extent()
-	return config.dungeons[space].half_extent
+	return layouts[space].half_extent()
 
 
 func sites(space: int) -> CampSites:
@@ -64,6 +68,13 @@ func gate_position(d: int) -> Vector2:
 	return region_center(dungeon.region) + dungeon.gate_offset
 
 
+## A second gate to dungeon d at the north edge of the town square, for
+## quick travel while testing. Gates spread out side by side.
+func town_gate_position(d: int) -> Vector2:
+	var spread := (d - (config.dungeons.size() - 1) * 0.5) * TOWN_GATE_SPACING
+	return town_spawn() + Vector2(spread, -TOWN_GATE_DISTANCE)
+
+
 ## Where the player lands in the open world when leaving dungeon d.
 func gate_exit_point(d: int) -> Vector2:
 	return gate_position(d) + Vector2(0.0, GATE_STEP_OUT)
@@ -71,12 +82,12 @@ func gate_exit_point(d: int) -> Vector2:
 
 ## Position of dungeon d's exit gate inside its hall.
 func exit_position(d: int) -> Vector2:
-	return Vector2(0.0, config.dungeons[d].half_extent - EXIT_INSET)
+	return Vector2(0.0, layouts[d].south_end() - EXIT_INSET)
 
 
 ## Where the player lands inside dungeon d.
 func arrival_point(d: int) -> Vector2:
-	return Vector2(0.0, config.dungeons[d].half_extent - ARRIVAL_INSET)
+	return Vector2(0.0, layouts[d].south_end() - ARRIVAL_INSET)
 
 
 func _generate() -> void:
@@ -89,6 +100,7 @@ func _generate() -> void:
 	for region in config.regions.size():
 		_place_region_camps(region, rng, keep_clear)
 	for d in config.dungeons.size():
+		layouts.append(DungeonLayout.new(config.dungeons[d]))
 		dungeon_sites.append(_dungeon_camps(d, rng))
 
 
@@ -126,36 +138,32 @@ func _place_region_camps(region: int, rng: RandomNumberGenerator,
 		overworld_sites.set_types(s, def.enemy_type, def.heavy_type)
 
 
+## One camp per room: the boss in the boss room, spawners in the rooms at
+## spawner_depth, ordinary camps elsewhere, each a level harder per depth.
 func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
 	var def := config.dungeons[d]
+	var layout := layouts[d]
 	var sites := CampSites.new()
-	var h := def.half_extent
-	var arrival := arrival_point(d)
-	if def.has_boss:
-		sites.add(Vector2(0.0, -h + config.edge_margin + 2.0), def.boss_camp_size, def.level,
-				def.heavy_chance, true, false, 0.0, def.camp_respawn_time)
-	# Spawners stand on the side walls in the far half of the hall, out of
-	# range of the arrival point.
-	for k in def.spawner_count:
-		var side := -1.0 if k % 2 == 0 else 1.0
-		var along := lerpf(0.0, -h * 0.5, float(k) / maxf(def.spawner_count - 1, 1))
-		sites.add(Vector2(side * (h - config.edge_margin), along), def.spawner_population,
-				def.level, def.heavy_chance, false, true, def.spawner_interval)
-	var limit := h - config.edge_margin
-	var spacing := minf(config.camp_spacing, h * 0.45)
-	var placed := 0
-	for _attempt in config.placement_attempts:
-		if placed >= def.camp_count:
-			break
-		var at := Vector2(rng.randf_range(-limit, limit), rng.randf_range(-limit, limit))
-		if at.distance_to(arrival) < config.keep_clear_radius \
-				or too_close(at, sites.centers, spacing):
-			continue
-		sites.add(at, rng.randi_range(def.camp_size_min, def.camp_size_max), def.level,
-				def.heavy_chance, false, false, 0.0, def.camp_respawn_time)
-		placed += 1
-	for s in sites.size():
+	var spawners := 0
+	for room in layout.rooms.size():
+		var depth := layout.depths[room]
+		var level := def.level + depth * def.depth_level_step
+		var at := layout.room_center(room)
+		var s := -1
+		if room == layout.boss_room:
+			if not def.has_boss:
+				continue
+			s = sites.add(at, def.boss_camp_size, level, def.heavy_chance, true, false, 0.0,
+					def.camp_respawn_time)
+		elif depth == def.spawner_depth and spawners < def.spawner_count:
+			spawners += 1
+			s = sites.add(at, def.spawner_population, level, def.heavy_chance, false, true,
+					def.spawner_interval)
+		else:
+			s = sites.add(at, rng.randi_range(def.camp_size_min, def.camp_size_max), level,
+					def.heavy_chance, false, false, 0.0, def.camp_respawn_time)
 		sites.set_types(s, def.enemy_type, def.heavy_type)
+		sites.depth[s] = depth
 	return sites
 
 

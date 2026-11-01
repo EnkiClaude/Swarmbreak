@@ -1,7 +1,7 @@
 class_name DebugOverlay
 extends CanvasLayer
 ## Top-left perf readout: fps, frame time, swarm and total sim time, enemy
-## count, kills and the nova cooldown.
+## count, kills, the nova cooldown and the connected controllers.
 
 const REFRESH_INTERVAL := 0.25
 const SMOOTHING := 0.1
@@ -11,8 +11,9 @@ Swarm %.2f ms   Sim total %.2f ms
 Enemies %d / %d
 Kills %d   Best break %d
 Nova %s
-RT/LMB fire  RB/Q nova  LB/E lure  A/Space dodge
-Tab/Start: character   [+] or View: spawn %d   [F3] or L3: hide"""
+RT/LMB fire  RB/Q nova  LB/E lure  LT/Space dodge
+Tab/Start: character   [+] or View: spawn %d   [F3] or L3: hide
+Controllers: %s"""
 
 var swarm: SwarmManager
 var combat: PlayerCombat
@@ -37,7 +38,7 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("debug_toggle_overlay"):
+	if event.is_action_pressed("debug_toggle_overlay") and not GamepadCompat.is_raw_trigger(event):
 		visible = not visible
 
 
@@ -63,5 +64,6 @@ func _process(delta: float) -> void:
 		swarm.best_break,
 		nova,
 		swarm.config.debug_spawn_batch,
+		GamepadCompat.describe(),
 	]
 	_frame_ms_worst = 0.0

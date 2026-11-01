@@ -12,13 +12,16 @@ signal opened
 signal closed
 signal job_chosen(job: int)
 signal refined(result: Refinery.Result, item: ItemData)
+signal egg_taken(egg: ItemData)
 ## The player confirmed erasing their save and starting over.
 signal new_game_requested
 
-enum Tab { CHARACTER, INVENTORY }
+enum Tab { CHARACTER, INVENTORY, PET }
 
 const PANEL_MARGIN := 40.0
-const TAB_NAMES: PackedStringArray = ["CHARACTER", "INVENTORY"]
+## Two picks of the same item within this many milliseconds toggle wearing it.
+const DOUBLE_PICK_MSEC := 450
+const TAB_NAMES: PackedStringArray = ["CHARACTER", "INVENTORY", "PET"]
 
 ## The open tab, a Tab value.
 var tab: int = Tab.CHARACTER
@@ -32,6 +35,10 @@ var _jobs: JobTree
 var _refinery: Refinery
 var _character_page: CharacterPage
 var _inventory_page: InventoryPage
+## Null until setup_pets(); the PET tab shows only then.
+var _pet_page: PetPage
+var _pets: PetConfig
+var _quests: QuestLog
 var _panel: PanelContainer
 var _content: VBoxContainer
 ## New Game needs a second press to confirm.
@@ -39,6 +46,9 @@ var _confirm_new_game := false
 ## The floating item tooltip and the control it belongs to.
 var _tooltip: Control
 var _tooltip_owner: Control
+## The last item picked and when, to spot a double pick.
+var _last_pick: ItemData
+var _last_pick_msec := 0
 
 
 func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stats: PlayerStats,
@@ -77,6 +87,38 @@ func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stat
 	visible = false
 
 
+## Adds the PET tab: the pet, the quest and egg choices.
+func setup_pets(pets: PetConfig, quests: QuestLog) -> void:
+	_pets = pets
+	_quests = quests
+	_pet_page = PetPage.new(self, _inventory, _loot, pets, quests)
+
+
+## Opens the PET tab with the Egg Keeper's eggs on offer.
+func open_keeper() -> void:
+	if _pet_page == null:
+		return
+	_pet_page.at_keeper = true
+	open(Tab.PET)
+
+
+## Takes an egg: the quest's reward if one is waiting, otherwise from the
+## Egg Keeper. It's worn if the pet slot is empty, else goes to the backpack.
+func take_egg(kind: int) -> void:
+	var q := _quests.current()
+	if not _quests.reward_waiting(q) and not _pet_page.at_keeper:
+		return
+	var egg := PetRules.make_egg(_pets, kind)
+	if not _inventory.add(egg):
+		_inventory_page.result_text = "No room for the egg - make space in your backpack"
+		_rebuild()
+		return
+	if _quests.reward_waiting(q):
+		_quests.claim(q)
+	egg_taken.emit(egg)
+	_rebuild()
+
+
 func is_open() -> bool:
 	return visible
 
@@ -103,6 +145,8 @@ func close() -> void:
 		return
 	visible = false
 	_clear_tooltip()
+	if _pet_page != null:
+		_pet_page.at_keeper = false
 	get_tree().paused = false
 	Input.emulate_mouse_from_touch = false
 	closed.emit()
@@ -122,6 +166,8 @@ func show_tab(new_tab: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if GamepadCompat.is_raw_trigger(event):
+		return
 	if event.is_action_pressed("character_menu"):
 		toggle()
 	elif event.is_action_pressed("menu_inventory"):
@@ -132,7 +178,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif visible and event.is_action_pressed("ui_cancel"):
 		close()
 	elif visible and (event.is_action_pressed("skill_lure") or event.is_action_pressed("attack_nova")):
-		show_tab(Tab.INVENTORY if tab == Tab.CHARACTER else Tab.CHARACTER)
+		var step := 1 if event.is_action_pressed("attack_nova") else -1
+		show_tab(posmod(tab + step, _tab_count()))
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -159,9 +206,29 @@ func choose_job(index: int) -> void:
 	_rebuild()
 
 
+## Selects an item; picking the same item again quickly (double-click,
+## double-tap, or A twice) wears it, or takes it off if it's worn.
 func select_item(item: ItemData) -> void:
+	var now := Time.get_ticks_msec()
+	var again := item == _last_pick and now - _last_pick_msec <= DOUBLE_PICK_MSEC
+	_last_pick = item
+	_last_pick_msec = now
+	if again:
+		_last_pick = null
+		toggle_equip(item)
+		return
 	_inventory_page.select(item)
 	_rebuild()
+
+
+## Takes the item off if it's worn, otherwise wears it where it goes.
+func toggle_equip(item: ItemData) -> void:
+	var position := _inventory.position_of(item)
+	if position >= 0:
+		unequip(position)
+	else:
+		equip_item(item)
+	_inventory_page.selected = item
 
 
 func selected_item() -> ItemData:
@@ -190,8 +257,12 @@ func unequip(position: int) -> void:
 
 
 ## Floats an item's tooltip beside the control that shows it.
+## Focus the menu gives a control by itself (on opening or rebuilding)
+## shows no tooltip; only the player's own hovering or navigating does.
 func show_tooltip(item: ItemData, owner: Control) -> void:
 	_clear_tooltip()
+	if _auto_focusing:
+		return
 	if not is_instance_valid(owner) or not owner.is_inside_tree():
 		return
 	_tooltip = ItemTooltip.build(item, _inventory, _loot)
@@ -217,9 +288,11 @@ func tooltip_showing() -> bool:
 	return _tooltip != null
 
 
+## Freed at the end of the frame, not removed now: focus and mouse-exit
+## signals can arrive while the menu is busy removing children.
 func _clear_tooltip() -> void:
 	if _tooltip != null:
-		remove_child(_tooltip)
+		_tooltip.visible = false
 		_tooltip.queue_free()
 	_tooltip = null
 	_tooltip_owner = null
@@ -241,10 +314,16 @@ func salvage_all(rarity: int) -> int:
 	return gained
 
 
+## Refines with a Blessed Stone: always succeeds while one is left.
+func refine_blessed(item: ItemData) -> Refinery.Result:
+	return refine(item, true)
+
+
 ## Tries to refine an item (one press of UPGRADE).
-func refine(item: ItemData) -> Refinery.Result:
+func refine(item: ItemData, blessed: bool = false) -> Refinery.Result:
 	var before := item.upgrade_level
-	var result := _refinery.attempt(item, _inventory)
+	var result := _refinery.attempt_blessed(item, _inventory) if blessed \
+			else _refinery.attempt(item, _inventory)
 	var page := _inventory_page
 	match result:
 		Refinery.Result.SUCCESS:
@@ -280,6 +359,14 @@ func press_new_game() -> void:
 
 # --- Building ---
 
+func _tab_count() -> int:
+	return TAB_NAMES.size() if _pet_page != null else TAB_NAMES.size() - 1
+
+
+## True while _grab_focus_later() moves focus, so no tooltip pops up.
+var _auto_focusing := false
+
+
 func _rebuild() -> void:
 	_clear_tooltip()
 	for child in _content.get_children():
@@ -289,6 +376,8 @@ func _rebuild() -> void:
 	var focus: Control
 	if tab == Tab.CHARACTER:
 		focus = _character_page.build(_content, _confirm_new_game)
+	elif tab == Tab.PET and _pet_page != null:
+		focus = _pet_page.build(_content)
 	else:
 		focus = _inventory_page.build(_content)
 	_grab_focus_later.call_deferred(focus if focus != null else header_focus)
@@ -298,27 +387,33 @@ func _rebuild() -> void:
 ## may already have replaced the control, so check it's still on screen.
 func _grab_focus_later(target: Control) -> void:
 	if is_instance_valid(target) and target.is_inside_tree():
+		_auto_focusing = true
 		target.grab_focus()
+		_auto_focusing = false
 
 
 func _build_header() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	_content.add_child(row)
-	for index in TAB_NAMES.size():
+	var current: Control = null
+	for index in _tab_count():
 		var b := MenuWidgets.button(TAB_NAMES[index], MenuWidgets.FONT_SIZE - 2)
 		b.custom_minimum_size.x = 190.0
 		b.toggle_mode = true
 		b.button_pressed = index == tab
 		b.pressed.connect(show_tab.bind(index))
 		row.add_child(b)
+		if index == tab:
+			current = b
 	var job := ""
 	if _jobs != null and _progress.job >= 0:
 		job = "%s   " % _progress.job_title(_jobs)
 	var xp := "MAX" if _progress.is_max_level() else "%d / %d" % [
 			floori(_progress.xp), ceili(_progress.xp_to_next())]
-	var summary := MenuWidgets.label("   %sLEVEL %d   XP %s   %s %d" % [job, _progress.level,
-			xp, _loot.currency_name, _inventory.stones], MenuWidgets.SMALL_FONT + 1)
+	var summary := MenuWidgets.label("   %sLEVEL %d   XP %s   %s %d   %ss %d" % [job,
+			_progress.level, xp, _loot.currency_name, _inventory.stones, _loot.blessed_name,
+			_inventory.blessed_stones], MenuWidgets.SMALL_FONT + 1)
 	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(summary)
@@ -326,4 +421,5 @@ func _build_header() -> Control:
 	close_button.pressed.connect(close)
 	row.add_child(close_button)
 	_content.add_child(HSeparator.new())
-	return close_button
+	# The open tab's own button: safe to land on (A doesn't close the menu).
+	return current if current != null else close_button

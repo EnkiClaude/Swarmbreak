@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="QuestList" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/quest_def.gd" id="1_quest"]
+[ext_resource type="Script" path="res://scripts/config/quest_list.gd" id="2_list"]
+
+[sub_resource type="Resource" id="Quest_0"]
+script = ExtResource("1_quest")
+title = "The Keeper's Request"
+description = "The Egg Keeper in Jade Village wants proof you can protect a hatchling. Clear five camps, then choose an egg."
+goal = 0
+target = 5
+reward = 0
+
+[resource]
+script = ExtResource("2_list")
+quests = Array[ExtResource("1_quest")]([SubResource("Quest_0")])

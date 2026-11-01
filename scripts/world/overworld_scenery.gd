@@ -31,8 +31,9 @@ static func build(parent: Node3D, map: WorldMap) -> Node3D:
 	for d in config.dungeons.size():
 		blocked.append(map.gate_position(d))
 		var dungeon := config.dungeons[d]
-		GateProp.build(root, map.gate_position(d), "%s   Lv %d" % [dungeon.display_name,
-				dungeon.level], dungeon.gate_color)
+		var title := "%s   Lv %d" % [dungeon.display_name, dungeon.level]
+		GateProp.build(root, map.gate_position(d), title, dungeon.gate_color)
+		GateProp.build(root, map.town_gate_position(d), title, dungeon.gate_color)
 	for region in config.regions.size():
 		_build_region_props(root, map, region, rng, blocked)
 	return root

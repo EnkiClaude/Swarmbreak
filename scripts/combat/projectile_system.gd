@@ -63,10 +63,12 @@ func tick(delta: float, swarm: SwarmManager) -> void:
 		if absf(p.x) > h or absf(p.y) > h:
 			_pool.remove(i)
 			continue
+		# A bolt hitting a dungeon wall bursts there.
+		var walled := swarm.is_wall(p)
 		var expired := _pool.ages[i] >= _config.lifetime
-		var hit := not expired and _pool.hit_cooldown[i] <= 0.0 \
+		var hit := not expired and not walled and _pool.hit_cooldown[i] <= 0.0 \
 				and swarm.first_hit(p, _config.hit_radius) >= 0
-		if not expired and not hit:
+		if not expired and not hit and not walled:
 			continue
 		var radius := _config.burst_radius * burst_radius_multiplier
 		swarm.damage_circle(p, radius, _config.damage * damage_multiplier, _config.knockback)

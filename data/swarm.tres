@@ -25,4 +25,6 @@ direct_chase_distance = 3.0
 max_tick_delta = 0.05
 hit_flash_duration = 0.08
 hit_flash_color = Color(1, 1, 1, 1)
+lure_glow_color = Color(1, 0.8, 0.35, 1)
+lure_glow = 0.6
 enemy_types = Array[ExtResource("2_enemy_type")]([ExtResource("3_grunt"), ExtResource("4_brute"), ExtResource("5_boss"), ExtResource("6_skeleton"), ExtResource("7_treant"), ExtResource("8_wisp")])

@@ -21,7 +21,7 @@ func roll(zone_level: int, min_rarity: int = 0) -> ItemData:
 	var item := ItemData.new()
 	var kind: ItemKindDef = null
 	if _config.item_kinds.is_empty():
-		item.slot = _rng.randi_range(0, AffixDef.Slot.size() - 1)
+		item.slot = _rng.randi_range(0, AffixDef.Slot.PET - 1)
 	else:
 		var kind_weights := PackedFloat32Array()
 		for def in _config.item_kinds:

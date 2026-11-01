@@ -128,6 +128,17 @@ that farm standing still. Dungeon camps, bosses included, also come back at
 once (`DungeonDef.camp_respawn_time` 0), asleep, right where they were.
 The swarm's camp id is the site index in the active space.
 
+Dungeons (`DungeonLayout`) are a hallway running north from the entrance
+with rooms on both sides behind doorways and a boss room at the far end.
+Each room holds one camp (or a spawner), `depth_level_step` levels harder
+per room deeper, with more Geon and a better minimum rarity in deep rooms.
+On entry `SwarmManager.set_layout()` rasterizes the plan onto the flow
+field: monsters route through doors (`FlowField` room mode, as cheap as
+open ground) and steering stops them at wall cells; the player
+(`Player.wall_check`) and bolts are stopped too. `DungeonHall` builds walls
+on exactly those cells. For testing, the town square also has a gate to
+each dungeon; leaving returns the player to the gate they used.
+
 Each region and dungeon names its monsters (`enemy_type`, `heavy_type`:
 indices into `SwarmConfig.enemy_types`: goblin, ogre, warlord boss,
 skeleton, treant, wisp).
@@ -152,16 +163,18 @@ level's points to spend.
 The currency is Geon (`LootConfig.currency_name`; kept as `Inventory.stones`
 in code and saves). Clearing a camp drops loot where its last member died
 (`LootSystem.drop_rewards`): each drop is an item at `item_drop_chance`
-(1 in 20), otherwise a pile of Geon that grows with the camp's level and
+(1 in 10), otherwise a pile of Geon that grows with the camp's level and
 is picked up on touch. Bosses also drop a big pile; dungeons add drops and
 bigger piles. An item is a base kind
 (`ItemKindDef` in `data/rpg/loot.tres`: wand, blade, staff, greatblade,
 tome, shield, robe, plate, pendant, belt, ring) that sets the slot, whether
 it takes both hands, its icon and an implicit stat; then a rarity and that
 many affixes from the slot's pool, growing with the camp's level.
-`Inventory` wears items in seven positions (`Inventory.Equip`: main hand,
-off hand, armor, amulet, belt, two rings); the first five equal their
-`AffixDef.Slot`. A two-handed weapon and an off-hand item exclude each
+`Inventory` wears items in twelve positions (`Inventory.Equip`: main hand,
+amulet, armor, off hand, belt, two rings, helm, gloves, pants, boots, pet);
+the first five equal their `AffixDef.Slot`, later slots are slot + 1.
+Picking the same item twice quickly (double-click, double-tap, A twice)
+wears it or takes it off. A two-handed weapon and an off-hand item exclude each
 other, so equipping one moves the other to the backpack. Salvage All works
 per rarity or on everything, never on worn items. Item icons are drawn in
 code (`ItemIcon`); hovering or focusing an item shows `ItemTooltip`.
@@ -179,11 +192,25 @@ Evasion (`PlayerStat.Id.EVASION`, mostly from Agility, capped at 85%) is
 rolled in `PlayerVitals.take_damage()` for every hit (each frame of contact,
 each boss slam); an evaded hit does nothing and pops up EVADE.
 
+Pets (`data/rpg/pets.tres`, `PetConfig`/`PetDef`, logic in `PetRules`): an
+egg is an `ItemData` in the PET slot with `pet_type`, `pet_level` and
+`pet_xp`; its stats are rewritten for its level (base plus per level), so
+`Inventory.total()` counts them like any item. It earns a bonus share of the
+player's kill XP that grows per stage, hatches at level 10 and evolves
+every 10 levels (bigger model, new name). `PetSystem` follows the player,
+feeds the pet XP and, once hatched, sets `LootSystem.collect_radius` so
+loot around the player is collected. Eggs come from the first quest
+(`data/rpg/quests.tres`, `QuestLog`: clear camps, then pick an egg on the
+PET tab) or, for testing, from the Egg Keeper in the town square, whose
+menu opens when the player walks up.
+
 Refining (`Refinery`): Geon (from drops and salvaging) buys an
 attempt to raise an item one level, +0 to +10, each level adding
 `upgrade_bonus_per_level` to all its stats. Odds fall per level; a failure
 drops it one level, never below +0 and never destroying it, and adds pity
-to the next try. Keep it that way: no item loss.
+to the next try. Keep it that way: no item loss. A Blessed Stone
+(`Inventory.blessed_stones`, a rare drop from any monster at
+`blessed_drop_chance` per kill) instead makes an attempt certain to succeed.
 
 Item data is a small object created per drop. That's allowed because drops
 happen per camp, not per frame; ground loot itself is a fixed pool.
@@ -292,10 +319,10 @@ run, except errors from the headless dummy renderer.
 |-----------------|---------------------|-------------------|
 | Move            | Left stick          | WASD / arrows     |
 | Turn camera     | Right stick         | Mouse (click to capture, Esc frees) |
-| Fire bolts      | RT (hold)           | Left mouse (hold) |
+| Fire bolts      | X or RT (hold)      | Left mouse (hold) |
 | Nova            | RB                  | Q / right mouse   |
 | Lure            | LB                  | E                 |
-| Dodge           | A                   | Space / Shift     |
+| Dodge           | LT                  | Space / Shift     |
 | Character       | Start               | Tab / C           |
 | Inventory       | Y                   | I                 |
 | Switch menu tab | LB / RB             | Q / E             |

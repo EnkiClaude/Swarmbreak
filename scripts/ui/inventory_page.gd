@@ -17,13 +17,16 @@ const EQUIPPED_WIDTH := 350.0
 const DETAILS_WIDTH := 330.0
 ## Equipment positions in the order the cards show, two per row.
 const CARD_ORDER: PackedInt32Array = [
-	Inventory.Equip.MAIN_HAND, Inventory.Equip.OFF_HAND, Inventory.Equip.ARMOR,
-	Inventory.Equip.AMULET, Inventory.Equip.RING_1, Inventory.Equip.RING_2, Inventory.Equip.BELT,
+	Inventory.Equip.HELM, Inventory.Equip.AMULET, Inventory.Equip.MAIN_HAND,
+	Inventory.Equip.OFF_HAND, Inventory.Equip.ARMOR, Inventory.Equip.GLOVES,
+	Inventory.Equip.PANTS, Inventory.Equip.BELT, Inventory.Equip.BOOTS, Inventory.Equip.PET,
+	Inventory.Equip.RING_1, Inventory.Equip.RING_2,
 ]
-## Outline shown in an empty position.
+## Outline shown in an empty position, indexed by Inventory.Equip.
 const EMPTY_GLYPHS: PackedInt32Array = [
 	ItemKindDef.Icon.WAND, ItemKindDef.Icon.AMULET, ItemKindDef.Icon.ROBE, ItemKindDef.Icon.TOME,
-	ItemKindDef.Icon.BELT, ItemKindDef.Icon.RING, ItemKindDef.Icon.RING,
+	ItemKindDef.Icon.BELT, ItemKindDef.Icon.RING, ItemKindDef.Icon.RING, ItemKindDef.Icon.HELM,
+	ItemKindDef.Icon.GLOVES, ItemKindDef.Icon.PANTS, ItemKindDef.Icon.BOOTS, ItemKindDef.Icon.EGG,
 ]
 ## Salvage All buttons: one per rarity, then -1 for everything. All but
 ## commons need a second press to confirm.
@@ -97,12 +100,12 @@ func build(parent: Container) -> Control:
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 22)
 	parent.add_child(columns)
-	var focus := _build_equipped(MenuWidgets.column(columns, EQUIPPED_WIDTH))
-	var grid_focus := _build_backpack(MenuWidgets.column(columns))
+	_build_equipped(MenuWidgets.column(columns, EQUIPPED_WIDTH))
+	_build_backpack(MenuWidgets.column(columns))
 	var detail_focus := _build_details(MenuWidgets.column(columns, DETAILS_WIDTH))
-	if detail_focus != null:
-		return detail_focus
-	return grid_focus if grid_focus != null else focus
+	# Nothing selected: focus stays on the tab header, so no item looks picked
+	# (and no tooltip covers the screen) until the player moves to one.
+	return detail_focus
 
 
 func _build_equipped(parent: VBoxContainer) -> Control:
@@ -188,7 +191,8 @@ func _build_details(parent: VBoxContainer) -> Control:
 			_inventory.stones]))
 	if selected == null:
 		parent.add_child(MenuWidgets.label("Tap an item to see it here and compare it with " +
-				"what you're wearing.", MenuWidgets.SMALL_FONT, MenuWidgets.DIM_COLOR))
+				"what you're wearing. Double-click (or double-tap) to wear it or take it off.",
+				MenuWidgets.SMALL_FONT, MenuWidgets.DIM_COLOR))
 		_add_result(parent)
 		return null
 	var item := selected
@@ -252,8 +256,15 @@ func _build_refine(parent: VBoxContainer, item: ItemData) -> Control:
 	var b := MenuWidgets.button("UPGRADE +%d -> +%d   %d%%   cost %d" % [item.upgrade_level,
 			item.upgrade_level + 1, chance, cost])
 	b.disabled = _inventory.stones < cost
-	b.pressed.connect(_menu.refine.bind(item))
+	b.pressed.connect(_menu.refine.bind(item, false))
 	parent.add_child(b)
+	var blessed := MenuWidgets.button("%s  +%d -> +%d   100%%   (have %d)" % [
+			_loot.blessed_name.to_upper(), item.upgrade_level, item.upgrade_level + 1,
+			_inventory.blessed_stones])
+	blessed.disabled = _inventory.blessed_stones <= 0
+	blessed.add_theme_color_override("font_color", _loot.blessed_color)
+	blessed.pressed.connect(_menu.refine_blessed.bind(item))
+	parent.add_child(blessed)
 	var note := "Fails drop it one level; it never breaks."
 	if item.fail_streak > 0:
 		note += " Luck +%d%% from %d failures." % [

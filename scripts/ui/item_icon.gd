@@ -12,7 +12,8 @@ const CLOTH := Color(0.42, 0.3, 0.55)
 ## Icon when an item's kind is unknown, per AffixDef.Slot.
 const SLOT_DEFAULTS: PackedInt32Array = [
 	ItemKindDef.Icon.WAND, ItemKindDef.Icon.AMULET, ItemKindDef.Icon.ROBE,
-	ItemKindDef.Icon.TOME, ItemKindDef.Icon.BELT, ItemKindDef.Icon.RING,
+	ItemKindDef.Icon.TOME, ItemKindDef.Icon.BELT, ItemKindDef.Icon.RING, ItemKindDef.Icon.HELM,
+	ItemKindDef.Icon.GLOVES, ItemKindDef.Icon.PANTS, ItemKindDef.Icon.BOOTS, ItemKindDef.Icon.EGG,
 ]
 
 var glyph: int = ItemKindDef.Icon.WAND
@@ -96,6 +97,37 @@ func _draw() -> void:
 			draw_rect(Rect2(p.call(0.12, 0.4), Vector2(0.76, 0.2) * s), LEATHER * tint)
 			draw_rect(Rect2(p.call(0.4, 0.34), Vector2(0.2, 0.32) * s), GOLD * tint, false, s * 0.05)
 			draw_circle(p.call(0.5, 0.5), s * 0.04, accent * tint)
+		ItemKindDef.Icon.HELM:
+			var dome := [p.call(0.22, 0.62), p.call(0.26, 0.36), p.call(0.4, 0.22), p.call(0.6, 0.22),
+					p.call(0.74, 0.36), p.call(0.78, 0.62)]
+			_poly(dome, STEEL * tint)
+			draw_rect(Rect2(p.call(0.18, 0.6), Vector2(0.64, 0.1) * s), GOLD * tint)
+			_line(p.call(0.5, 0.24), p.call(0.5, 0.6), accent * tint, s * 0.05)
+			_poly([p.call(0.3, 0.7), p.call(0.38, 0.7), p.call(0.36, 0.84), p.call(0.3, 0.8)],
+					STEEL * tint)
+			_poly([p.call(0.62, 0.7), p.call(0.7, 0.7), p.call(0.7, 0.8), p.call(0.64, 0.84)],
+					STEEL * tint)
+		ItemKindDef.Icon.GLOVES:
+			_poly([p.call(0.3, 0.82), p.call(0.3, 0.42), p.call(0.36, 0.22), p.call(0.44, 0.24),
+					p.call(0.46, 0.4), p.call(0.52, 0.18), p.call(0.6, 0.2), p.call(0.6, 0.4),
+					p.call(0.72, 0.34), p.call(0.76, 0.42), p.call(0.66, 0.6), p.call(0.66, 0.82)],
+					LEATHER * tint)
+			draw_rect(Rect2(p.call(0.28, 0.72), Vector2(0.4, 0.1) * s), accent * tint)
+		ItemKindDef.Icon.PANTS:
+			_poly([p.call(0.28, 0.2), p.call(0.72, 0.2), p.call(0.76, 0.84), p.call(0.56, 0.84),
+					p.call(0.5, 0.42), p.call(0.44, 0.84), p.call(0.24, 0.84)], CLOTH * tint)
+			draw_rect(Rect2(p.call(0.28, 0.2), Vector2(0.44, 0.08) * s), accent * tint)
+		ItemKindDef.Icon.BOOTS:
+			_poly([p.call(0.3, 0.18), p.call(0.52, 0.18), p.call(0.52, 0.62), p.call(0.8, 0.68),
+					p.call(0.82, 0.82), p.call(0.28, 0.82)], LEATHER * tint)
+			draw_rect(Rect2(p.call(0.28, 0.18), Vector2(0.26, 0.08) * s), accent * tint)
+		ItemKindDef.Icon.EGG:
+			draw_set_transform(p.call(0.5, 0.52), 0.0, Vector2(1.0, 1.25))
+			draw_circle(Vector2.ZERO, s * 0.26, Color(0.95, 0.9, 0.8) * tint)
+			draw_circle(Vector2(-s * 0.08, -s * 0.08), s * 0.06, accent * tint)
+			draw_circle(Vector2(s * 0.1, s * 0.06), s * 0.05, accent * tint)
+			draw_circle(Vector2(-s * 0.04, s * 0.14), s * 0.04, accent * tint)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		ItemKindDef.Icon.RING:
 			draw_arc(p.call(0.5, 0.58), s * 0.24, 0.0, TAU, 28, GOLD * tint, s * 0.08, true)
 			_poly([p.call(0.5, 0.18), p.call(0.62, 0.3), p.call(0.5, 0.42), p.call(0.38, 0.3)],

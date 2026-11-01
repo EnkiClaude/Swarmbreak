@@ -65,7 +65,8 @@ func setup(arena_half_extent: float, effects: EffectSystem = null,
 	_renderer = SwarmRenderer.new()
 	_renderer.name = "Renderer"
 	add_child(_renderer)
-	_renderer.setup(config.enemy_types, config.capacity, config.hit_flash_color)
+	_renderer.setup(config.enemy_types, config.capacity, config.hit_flash_color,
+			config.lure_glow_color, config.lure_glow)
 	for t in config.enemy_types:
 		_death_effects.append(effects.register(t.death_effect) if effects != null else -1)
 
@@ -142,6 +143,27 @@ func set_bounds(half_extent: float) -> void:
 	_flow_follows = half_extent > _flow_half
 	if not _flow_follows:
 		_flow.set_origin(Vector2(-_flow_half, -_flow_half))
+
+
+## Lays a dungeon's rooms onto the flow field: monsters route through its
+## doors and stop at its walls. Also shortens the straight chase, so they
+## don't press into walls near the player.
+func set_layout(layout: DungeonLayout, direct_chase: float) -> void:
+	_flow.set_origin(Vector2(-_flow_half, -_flow_half))
+	_flow.set_rooms(layout.rasterize(_flow.origin, _flow.cols, _flow.rows, _flow.cell_size),
+			layout.door_points())
+	_steering.set_direct_chase(direct_chase)
+
+
+## Open ground again: no walls, the usual straight chase.
+func clear_layout() -> void:
+	_flow.clear_rooms()
+	_steering.set_direct_chase(config.direct_chase_distance)
+
+
+## True inside a dungeon wall.
+func is_wall(p: Vector2) -> bool:
+	return _flow.is_wall(p)
 
 
 ## Removes a camp's members without killing them (no XP, loot or effects).

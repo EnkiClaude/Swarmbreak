@@ -22,6 +22,14 @@ var upgrade_level: int = 0
 var upgrade_bonus: float = 0.0
 ## Failed refines in a row, which raise the next chance.
 var fail_streak: int = 0
+## Pets only (slot PET): the PetConfig.pets kind, level and XP (see PetRules).
+var pet_type: int = -1
+var pet_level: int = 1
+var pet_xp: float = 0.0
+
+
+func is_pet() -> bool:
+	return slot == AffixDef.Slot.PET
 
 
 func upgrade_multiplier() -> float:

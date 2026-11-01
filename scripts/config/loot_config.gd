@@ -5,12 +5,17 @@ extends Resource
 ## The currency (refining, salvage), as shown to the player.
 @export var currency_name: String = "Geon"
 ## Each drop is an item with this chance; otherwise it's a pile of Geon.
-@export var item_drop_chance: float = 0.05
+@export var item_drop_chance: float = 0.1
 ## Geon in one pile at level 1; piles grow by geon_growth_per_level per level.
 @export var geon_pile_min: int = 2
 @export var geon_pile_max: int = 5
 @export var geon_growth_per_level: float = 0.25
 @export var geon_color: Color = Color(1.0, 0.8, 0.3)
+## A rare stone any monster may drop, whatever its level: refining with it
+## always succeeds.
+@export var blessed_name: String = "Blessed Stone"
+@export var blessed_drop_chance: float = 0.002
+@export var blessed_color: Color = Color(0.7, 0.9, 1.0)
 ## Drops when a camp's last member dies (items or Geon piles).
 @export var camp_drop_min: int = 1
 @export var camp_drop_max: int = 2
@@ -28,7 +33,7 @@ extends Resource
 @export var item_kinds: Array[ItemKindDef] = []
 ## Names of AffixDef.Slot values, for labels.
 @export var slot_names: PackedStringArray = [
-	"Weapon", "Amulet", "Armor", "Off hand", "Belt", "Ring",
+	"Weapon", "Amulet", "Armor", "Off hand", "Belt", "Ring", "Helm", "Gloves", "Pants", "Boots", "Pet",
 ]
 @export var rare_prefixes: PackedStringArray = [
 	"Grim", "Storm", "Hollow", "Ember", "Dread", "Bright", "Iron", "Wild",
