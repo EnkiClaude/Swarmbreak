@@ -134,7 +134,7 @@ skeleton, treant, wisp).
 
 Levels: monster health, contact damage and XP grow with the level where the
 player is (`WorldDirector.level()`); items roll at the camp's level, and
-dungeons add drops, a minimum rarity and more stones. Props never collide,
+dungeons add drops, a minimum rarity and more Geon. Props never collide,
 so they stand clear of camps, gates and the town square. The art is original
 and generated in code. In the web build, `index.html?region=N` (row by row
 from the north-west) or `?dungeon=N` (from 1) starts there.
@@ -191,7 +191,7 @@ happen per camp, not per frame; ground loot itself is a fixed pool.
 ## Saving
 
 `SaveManager` autosaves the character (level, XP, skills, job, items,
-stones) to `user://` (the browser's storage on web); the game always
+Geon) to `user://` (the browser's storage on web); the game always
 resumes in town.
 Anything worth keeping calls `mark_dirty()`, and the write happens
 `autosave_delay` later. The menu, tab switches and closing save immediately.
@@ -208,7 +208,7 @@ slot: `SwarmState.boss_index[slot]` tracks its current index through
 compaction, so never cache a boss's enemy index across frames. Slots are
 reused once a boss dies or streams out. `BossSystem` runs the slam: stun,
 telegraph ring for `slam_windup`, then damage inside `slam_radius`. Killing
-one drops rare loot and stones.
+one drops rare loot and a pile of Geon.
 
 ## Frame order
 
