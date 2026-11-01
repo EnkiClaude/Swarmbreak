@@ -713,12 +713,20 @@ func _camp_drops_loot() -> void:
 			at = _swarm.state.positions[i]
 	var before := loot.ground_count()
 	var geon_before := inventory.stones
+	# Gear and talisman drops are chance; switch them off to check the Geon.
+	var loot_config := _main_var("loot_config") as LootConfig
+	var item_chance := loot_config.item_drop_chance
+	var talisman_chance := loot_config.talisman_drop_chance
+	loot_config.item_drop_chance = 0.0
+	loot_config.talisman_drop_chance = 0.0
 	await _frames(2)
+	loot_config.item_drop_chance = item_chance
+	loot_config.talisman_drop_chance = talisman_chance
 	_check(_camps.sites.alive[camp] == 0, "camp %d cleared" % camp)
 	var dropped := loot.ground_count() - before
 	_check(dropped >= 1, "camp dropped %d things" % dropped)
 	var piles := loot.ground_geon()
-	_check(piles > 0 or dropped == 0, "mostly Geon (%d on the ground)" % piles)
+	_check(piles > 0, "Geon piles (%d on the ground)" % piles)
 	_teleport(at)
 	await _frames(40)
 	_check(inventory.stones >= geon_before + piles,
