@@ -7,8 +7,11 @@ extends RefCounted
 ##              All for each rarity and for everything.
 ##   DETAILS  - the selected item, compared stat by stat against what wearing
 ##              it would take off, with Equip (left or right for rings),
-##              Unequip, Salvage and Upgrade.
+##              Unequip, Salvage and Upgrade; a selected talisman lists the
+##              worn gear it can be applied to.
 ## Hovering or focusing an item shows its tooltip (ItemTooltip) beside it.
+## After any action, focus goes back to the item the player was on, so a
+## controller's A never lands on a button by itself.
 
 const TILE_SIZE := Vector2(70, 70)
 const GRID_COLUMNS := 6
@@ -30,11 +33,15 @@ const EMPTY_GLYPHS: PackedInt32Array = [
 ]
 ## Salvage All buttons: one per rarity, then -1 for everything. All but
 ## commons need a second press to confirm.
-const SALVAGE_ALL_CHOICES: PackedInt32Array = [0, 1, 2, -1]
+const SALVAGE_ALL_CHOICES: PackedInt32Array = [0, 1, 2, 3, 4, 5, -1]
 const NO_CONFIRM := -2
 
 ## The selected item (equipped or in the backpack), or null.
 var selected: ItemData
+## The item whose tile last had focus or was picked: focus returns to it.
+var focus_item: ItemData
+## Applies talismans (null hides them).
+var talismans: TalismanRules
 ## Result line under the details, e.g. after refining.
 var result_text := ""
 var result_color := Color.WHITE
@@ -44,6 +51,7 @@ var _inventory: Inventory
 var _loot: LootConfig
 var _refinery: Refinery
 var _confirm_rarity := NO_CONFIRM
+var _focus_tile: Control
 
 
 func _init(menu: CharacterMenu, inventory: Inventory, loot: LootConfig,
@@ -57,6 +65,7 @@ func _init(menu: CharacterMenu, inventory: Inventory, loot: LootConfig,
 ## Clears selection and messages (when the menu opens).
 func reset() -> void:
 	selected = null
+	focus_item = null
 	result_text = ""
 	_confirm_rarity = NO_CONFIRM
 
@@ -100,12 +109,13 @@ func build(parent: Container) -> Control:
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 22)
 	parent.add_child(columns)
+	_focus_tile = null
 	_build_equipped(MenuWidgets.column(columns, EQUIPPED_WIDTH))
 	_build_backpack(MenuWidgets.column(columns))
 	var detail_focus := _build_details(MenuWidgets.column(columns, DETAILS_WIDTH))
-	# Nothing selected: focus stays on the tab header, so no item looks picked
-	# (and no tooltip covers the screen) until the player moves to one.
-	return detail_focus
+	# Back to the item the player was on; with none (just opened), focus stays
+	# on the tab header, so nothing looks picked until the player moves.
+	return _focus_tile if _focus_tile != null else detail_focus
 
 
 func _build_equipped(parent: VBoxContainer) -> Control:
@@ -131,11 +141,19 @@ func _build_equipped(parent: VBoxContainer) -> Control:
 
 ## Click selects; hover or focus shows the tooltip.
 func _hook_item(control: Button, item: ItemData) -> void:
+	if item == focus_item:
+		_focus_tile = control
+	control.pressed.connect(_remember.bind(item))
+	control.focus_entered.connect(_remember.bind(item))
 	control.pressed.connect(_menu.select_item.bind(item))
 	control.mouse_entered.connect(_menu.show_tooltip.bind(item, control))
 	control.focus_entered.connect(_menu.show_tooltip.bind(item, control))
 	control.mouse_exited.connect(_menu.hide_tooltip.bind(control))
 	control.focus_exited.connect(_menu.hide_tooltip.bind(control))
+
+
+func _remember(item: ItemData) -> void:
+	focus_item = item
 
 
 func _build_backpack(parent: VBoxContainer) -> Control:
@@ -165,7 +183,7 @@ func _build_salvage_all(parent: VBoxContainer) -> void:
 	parent.add_child(MenuWidgets.label("SALVAGE ALL (equipped items are never touched)",
 			MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
 	parent.add_child(grid)
@@ -210,10 +228,16 @@ func _build_details(parent: VBoxContainer) -> Control:
 	names.add_child(MenuWidgets.label(item.display_name(), MenuWidgets.FONT_SIZE - 2, color))
 	names.add_child(MenuWidgets.label(ItemTooltip.describe_kind(item, _loot) + ("   -   EQUIPPED"
 			if equipped else ""), MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
-	if equipped:
+	if equipped or item.is_talisman:
 		parent.add_child(MenuWidgets.label("  " + "\n  ".join(item.describe_lines())))
 	else:
 		ItemTooltip.add_comparison(parent, item, _inventory, _loot, MenuWidgets.SMALL_FONT)
+	ItemTooltip.add_set_lines(parent, item, _inventory, MenuWidgets.SMALL_FONT - 1)
+	ItemTooltip.add_socket_line(parent, item, _loot, MenuWidgets.SMALL_FONT - 1)
+	if item.is_talisman:
+		var first := _build_talisman(parent, item)
+		_add_result(parent)
+		return first
 	var focus: Control = null
 	var row := HBoxContainer.new()
 	parent.add_child(row)
@@ -242,6 +266,42 @@ func _build_details(parent: VBoxContainer) -> Control:
 	var upgrade := _build_refine(parent, item)
 	_add_result(parent)
 	return focus if focus != null else upgrade
+
+
+## A talisman's choices: apply it to a worn item with a free socket (each
+## with its chance), or salvage it.
+func _build_talisman(parent: VBoxContainer, talisman: ItemData) -> Control:
+	var first: Control = null
+	if talismans != null:
+		parent.add_child(MenuWidgets.label("APPLY TO WORN GEAR (the talisman is used up; " +
+				"if it fails it crumbles, the gear is never harmed)", MenuWidgets.SMALL_FONT - 3,
+				MenuWidgets.DIM_COLOR))
+		var any := false
+		for position in CARD_ORDER:
+			var gear := _inventory.equipped[position]
+			if gear == null or talismans.sockets(gear) == 0:
+				continue
+			any = true
+			var free := talismans.free_sockets(gear)
+			var text := "%s: %s   %s" % [Inventory.EQUIP_NAMES[position], gear.display_name(),
+					("%d%%  (%d free)" % [roundi(talismans.chance_for(gear) * 100.0), free])
+					if free > 0 else "no free socket"]
+			var b := MenuWidgets.button(text, MenuWidgets.SMALL_FONT - 2)
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.disabled = free <= 0
+			b.add_theme_color_override("font_color", _loot.rarity_colors[gear.rarity])
+			b.pressed.connect(_menu.apply_talisman.bind(talisman, gear))
+			parent.add_child(b)
+			if first == null and not b.disabled:
+				first = b
+		if not any:
+			parent.add_child(MenuWidgets.label("Wear some gear first.", MenuWidgets.SMALL_FONT,
+					MenuWidgets.DIM_COLOR))
+	var salvage := MenuWidgets.button("SALVAGE +%d" % Inventory.salvage_value(talisman,
+			_loot.salvage_stones))
+	salvage.pressed.connect(_menu.salvage_item.bind(talisman))
+	parent.add_child(salvage)
+	return first if first != null else salvage
 
 
 func _build_refine(parent: VBoxContainer, item: ItemData) -> Control:

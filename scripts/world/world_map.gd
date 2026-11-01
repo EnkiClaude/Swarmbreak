@@ -13,7 +13,7 @@ const EXIT_INSET := 4.0
 const ARRIVAL_INSET := 17.0
 ## Coming out of a dungeon, the player stands this far south of its gate.
 const GATE_STEP_OUT := 5.0
-const TOWN_GATE_SPACING := 12.0
+const TOWN_GATE_SPACING := 9.0
 const TOWN_GATE_DISTANCE := 16.0
 
 var config: WorldConfig
@@ -138,33 +138,71 @@ func _place_region_camps(region: int, rng: RandomNumberGenerator,
 		overworld_sites.set_types(s, def.enemy_type, def.heavy_type)
 
 
-## One camp per room: the boss in the boss room, spawners in the rooms at
-## spawner_depth, ordinary camps elsewhere, each a level harder per depth.
+## Several camps per side room, spread over it (in the room at spawner_depth,
+## spawner_count of them are spawners); the boss room holds the boss at its
+## center, more camps around it and spawners near its walls. Each room is a
+## level harder than the one before (depth_level_step).
 func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
 	var def := config.dungeons[d]
 	var layout := layouts[d]
 	var sites := CampSites.new()
-	var spawners := 0
 	for room in layout.rooms.size():
 		var depth := layout.depths[room]
 		var level := def.level + depth * def.depth_level_step
-		var at := layout.room_center(room)
-		var s := -1
+		var rect := layout.rooms[room]
 		if room == layout.boss_room:
-			if not def.has_boss:
-				continue
-			s = sites.add(at, def.boss_camp_size, level, def.heavy_chance, true, false, 0.0,
-					def.camp_respawn_time)
-		elif depth == def.spawner_depth and spawners < def.spawner_count:
-			spawners += 1
-			s = sites.add(at, def.spawner_population, level, def.heavy_chance, false, true,
-					def.spawner_interval)
-		else:
-			s = sites.add(at, rng.randi_range(def.camp_size_min, def.camp_size_max), level,
-					def.heavy_chance, false, false, 0.0, def.camp_respawn_time)
-		sites.set_types(s, def.enemy_type, def.heavy_type)
-		sites.depth[s] = depth
+			if def.has_boss:
+				_dungeon_site(sites, def, rect.get_center(), def.boss_camp_size, level, depth,
+						true, false)
+			for k in def.boss_room_camps:
+				# A ring around the boss, halfway to the walls.
+				var a := TAU * (k + 0.5) / maxf(def.boss_room_camps, 1)
+				var at := rect.get_center() + Vector2(cos(a) * rect.size.x * 0.3,
+						sin(a) * rect.size.y * 0.3)
+				_dungeon_site(sites, def, at, rng.randi_range(def.camp_size_min,
+						def.camp_size_max), level, depth, false, false)
+			for k in def.boss_room_spawners:
+				var side := -1.0 if k % 2 == 0 else 1.0
+				var at := rect.get_center() + Vector2(side * rect.size.x * 0.38,
+						(0.25 if k < 2 else -0.25) * rect.size.y)
+				_dungeon_site(sites, def, at, def.spawner_population, level, depth, false, true)
+			continue
+		var spawners := def.spawner_count if depth == def.spawner_depth else 0
+		var grid := _camp_grid(rect, def.camps_per_room)
+		for k in grid.size():
+			if k < spawners:
+				_dungeon_site(sites, def, grid[k], def.spawner_population, level, depth, false,
+						true)
+			else:
+				_dungeon_site(sites, def, grid[k], rng.randi_range(def.camp_size_min,
+						def.camp_size_max), level, depth, false, false)
 	return sites
+
+
+func _dungeon_site(sites: CampSites, def: DungeonDef, at: Vector2, size: int, level: int,
+		depth: int, boss: bool, spawner: bool) -> void:
+	var s := sites.add(at, size, level, def.heavy_chance, boss, spawner,
+			def.spawner_interval if spawner else 0.0, def.camp_respawn_time)
+	sites.set_types(s, def.enemy_type, def.heavy_type)
+	sites.depth[s] = depth
+
+
+## count camp centers spread over a room: a grid two wide along its short side.
+static func _camp_grid(rect: Rect2, count: int) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	if count <= 0:
+		return points
+	var across := 2 if count > 1 else 1
+	var rows := ceili(float(count) / across)
+	var wide := rect.size.x >= rect.size.y
+	for k in count:
+		var row := floori(float(k) / across)
+		var col := k % across
+		var along := (row + 0.5) / rows
+		var side := (col + 0.5) / across
+		var f := Vector2(along, side) if wide else Vector2(side, along)
+		points.append(rect.position + rect.size * f)
+	return points
 
 
 static func too_close(at: Vector2, others: PackedVector2Array, distance: float) -> bool:

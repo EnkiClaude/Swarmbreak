@@ -2,7 +2,8 @@ class_name ItemGenerator
 extends RefCounted
 ## Rolls random items: a kind (which sets the slot, hands and implicit stat),
 ## a rarity, then distinct affixes allowed in that slot, with values growing
-## with the level of the camp that dropped it.
+## with the level of the camp that dropped it and with the rarity's power.
+## Also makes set pieces (fixed stats, from SetList) and talismans.
 
 var _config: LootConfig
 var _rng := RandomNumberGenerator.new()
@@ -33,7 +34,7 @@ func roll(zone_level: int, min_rarity: int = 0) -> ItemData:
 	item.rarity = maxi(_pick_weighted(_config.rarity_weights), min_rarity)
 	item.upgrade_bonus = _config.upgrade_bonus_per_level
 	item.item_level = zone_level
-	var growth := 1.0 + _config.value_growth_per_zone * (zone_level - 1)
+	var growth := _growth(zone_level) * _power(item.rarity)
 	if kind != null and kind.has_implicit:
 		item.stats.append(kind.implicit_stat)
 		item.values.append(_round_value(kind.implicit_stat,
@@ -56,8 +57,73 @@ func roll(zone_level: int, min_rarity: int = 0) -> ItemData:
 	return item
 
 
+## One piece of a set, picked at random, at a level.
+func roll_set_piece(sets: SetList, set_index: int, zone_level: int) -> ItemData:
+	var def := sets.sets[set_index]
+	var piece := def.pieces[_rng.randi() % def.pieces.size()]
+	var item := ItemData.new()
+	item.kind = clampi(piece.kind, 0, _config.item_kinds.size() - 1)
+	var kind := _config.item_kinds[item.kind]
+	item.slot = kind.slot
+	item.two_handed = kind.two_handed
+	item.rarity = sets.set_rarity
+	item.set_id = set_index
+	item.item_name = piece.piece_name
+	item.item_level = zone_level
+	item.upgrade_bonus = _config.upgrade_bonus_per_level
+	var growth := _growth(zone_level)
+	for k in mini(piece.stats.size(), piece.values.size()):
+		item.stats.append(piece.stats[k])
+		item.values.append(_round_value(piece.stats[k], piece.values[k] * growth))
+	return item
+
+
+## A talisman: a rarity, then that many distinct stats from any slot's
+## affixes, at talisman_power of an affix roll.
+func roll_talisman(zone_level: int, min_rarity: int = 0) -> ItemData:
+	var item := ItemData.new()
+	item.is_talisman = true
+	item.rarity = mini(maxi(_pick_weighted(_config.rarity_weights), min_rarity),
+			_config.talisman_max_rarity)
+	item.item_level = zone_level
+	var growth := _growth(zone_level) * _power(item.rarity) * _config.talisman_power
+	var allowed: Array[AffixDef] = []
+	for affix in _config.affixes:
+		var seen := false
+		for other in allowed:
+			seen = seen or other.stat == affix.stat
+		if not seen:
+			allowed.append(affix)
+	var wanted := mini(_config.talisman_stat_counts[mini(item.rarity,
+			_config.talisman_stat_counts.size() - 1)], allowed.size())
+	for _n in wanted:
+		var picked := allowed[_rng.randi() % allowed.size()]
+		allowed.erase(picked)
+		item.stats.append(picked.stat)
+		item.values.append(_round_value(picked.stat,
+				_rng.randf_range(picked.min_value, picked.max_value) * growth))
+	var first := PlayerStat.NAMES[item.stats[0]].capitalize() if not item.stats.is_empty() else ""
+	item.item_name = "%s of %s" % [_config.talisman_name, first]
+	if item.rarity >= 2:
+		item.item_name = "%s %s" % [_config.rarity_names[item.rarity], item.item_name]
+	return item
+
+
+func _growth(zone_level: int) -> float:
+	return 1.0 + _config.value_growth_per_zone * (zone_level - 1)
+
+
+func _power(rarity: int) -> float:
+	if _config.rarity_power.is_empty():
+		return 1.0
+	return _config.rarity_power[clampi(rarity, 0, _config.rarity_power.size() - 1)]
+
+
 func _name_for(item: ItemData, kind: ItemKindDef) -> String:
 	var base := kind.display_name if kind != null else _config.slot_names[item.slot]
+	if item.rarity >= 4 and not _config.legendary_prefixes.is_empty():
+		return "%s %s" % [_config.legendary_prefixes[_rng.randi() %
+				_config.legendary_prefixes.size()], base]
 	if item.rarity >= 2 and not _config.rare_prefixes.is_empty():
 		return "%s %s" % [_config.rare_prefixes[_rng.randi() % _config.rare_prefixes.size()], base]
 	# Named after its first rolled affix (after the implicit, if any).
@@ -78,8 +144,13 @@ func _pick_weighted(weights: PackedFloat32Array) -> int:
 	for w in weights:
 		total += w
 	var r := _rng.randf() * total
+	var last := 0
 	for k in weights.size():
+		if weights[k] <= 0.0:
+			continue
+		last = k
 		r -= weights[k]
 		if r <= 0.0:
 			return k
-	return weights.size() - 1
+	# Rounding left a sliver: the last entry that can roll (never a 0 weight).
+	return last

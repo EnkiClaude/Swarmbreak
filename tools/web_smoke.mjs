@@ -117,7 +117,7 @@ await page.waitForTimeout(500);
 
 // A few open-world regions and both dungeons: ?region=N and ?dungeon=N
 // start there.
-for (const place of ["region=3", "region=0", "region=8", "dungeon=1", "dungeon=2"]) {
+for (const place of ["region=3", "region=0", "region=8", "dungeon=1", "dungeon=2", "dungeon=6"]) {
   await page.goto(`http://localhost:8060/index.html?${place}`);
   await page.waitForTimeout(10000);
   await shot(place.replace("=", ""));

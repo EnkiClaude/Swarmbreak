@@ -20,7 +20,7 @@ extends Resource
 @export var xp_share_base: float = 0.08
 @export var xp_share_per_stage: float = 0.04
 ## Loot within this distance of the player is collected, per stage (0 = egg).
-@export var pickup_radius_per_stage: PackedFloat32Array = [0.0, 7.0, 9.0, 11.0, 13.0]
+@export var pickup_radius_per_stage: PackedFloat32Array = [0.0, 12.0, 15.0, 18.0, 22.0]
 ## Model height per stage.
 @export var height_per_stage: PackedFloat32Array = [0.45, 0.55, 0.8, 1.05, 1.35]
 ## Where the pet floats or walks: behind and beside the player.

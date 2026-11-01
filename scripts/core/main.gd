@@ -30,6 +30,7 @@ const LOCATION_MESSAGE_TIME := 2.0
 @export var damage_numbers_config: DamageNumbersConfig
 @export var pet_config: PetConfig
 @export var quest_list: QuestList
+@export var set_list: SetList
 
 var combat: PlayerCombat
 var world: WorldDirector
@@ -76,6 +77,7 @@ func _ready() -> void:
 	var flow_half := _swarm.config.flow_half_extent
 	progress = PlayerProgress.new(progression_config, skill_tree, attribute_table)
 	inventory = Inventory.new(loot_config.backpack_size)
+	inventory.sets = set_list
 	stats = PlayerStats.new(progress, skill_tree, inventory, progression_config, job_tree)
 	inventory.changed.connect(stats.recompute)
 	progress.leveled_up.connect(_on_leveled_up)
@@ -120,6 +122,8 @@ func _ready() -> void:
 	_menu.setup_pets(pet_config, quests)
 	_menu.egg_taken.connect(_on_egg_taken)
 	_menu.refined.connect(_on_refined)
+	_menu.setup_talismans(TalismanRules.new(loot_config))
+	_menu.talisman_applied.connect(_on_talisman_applied)
 	_menu.opened.connect(_touch.release_all)
 	_menu.opened.connect(_camera_rig.release_mouse)
 	_sfx.setup(audio_config)
@@ -160,16 +164,26 @@ func _check_data() -> void:
 			if perks != null and perks.values.size() != perks.stats.size():
 				push_error("Job %s perks have %d values for %d stats" % [job.display_name,
 						perks.values.size(), perks.stats.size()])
+	if set_list != null:
+		for def in set_list.sets:
+			if def.bonus_values.size() != def.bonus_stats.size() \
+					or def.bonus_pieces.size() != def.bonus_stats.size():
+				push_error("Set %s has mismatched bonus lists" % def.set_name)
+			for piece in def.pieces:
+				if piece.values.size() != piece.stats.size():
+					push_error("Set piece %s has %d values for %d stats" % [piece.piece_name,
+							piece.values.size(), piece.stats.size()])
 
 
 ## Every space's camps share the swarm's camp ids, so size them for the biggest.
 func _max_sites() -> int:
 	var most := 1
-	# Upper bound: every region's camps, or one camp per dungeon room.
+	# Upper bound: every region's camps, or every camp of a dungeon.
 	for region in world_config.regions:
 		most += region.camp_count
 	for dungeon in world_config.dungeons:
-		most = maxi(most, dungeon.rooms_per_side * 2 + 2)
+		most = maxi(most, dungeon.rooms_per_side * 2 * dungeon.camps_per_room + 1
+				+ dungeon.boss_room_camps + dungeon.boss_room_spawners)
 	return most
 
 
@@ -332,10 +346,11 @@ func _on_camp_cleared(camp: int, at: Vector2, level: int, _had_boss: bool) -> vo
 	_loot.drop_rewards(at, amount, level, min_rarity, multiplier)
 
 
-## A dungeon room's minimum item rarity: one better in the deep rooms.
+## A dungeon room's minimum item rarity: one better every deep_rarity_depth
+## rooms deeper, never set rarity (set items come only from bosses).
 func _dungeon_rarity(dungeon: DungeonDef, camp: int) -> int:
-	var deep := camps.sites.depth[camp] >= dungeon.deep_rarity_depth
-	return mini(dungeon.min_drop_rarity + (1 if deep else 0), loot_config.rarity_names.size() - 1)
+	var steps := floori(float(camps.sites.depth[camp]) / maxi(dungeon.deep_rarity_depth, 1))
+	return mini(dungeon.min_drop_rarity + steps, loot_config.talisman_max_rarity)
 
 
 ## A dungeon room's Geon multiplier, growing with depth.
@@ -367,6 +382,11 @@ func _on_boss_killed(_slot: int, at: Vector2) -> void:
 	_loot.drop_rewards(at, boss_config.extra_drops, level, boss_config.min_drop_rarity)
 	var growth := 1.0 + loot_config.geon_growth_per_level * (level - 1)
 	_loot.place_geon(roundi(boss_config.geon * growth), at)
+	var dungeon := world.dungeon()
+	if dungeon != null and set_list != null and dungeon.set_index >= 0 \
+			and dungeon.set_index < set_list.sets.size() \
+			and _loot_rng.randf() < set_list.boss_drop_chance:
+		_loot.drop_set_piece(at, set_list, dungeon.set_index, level)
 	_hud.banner("%s SLAIN" % boss_config.display_name.to_upper(), Color(1.0, 0.7, 0.3), 2.0)
 
 
@@ -382,6 +402,10 @@ func _on_job_chosen(job: int) -> void:
 	_hud.banner(job_tree.jobs[job].display_name.to_upper(), job_tree.jobs[job].color, 2.0)
 	_effects.spawn(_pillar_effect, _player.position, 1.0)
 	_feedback.level_up()
+
+
+func _on_talisman_applied(success: bool, _gear: ItemData) -> void:
+	_feedback.refined(success)
 
 
 func _on_refined(result: Refinery.Result, _item: ItemData) -> void:
@@ -412,8 +436,11 @@ func _on_geon_picked_up(amount: int) -> void:
 
 func _on_item_picked_up(item: ItemData) -> void:
 	var equipped := inventory.is_equipped(item)
-	_hud.toast("%s %s" % ["Equipped" if equipped else "Picked up", item.item_name],
-			loot_config.rarity_colors[item.rarity])
+	var color := loot_config.rarity_colors[item.rarity]
+	_hud.toast("%s %s" % ["Equipped" if equipped else "Picked up", item.item_name], color)
+	if item.rarity >= loot_config.announce_rarity:
+		_hud.banner("%s!  %s" % [loot_config.rarity_names[item.rarity].to_upper(),
+				item.item_name.to_upper()], color, 2.0)
 	_feedback.item_picked_up()
 
 

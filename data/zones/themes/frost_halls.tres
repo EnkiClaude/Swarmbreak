@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="ZoneTheme" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/zone_theme.gd" id="1_theme"]
+
+[resource]
+script = ExtResource("1_theme")
+display_name = "Frostbound Halls"
+floor_pattern = 0
+floor_color = Color(0.55, 0.68, 0.8, 1)
+floor_alt_color = Color(0.45, 0.58, 0.72, 1)
+grout_color = Color(0.25, 0.35, 0.48, 1)
+inlay_color = Color(0.85, 0.95, 1, 1)
+inlay_every = 4
+tile_size = 2.0
+grout_width = 0.07
+floor_noise = 0.12
+floor_roughness = 0.25
+wall_height = 8.0
+wall_color = Color(0.3, 0.42, 0.56, 1)
+wall_trim_color = Color(0.85, 0.95, 1, 1)
+ceiling_height = 12.0
+ceiling_color = Color(0.15, 0.2, 0.28, 1)
+pillar_spacing = 8.0
+pillar_height = 8.0
+pillar_radius = 0.6
+pillar_color = Color(0.6, 0.78, 0.92, 1)
+pillar_trim_color = Color(0.3, 0.45, 0.65, 1)
+lantern_every = 2
+lantern_color = Color(0.6, 0.85, 1, 1)
+show_sky = false
+background_color = Color(0.04, 0.06, 0.1, 1)
+fog_color = Color(0.4, 0.55, 0.7, 1)
+fog_density = 0.012
+ambient_color = Color(0.75, 0.88, 1, 1)
+ambient_energy = 0.45
+sun_color = Color(0.85, 0.92, 1, 1)
+sun_energy = 0.7
+sun_elevation = 62.0
+sun_azimuth = 20.0
+glow_strength = 0.9

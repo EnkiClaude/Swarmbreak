@@ -4,6 +4,8 @@ extends RefCounted
 ## (Equip) match AffixDef.Slot for every slot but rings, which have two. A
 ## two-handed weapon and an off-hand item can't be worn together: equipping
 ## one moves the other to the backpack, so that needs room there.
+## Talismans live in the backpack and are never worn. Wearing several pieces
+## of a set adds its bonuses (sets) to total().
 
 signal changed
 
@@ -27,6 +29,8 @@ var backpack_size: int
 var stones: int = 0
 ## Rare stones that make one refine attempt certain to succeed.
 var blessed_stones: int = 0
+## Item sets, for set bonuses (null: no sets).
+var sets: SetList
 
 
 func _init(p_backpack_size: int) -> void:
@@ -82,6 +86,8 @@ func displaced_by(item: ItemData, position: int) -> Array[ItemData]:
 
 ## True if the item fits position and the backpack can take what it displaces.
 func can_equip(item: ItemData, position: int = -1) -> bool:
+	if item.is_talisman:
+		return false
 	if position < 0:
 		position = target_for(item)
 	if not positions_for(item.slot).has(position):
@@ -130,6 +136,8 @@ func unequip(position: int) -> bool:
 
 ## An empty position the item could go in without taking anything off, or -1.
 func free_position(item: ItemData) -> int:
+	if item.is_talisman:
+		return -1
 	for position in positions_for(item.slot):
 		if equipped[position] == null and displaced_by(item, position).is_empty():
 			return position
@@ -198,9 +206,11 @@ func salvage_all(rarity: int, salvage_table: PackedInt32Array) -> int:
 	return gained
 
 
-## Orders the backpack by slot, then best rarity and refine level first.
+## Orders the backpack by slot (talismans last), then best rarity and refine level first.
 func sort_backpack() -> void:
 	backpack.sort_custom(func(a: ItemData, b: ItemData) -> bool:
+		if a.is_talisman != b.is_talisman:
+			return b.is_talisman
 		if a.slot != b.slot:
 			return a.slot < b.slot
 		if a.rarity != b.rarity:
@@ -246,4 +256,22 @@ func total(stat: int) -> float:
 	for item in equipped:
 		if item != null:
 			sum += item.value_of(stat)
+	if sets != null:
+		for set_index in sets.sets.size():
+			var worn := set_count(set_index)
+			if worn < 2:
+				continue
+			var def := sets.sets[set_index]
+			for k in def.bonus_stats.size():
+				if def.bonus_stats[k] == stat and worn >= def.bonus_pieces[k]:
+					sum += def.bonus_values[k]
 	return sum
+
+
+## Worn pieces of a set.
+func set_count(set_index: int) -> int:
+	var count := 0
+	for item in equipped:
+		if item != null and item.set_id == set_index:
+			count += 1
+	return count

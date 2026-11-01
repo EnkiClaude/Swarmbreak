@@ -2,8 +2,8 @@ class_name DungeonLayout
 extends RefCounted
 ## A dungeon's floor plan: a hallway running north from the entrance (+Z
 ## end), rooms on both sides opening onto it through doorways, and the boss
-## room across its far end. Rooms get deeper (harder, richer) toward the
-## boss. Rasterized onto the flow field's grid as a room id per cell (-1
+## room across its far end. Every room is one step deeper (harder, richer)
+## than the one before: left then right, pair by pair, toward the boss. Rasterized onto the flow field's grid as a room id per cell (-1
 ## wall, 0 hallway and doorways, 1.. rooms), with each room's door, which
 ## FlowField uses to route monsters through doors and to stop movement at
 ## walls.
@@ -35,19 +35,20 @@ func _init(def: DungeonDef) -> void:
 		var room_south := south - def.entry_length - i * def.room_length
 		var room_north := room_south - def.room_length
 		var center_z := (room_south + room_north) * 0.5
-		for side: float in [-1.0, 1.0]:
+		for side_index in 2:
+			var side := -1.0 if side_index == 0 else 1.0
 			var inner := corridor + WALL
 			var x0 := inner if side > 0.0 else -inner - def.room_width
 			# Rooms share a wall between them: shrink each by half of it.
 			rooms.append(Rect2(x0, room_north + WALL * 0.5, def.room_width,
 					def.room_length - WALL))
 			doors.append(Vector2(side * (corridor + WALL * 0.5), center_z))
-			depths.append(i)
+			depths.append(i * 2 + side_index)
 	boss_room = rooms.size()
 	var boss_half := def.boss_room_width * 0.5
 	rooms.append(Rect2(-boss_half, north, def.boss_room_width, def.boss_room_length))
 	doors.append(Vector2(0.0, boss_south))
-	depths.append(def.rooms_per_side)
+	depths.append(def.rooms_per_side * 2)
 	_door_width = def.door_width
 
 
@@ -85,6 +86,14 @@ func rasterize(origin: Vector2, cols: int, rows: int, size: float) -> PackedInt3
 		for x in cols:
 			ids[z * cols + x] = room_at(origin + Vector2((x + 0.5) * size, (z + 0.5) * size))
 	return ids
+
+
+## Room id of each point (e.g. camp centers): where each camp lives.
+func homes_for(points: PackedVector2Array) -> PackedInt32Array:
+	var homes := PackedInt32Array()
+	for p in points:
+		homes.append(room_at(p))
+	return homes
 
 
 ## Door points indexed by room id (0, the hallway, has none: zero).

@@ -7,7 +7,7 @@ extends Resource
 ## Glyphs ItemIcon can draw.
 enum Icon {
 	WAND, SWORD, STAFF, GREATSWORD, TOME, SHIELD, ROBE, PLATE, AMULET, BELT, RING, HELM, GLOVES,
-	PANTS, BOOTS, EGG,
+	PANTS, BOOTS, EGG, TALISMAN,
 }
 
 @export var display_name: String = "Wand"

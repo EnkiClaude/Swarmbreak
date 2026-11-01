@@ -85,6 +85,11 @@ func clear_rooms() -> void:
 	_goal_cell = -1
 
 
+## Room id per cell (empty without rooms). Read-only for callers.
+func room_ids() -> PackedInt32Array:
+	return _rooms
+
+
 func has_rooms() -> bool:
 	return not _rooms.is_empty()
 

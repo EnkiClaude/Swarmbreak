@@ -11,7 +11,7 @@ func _config() -> WorldConfig:
 func _swarm() -> SwarmManager:
 	var swarm := SwarmManager.new()
 	swarm.config = load("res://data/swarm.tres") as SwarmConfig
-	swarm.setup(64.0, null, null, 128, 8)
+	swarm.setup(72.0, null, null, 128, 8)
 	return swarm
 
 
@@ -250,21 +250,25 @@ func test_dungeon_is_a_hallway_with_rooms_both_sides_getting_deeper() -> void:
 		# Deeper rooms lie further from the entrance (+Z).
 		for other in layout.rooms.size():
 			if other != layout.boss_room and layout.depths[other] > layout.depths[room]:
-				check(layout.room_center(other).y < center.y, "deeper is further in")
+				check(layout.room_center(other).y <= center.y, "deeper is never nearer the door")
 	check_eq(left, def.rooms_per_side, "rooms on the left")
 	check_eq(right, def.rooms_per_side, "rooms on the right")
 	# A wall stands between the hallway and a room away from its door.
 	var room0 := layout.rooms[0]
 	var beside := Vector2(layout.doors[0].x, room0.position.y + 1.0)
 	check_eq(layout.room_at(beside), -1, "wall beside the door")
-	check(layout.half_extent() <= 64.0, "fits the flow field's grid")
+	check(layout.half_extent() <= 72.0, "fits the flow field's grid")
+	var seen := PackedInt32Array()
+	for room in layout.rooms.size():
+		check(not seen.has(layout.depths[room]), "room %d is a step of its own" % room)
+		seen.append(layout.depths[room])
 
 
 func test_monsters_route_through_doors() -> void:
 	var config := _config()
 	var map := WorldMap.new(config)
 	var layout := map.layouts[0]
-	var flow := FlowField.new(64.0, 2.0)
+	var flow := FlowField.new(72.0, 2.0)
 	flow.set_rooms(layout.rasterize(flow.origin, flow.cols, flow.rows, flow.cell_size),
 			layout.door_points())
 	# Player in room 0; a monster in room 2 heads for room 2's door first.
@@ -294,4 +298,44 @@ func test_deeper_rooms_hold_higher_level_camps() -> void:
 	var deepest := 0
 	for s in sites.size():
 		deepest = maxi(deepest, sites.depth[s])
-	check(deepest >= def.rooms_per_side - 1, "camps reach the deep rooms (%d)" % deepest)
+	check(deepest >= def.rooms_per_side * 2, "camps reach the boss room (%d)" % deepest)
+	var layout := map.layouts[0]
+	var homes := layout.homes_for(sites.centers)
+	for room in layout.rooms.size():
+		var in_room := 0
+		for s in sites.size():
+			if homes[s] == room + 1:
+				in_room += 1
+		var wanted := def.camps_per_room if room != layout.boss_room \
+				else 1 + def.boss_room_camps + def.boss_room_spawners
+		check_eq(in_room, wanted, "room %d holds its camps" % room)
+
+
+func test_room_monsters_stay_in_their_room() -> void:
+	var config := _config()
+	var map := WorldMap.new(config)
+	var layout := map.layouts[0]
+	var swarm := _swarm()
+	swarm.set_bounds(layout.half_extent())
+	# Camp 0 lives in room 0; camp 1 roams.
+	var homes := PackedInt32Array([1, 0])
+	swarm.set_layout(layout, 1.5, homes)
+	var door := layout.doors[0]
+	var inside := door + Vector2(4.0 if door.x > 0.0 else -4.0, 0.0)
+	var leashed := swarm.spawn_at(inside, 0, 0, true)
+	var free := swarm.spawn_at(inside + Vector2(0.0, 1.5), 0, 1, true)
+	check(leashed >= 0 and free >= 0, "spawned two monsters by room 0's door")
+	# The player waits in the hallway across the door: both chase.
+	var player := Vector2(0.0, door.y)
+	for _n in 240:
+		swarm.simulate(1.0 / 60.0, player, 0.5)
+		swarm.resolve_deaths()
+	var leashed_pos := swarm.state.positions[0]
+	var free_pos := swarm.state.positions[1]
+	if swarm.state.camp_ids[0] != 0:
+		var swap := leashed_pos
+		leashed_pos = free_pos
+		free_pos = swap
+	check_eq(layout.room_at(leashed_pos), 1, "the leashed one stays in its room (%s)" % leashed_pos)
+	check(layout.room_at(free_pos) != 1, "the free one walks out to the player (%s)" % free_pos)
+	swarm.free()

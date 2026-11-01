@@ -6,7 +6,7 @@ extends RefCounted
 ## or hand-edited save still loads.
 
 const VERSION := 1
-const MAX_RARITY := 2
+const MAX_RARITY := 5
 
 
 static func encode(progress: PlayerProgress, inventory: Inventory, zone_level: int) -> Dictionary:
@@ -67,7 +67,7 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 		if position >= equipped.size() or not equipped[position] is Dictionary:
 			continue
 		var item := item_from_dict(equipped[position], upgrade_max)
-		if Inventory.positions_for(item.slot).has(position):
+		if not item.is_talisman and Inventory.positions_for(item.slot).has(position):
 			inventory.equipped[position] = item
 		else:
 			unfit.append(item)
@@ -134,6 +134,11 @@ static func item_to_dict(item: ItemData) -> Dictionary:
 		"pet_type": item.pet_type,
 		"pet_level": item.pet_level,
 		"pet_xp": item.pet_xp,
+		"set_id": item.set_id,
+		"talisman": item.is_talisman,
+		"talisman_stats": Array(item.talisman_stats),
+		"talisman_values": Array(item.talisman_values),
+		"talisman_sockets_used": item.talisman_sockets_used,
 	}
 
 
@@ -158,6 +163,16 @@ static func item_from_dict(d: Dictionary, upgrade_max: int) -> ItemData:
 	item.pet_type = _int(d.get("pet_type"), -1)
 	item.pet_level = maxi(_int(d.get("pet_level"), 1), 1)
 	item.pet_xp = maxf(_float(d.get("pet_xp"), 0.0), 0.0)
+	item.set_id = maxi(_int(d.get("set_id"), -1), -1)
+	item.is_talisman = d.get("talisman", false) == true
+	var t_stats := _array(d.get("talisman_stats"))
+	var t_values := _array(d.get("talisman_values"))
+	for k in mini(t_stats.size(), t_values.size()):
+		var stat := _int(t_stats[k], -1)
+		if stat >= 0 and stat < PlayerStat.COUNT:
+			item.talisman_stats.append(stat)
+			item.talisman_values.append(_float(t_values[k], 0.0))
+	item.talisman_sockets_used = maxi(_int(d.get("talisman_sockets_used"), 0), 0)
 	return item
 
 
