@@ -22,6 +22,7 @@ const LOCATION_MESSAGE_TIME := 2.0
 @export var world_config: WorldConfig
 @export var progression_config: ProgressionConfig
 @export var skill_tree: SkillTree
+@export var attribute_table: AttributeTable
 @export var loot_config: LootConfig
 @export var job_tree: JobTree
 @export var boss_config: BossConfig
@@ -66,11 +67,12 @@ var _respawn_in := -1.0
 
 func _ready() -> void:
 	var flow_half := _swarm.config.flow_half_extent
-	progress = PlayerProgress.new(progression_config, skill_tree)
+	progress = PlayerProgress.new(progression_config, skill_tree, attribute_table)
 	inventory = Inventory.new(loot_config.backpack_size)
 	stats = PlayerStats.new(progress, skill_tree, inventory, progression_config, job_tree)
 	inventory.changed.connect(stats.recompute)
 	progress.leveled_up.connect(_on_leveled_up)
+	progress.attributes_changed.connect(stats.recompute)
 	_player.setup(_camera_rig, flow_half)
 	_player.set_stats(stats)
 	_corpses.setup(_swarm.config.enemy_types, feedback_config)
@@ -150,6 +152,7 @@ func _connect_autosave() -> void:
 	progress.leveled_up.connect(save.mark_dirty.unbind(1))
 	progress.job_changed.connect(save.mark_dirty.unbind(2))
 	progress.skills_changed.connect(save.mark_dirty)
+	progress.attributes_changed.connect(save.mark_dirty)
 	inventory.changed.connect(save.mark_dirty)
 	_menu.opened.connect(save.save_now)
 	_menu.closed.connect(save.save_now)
@@ -325,7 +328,7 @@ func _on_refined(result: Refinery.Result, _item: ItemData) -> void:
 
 
 func _on_item_picked_up(item: ItemData) -> void:
-	var equipped := inventory.equipped[item.slot] == item
+	var equipped := inventory.is_equipped(item)
 	_hud.toast("%s %s" % ["Equipped" if equipped else "Picked up", item.item_name],
 			loot_config.rarity_colors[item.rarity])
 	_feedback.item_picked_up()

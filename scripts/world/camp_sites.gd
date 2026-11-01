@@ -17,6 +17,8 @@ var has_boss := PackedByteArray()
 ## 1 = a spawner: never clears, refills one monster every spawn_interval.
 var is_spawner := PackedByteArray()
 var spawn_interval := PackedFloat32Array()
+## Seconds before a cleared camp comes back; 0 = at once, even next to the player.
+var respawn_time := PackedFloat32Array()
 
 ## Runtime.
 var state := PackedByteArray()
@@ -33,7 +35,7 @@ func size() -> int:
 
 ## Adds a site, dormant. Returns its index (the swarm camp id while active).
 func add(center: Vector2, members: int, level: int, heavy: float, boss: bool = false,
-		spawner: bool = false, interval: float = 0.0) -> int:
+		spawner: bool = false, interval: float = 0.0, respawn: float = 60.0) -> int:
 	centers.append(center)
 	sizes.append(members)
 	levels.append(level)
@@ -41,6 +43,7 @@ func add(center: Vector2, members: int, level: int, heavy: float, boss: bool = f
 	has_boss.append(1 if boss else 0)
 	is_spawner.append(1 if spawner else 0)
 	spawn_interval.append(interval)
+	respawn_time.append(respawn)
 	state.append(State.DORMANT)
 	alive.append(members)
 	awake.append(0)

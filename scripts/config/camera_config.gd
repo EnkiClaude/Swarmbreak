@@ -12,8 +12,16 @@ extends Resource
 @export var max_pitch_degrees: float = 60.0
 ## Rotation around the vertical axis after going through a gate; 0 looks toward -Z.
 @export var yaw_degrees: float = 0.0
-## Distance from the look point to the camera.
+## Distance from the look point to the camera at the closest zoom.
 @export var distance: float = 11.0
+## Distance at the farthest zoom.
+@export var max_distance: float = 30.0
+## Meters per mouse-wheel notch or D-pad press.
+@export var zoom_step: float = 2.5
+## Levels the zoom-cycle button steps through, closest to farthest.
+@export var zoom_levels: int = 3
+## Higher eases into a new zoom faster (exponential rate per second).
+@export var zoom_sharpness: float = 10.0
 ## Shortest distance the camera pulls in to when it would leave the arena.
 @export var min_distance: float = 3.0
 ## Keep the camera this far inside the arena edge, so walls don't block the view.

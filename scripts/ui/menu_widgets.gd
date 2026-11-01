@@ -1,7 +1,8 @@
 class_name MenuWidgets
 extends RefCounted
 ## Shared building blocks for the character screen: labels, buttons, section
-## titles and the rarity-bordered item style.
+## titles, the rarity-bordered item style, and item tiles and equipment slot
+## cards with drawn icons (ItemIcon).
 
 const FONT_SIZE := 22
 const SMALL_FONT := 17
@@ -46,16 +47,19 @@ static func column(parent: Container, min_width: float = 0.0) -> VBoxContainer:
 
 ## Dark card with a border in the item's rarity color; thicker and brighter
 ## when selected.
-static func style_item(button: Button, rarity_color: Color, selected: bool) -> void:
+## left_margin leaves room for an icon on the left.
+static func style_item(button: Button, rarity_color: Color, selected: bool,
+		left_margin: float = 6.0) -> void:
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = CARD_COLOR.lightened(0.12) if selected else CARD_COLOR
 	normal.border_color = rarity_color if not selected else rarity_color.lightened(0.35)
 	normal.set_border_width_all(4 if selected else 2)
 	normal.set_corner_radius_all(6)
 	normal.set_content_margin_all(6)
+	normal.content_margin_left = left_margin
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = normal.bg_color.lightened(0.08)
-	for state in ["normal", "pressed"]:
+	for state in ["normal", "pressed", "disabled"]:
 		button.add_theme_stylebox_override(state, normal)
 	for state in ["hover", "focus"]:
 		button.add_theme_stylebox_override(state, hover)
@@ -80,3 +84,50 @@ static func empty_card(text: String, size: Vector2) -> PanelContainer:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	card.add_child(l)
 	return card
+
+
+## A backpack tile: the item's icon with its refine level in the corner.
+static func item_tile(item: ItemData, loot: LootConfig, selected: bool, size: Vector2) -> Button:
+	var color := loot.rarity_colors[item.rarity]
+	var b := button("")
+	b.custom_minimum_size = size
+	style_item(b, color, selected)
+	_add_icon(b, ItemIcon.glyph_for(item, loot), color, false, Vector2(0.12, 0.08) * size.x,
+			size * 0.8)
+	if item.upgrade_level > 0:
+		var plus := label("+%d" % item.upgrade_level, SMALL_FONT - 4, Color(1.0, 0.9, 0.5))
+		plus.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		plus.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+		plus.offset_left = -30.0
+		plus.offset_top = -22.0
+		b.add_child(plus)
+	return b
+
+
+## An equipment slot card: icon on the left, the position's name over the
+## item's (or "empty", with a faint outline of what goes there).
+static func slot_card(position_name: String, item: ItemData, empty_glyph: int,
+		loot: LootConfig, selected: bool, size: Vector2) -> Button:
+	var icon_size := size.y - 12.0
+	var color := loot.rarity_colors[item.rarity] if item != null else Color(1, 1, 1, 0.3)
+	var text := position_name.to_upper() + "\n" + (item.display_name() if item != null
+			else "empty")
+	var b := button(text, SMALL_FONT - 3)
+	b.custom_minimum_size = size
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.clip_text = true
+	style_item(b, color, selected, icon_size + 14.0)
+	var glyph := ItemIcon.glyph_for(item, loot) if item != null else empty_glyph
+	_add_icon(b, glyph, color, item == null, Vector2(6.0, 6.0), Vector2(icon_size, icon_size))
+	if item == null:
+		b.focus_mode = Control.FOCUS_NONE
+		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return b
+
+
+static func _add_icon(parent: Control, glyph: int, accent: Color, faded: bool, at: Vector2,
+		size: Vector2) -> void:
+	var icon := ItemIcon.make(glyph, accent, faded)
+	icon.position = at
+	icon.size = size
+	parent.add_child(icon)

@@ -4,8 +4,11 @@ extends Node3D
 ## The rig sits at the look point above the target and is rotated by yaw then
 ## pitch; the camera hangs back along the rig's +Z. The right stick (the aim
 ## actions, which touch drives too) turns and tilts it; on desktop, clicking
-## the game captures the mouse and moving it does the same. Near the arena
-## edge the camera pulls in so it stays inside the walls.
+## the game captures the mouse and moving it does the same. The mouse wheel
+## (or D-pad up/down) zooms out from the closest distance to max_distance,
+## and the right-stick click (or Z, or the touch ZOOM button) steps through
+## zoom levels. Near the arena edge the camera pulls in so it stays inside
+## the walls.
 ##
 ## Shake uses a trauma value (0..1) that decays over time; the screen-space
 ## offset grows with trauma squared, so small hits barely move the camera and
@@ -21,6 +24,9 @@ var _shake_time := 0.0
 var _yaw := 0.0
 var _pitch := 0.0
 var _limit := INF
+## Distance the zoom is heading for, and where it is now.
+var _zoom_goal := 0.0
+var _zoom := 0.0
 
 
 func _ready() -> void:
@@ -31,6 +37,7 @@ func _ready() -> void:
 	_camera.far = config.far
 	add_child(_camera)
 	_camera.make_current()
+	reset_zoom()
 	reset_view()
 
 
@@ -55,6 +62,7 @@ func tick(delta: float) -> void:
 	var look := Input.get_vector("aim_left", "aim_right", "aim_up", "aim_down")
 	turn(-look.x * deg_to_rad(config.turn_speed) * delta,
 			look.y * deg_to_rad(config.tilt_speed) * delta)
+	_zoom = lerpf(_zoom, _zoom_goal, 1.0 - exp(-config.zoom_sharpness * delta))
 	if target != null:
 		_place(1.0 - exp(-config.follow_sharpness * delta))
 	_tick_shake(delta)
@@ -69,12 +77,49 @@ func turn(yaw_delta: float, pitch_delta: float) -> void:
 	_apply_rotation()
 
 
+## Back to the closest zoom, at once.
+func reset_zoom() -> void:
+	_zoom_goal = config.distance
+	_zoom = config.distance
+
+
+## Zooms out by steps (negative zooms in), between the closest distance and
+## max_distance.
+func zoom(steps: float) -> void:
+	_zoom_goal = clampf(_zoom_goal + steps * config.zoom_step, config.distance,
+			config.max_distance)
+
+
+## Steps out through zoom_levels evenly spaced levels, back to the closest
+## after the farthest.
+func cycle_zoom() -> void:
+	var span := config.max_distance - config.distance
+	var step := span / maxi(config.zoom_levels - 1, 1)
+	if _zoom_goal >= config.max_distance - 0.01:
+		_zoom_goal = config.distance
+	else:
+		_zoom_goal = minf(config.distance + (floorf((_zoom_goal - config.distance) / step + 0.01)
+				+ 1.0) * step, config.max_distance)
+
+
+## The distance the zoom is heading for.
+func zoom_distance() -> float:
+	return _zoom_goal
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if event.is_action_pressed("camera_zoom_in"):
+		zoom(-1.0)
+	elif event.is_action_pressed("camera_zoom_out"):
+		zoom(1.0)
+	elif event.is_action_pressed("camera_zoom_cycle"):
+		cycle_zoom()
+	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var motion := (event as InputEventMouseMotion).relative
 		var s := deg_to_rad(config.mouse_sensitivity)
 		turn(-motion.x * s, motion.y * s)
 	elif event is InputEventMouseButton and event.is_pressed() \
+			and (event as InputEventMouseButton).button_index <= MOUSE_BUTTON_MIDDLE \
 			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		# Browsers only allow pointer lock in answer to a click.
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -116,7 +161,7 @@ func _place(weight: float) -> void:
 	# Ground direction from the look point toward the camera, per meter of distance.
 	var back := -forward() * cos(_pitch)
 	_camera.position.z = clamped_distance(Vector2(global_position.x, global_position.z),
-			Vector2(back.x, back.z), config.distance, _limit, config.min_distance)
+			Vector2(back.x, back.z), _zoom, _limit, config.min_distance)
 
 
 ## How far along dir (ground offset per meter of distance) the camera can sit

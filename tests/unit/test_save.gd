@@ -58,7 +58,7 @@ func test_round_trip_keeps_everything() -> void:
 	check_eq(inv2.stones, 41, "stones")
 	var wand := inv2.equipped[AffixDef.Slot.WEAPON]
 	check(wand != null, "weapon equipped")
-	check(inv2.equipped[AffixDef.Slot.CHARM] == null, "empty slot stays empty")
+	check(inv2.equipped[AffixDef.Slot.AMULET] == null, "empty slot stays empty")
 	check_eq(inv2.backpack.size(), 1, "backpack item")
 	check_eq(wand.rarity, 2, "rarity")
 	check_eq(wand.upgrade_level, 4, "refine level")
@@ -87,7 +87,8 @@ func test_decode_tolerates_missing_and_bad_data() -> void:
 	check_eq(progress.job, -1, "unknown job dropped")
 	check_eq(progress.skill_points, 0, "negative points clamped")
 	check_eq(inventory.stones, 0, "negative stones clamped")
-	check(inventory.equipped[0] == null, "item saved under the wrong slot is dropped")
+	check(inventory.equipped[0] == null, "armor saved in the main hand isn't worn there")
+	check_eq(inventory.backpack.size(), 1, "it goes to the backpack instead")
 
 
 func test_store_writes_reads_and_quarantines_corruption() -> void:

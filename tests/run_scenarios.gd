@@ -646,6 +646,13 @@ func _character_menu() -> void:
 	var before := stats.value(PlayerStat.Id.NOVA_DAMAGE)
 	menu.rank_up(shockwave)
 	_check(stats.value(PlayerStat.Id.NOVA_DAMAGE) > before, "spending a point raised nova damage")
+	var table := _main_var("attribute_table") as AttributeTable
+	var strength: int = table.attributes[0].stats[0]
+	var str_before := stats.value(strength)
+	progress.attribute_points += 5
+	menu.raise_attribute(0, 5)
+	_check(progress.attributes[0] >= 5, "five points went into %s" % table.attributes[0].display_name)
+	_check(stats.value(strength) > str_before, "and its stat grew")
 	menu.close()
 	await _frames(2)
 	_check(not paused, "closing unpauses")
@@ -800,7 +807,7 @@ func _refining() -> void:
 		outcomes[menu.refine(item)] = true
 	menu.close()
 	_check(outcomes.has(Refinery.Result.SUCCESS), "some refines succeed")
-	_check(inventory.equipped[item.slot] == item, "the item is still equipped")
+	_check(inventory.is_equipped(item), "the item is still equipped")
 	_check(item.upgrade_level >= 0 and item.upgrade_level <= 10,
 			"level %d in range" % item.upgrade_level)
 	_check(inventory.stones < 500, "stones were spent")
@@ -818,7 +825,7 @@ func _autosave_and_load() -> void:
 	# Load the file into fresh objects, as a restart would.
 	var jobs := _main_var("job_tree") as JobTree
 	var copy := PlayerProgress.new(_main_var("progression_config") as ProgressionConfig,
-			_main_var("skill_tree") as SkillTree)
+			_main_var("skill_tree") as SkillTree, _main_var("attribute_table") as AttributeTable)
 	var copy_inventory := Inventory.new(inventory.backpack_size)
 	var store := SaveStore.new(SCENARIO_SAVE)
 	SaveCodec.decode(store.read(), copy, copy_inventory, jobs, 50, 10)
@@ -896,14 +903,14 @@ func _inventory_tab() -> void:
 	var saved_equipped := inventory.equipped.duplicate()
 	inventory.backpack.clear()
 	var worn := ItemData.new()
-	worn.slot = AffixDef.Slot.CHARM
+	worn.slot = AffixDef.Slot.AMULET
 	worn.rarity = 1
 	worn.item_name = "Old Charm"
 	worn.stats = PackedInt32Array([PlayerStat.Id.NOVA_RADIUS])
 	worn.values = PackedFloat32Array([0.05])
-	inventory.equipped[AffixDef.Slot.CHARM] = worn
+	inventory.equipped[AffixDef.Slot.AMULET] = worn
 	var better := ItemData.new()
-	better.slot = AffixDef.Slot.CHARM
+	better.slot = AffixDef.Slot.AMULET
 	better.rarity = 2
 	better.item_name = "Bright Charm"
 	better.stats = PackedInt32Array([PlayerStat.Id.NOVA_RADIUS])
@@ -932,8 +939,23 @@ func _inventory_tab() -> void:
 	var rows := ItemCompare.compare(better, worn)
 	_check(rows[0]["change"] == ItemCompare.Change.BETTER, "it compares as better")
 	menu.equip_item(better)
-	_check(inventory.equipped[AffixDef.Slot.CHARM] == better, "equipped")
+	_check(inventory.equipped[AffixDef.Slot.AMULET] == better, "equipped")
 	_check(inventory.backpack.has(worn), "old charm went to the backpack")
+	var anchor := menu.get_child(0) as Control
+	menu.show_tooltip(worn, anchor)
+	_check(menu.tooltip_showing(), "hovering an item shows its tooltip")
+	menu.hide_tooltip(anchor)
+	_check(not menu.tooltip_showing(), "and leaving hides it")
+	var rare := ItemData.new()
+	rare.slot = AffixDef.Slot.RING
+	rare.rarity = 2
+	rare.item_name = "Spare Ring"
+	inventory.backpack.append(rare)
+	_check(menu.salvage_all(-1) == 0, "salvage everything asks to confirm first")
+	var everything := menu.salvage_all(-1)
+	_check(everything > 0 and inventory.backpack.is_empty(),
+			"salvage everything took the rare too (%d stones)" % everything)
+	_check(inventory.equipped[AffixDef.Slot.AMULET] == better, "but not what's worn")
 	menu.show_tab(CharacterMenu.Tab.CHARACTER)
 	_check(menu.tab == CharacterMenu.Tab.CHARACTER, "switched tabs")
 	menu.close()

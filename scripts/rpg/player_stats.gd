@@ -1,6 +1,7 @@
 class_name PlayerStats
 extends RefCounted
-## Current stat totals from level, skill ranks, job perks and equipped items.
+## Current stat totals from level, attributes, skill ranks, job perks and
+## equipped items.
 ## Systems read these through value() and multiplier(), and the current job
 ## perks through perks; call recompute() whenever the level, skills, job or
 ## equipment change.
@@ -34,6 +35,12 @@ func recompute() -> void:
 	for skill in _tree.skills.size():
 		var def := _tree.skills[skill]
 		totals[def.stat] += def.per_rank * _progress.ranks[skill]
+	var table := _progress.attribute_table
+	if table != null:
+		for a in table.attributes.size():
+			var def := table.attributes[a]
+			for k in def.stats.size():
+				totals[def.stats[k]] += def.per_point[k] * _progress.attributes[a]
 	for stat in PlayerStat.COUNT:
 		totals[stat] += _inventory.total(stat)
 	perks = _progress.perks(_jobs) if _jobs != null else null

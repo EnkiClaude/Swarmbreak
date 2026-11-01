@@ -22,6 +22,14 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M8:** gear and stats. The camera zooms out with the mouse wheel
+  (D-pad, R3 or the touch ZOOM button). Seven equipment slots: main and off
+  hand (two-handed staves and greatblades, or a wand or blade with a tome or
+  shield), armor, amulet, belt and two rings, with eleven item kinds, drawn
+  icons and hover tooltips that compare against what you're wearing.
+  Salvage All now covers rares and everything at once. Five attributes
+  (Strength, Health, Intelligence, Wisdom, Agility) take 5 points per level.
+  Dungeon camps, bosses and spawners come back instantly.
 - **M7:** the open world. A 3x3 map of regions around the town of Jade
   Village, getting harder away from it, with seamless walking between them
   (each region's name, ground and light blend in). Camps stream in as you
@@ -59,6 +67,7 @@ and its frame rate says little about the Deck.
 |-----------------|-----------------|---------------------|
 | Move            | Left stick      | WASD / arrows       |
 | Turn camera     | Right stick     | Mouse (click to capture, Esc frees) |
+| Zoom camera     | D-pad, R3       | Mouse wheel, Z      |
 | Fire bolts      | RT (hold)       | Left mouse (hold)   |
 | Nova            | RB              | Q / right mouse     |
 | Lure            | LB              | E                   |

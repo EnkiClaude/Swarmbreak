@@ -24,16 +24,20 @@ extends Resource
 @export var heavy_chance: float = 0.25
 ## Monster contact damage multiplies by this on top of the level scaling.
 @export var damage_multiplier: float = 1.25
+## Seconds before a cleared camp (the boss's too) comes back; 0 brings it
+## back at once, even right where the player stands.
+@export var camp_respawn_time: float = 0.0
 ## A boss camp at the far end of the hall.
 @export var has_boss: bool = true
 @export var boss_camp_size: int = 24
 
 @export_group("Spawners")
 ## Spawners keep `spawner_population` monsters alive near them, one more every
-## `spawner_interval` seconds while the player is close: a farming spot.
+## `spawner_interval` seconds (0: one per frame, so instant) while the player
+## is close: a farming spot.
 @export var spawner_count: int = 2
 @export var spawner_population: int = 30
-@export var spawner_interval: float = 0.4
+@export var spawner_interval: float = 0.0
 ## Per spawner kill: chance of an item, and of a refining stone.
 @export var spawner_item_chance: float = 0.03
 @export var spawner_stone_chance: float = 0.08

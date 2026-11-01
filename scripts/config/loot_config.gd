@@ -15,7 +15,12 @@ extends Resource
 ]
 ## Affix rolls grow by this fraction per item level (camp level) above 1.
 @export var value_growth_per_zone: float = 0.15
-@export var slot_names: PackedStringArray = ["Wand", "Charm", "Vest"]
+## Base item types that can drop; each says its slot (see ItemKindDef).
+@export var item_kinds: Array[ItemKindDef] = []
+## Names of AffixDef.Slot values, for labels.
+@export var slot_names: PackedStringArray = [
+	"Weapon", "Amulet", "Armor", "Off hand", "Belt", "Ring",
+]
 @export var rare_prefixes: PackedStringArray = [
 	"Grim", "Storm", "Hollow", "Ember", "Dread", "Bright", "Iron", "Wild",
 ]

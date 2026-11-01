@@ -5,8 +5,10 @@ extends RefCounted
 ## in, sleeping sites beyond despawn_radius stream out silently, so the swarm
 ## holds a few camps at a time however big the world is. A camp sleeps until
 ## the player comes within aggro range or any member is hit; the lure wakes
-## every camp in its radius. A cleared camp comes back after
-## camp_respawn_time, never on top of the player. Spawner sites never clear:
+## every camp in its radius. A cleared camp comes back after its site's
+## respawn time, never on top of the player unless that time is 0 (dungeons:
+## the camp is back at once, asleep, and wakes if the player is near).
+## Spawner sites never clear:
 ## while the player is within spawner_range they add one awake monster every
 ## spawn_interval until back at full population, so a build that survives
 ## the crowd can farm standing still.
@@ -118,7 +120,7 @@ func record_deaths(dead: int) -> void:
 			sites.alive[s] = 0
 			sites.state[s] = CampSites.State.CLEARED
 			sites.awake[s] = 0
-			sites.timer[s] = now + _config.camp_respawn_time
+			sites.timer[s] = now + sites.respawn_time[s]
 			camp_cleared.emit(s, dead_positions[k], sites.levels[s], sites.has_boss[s] != 0)
 
 
@@ -153,8 +155,11 @@ func _stream(player_pos: Vector2, now: float) -> void:
 		var d_sq := player_pos.distance_squared_to(sites.centers[s])
 		match sites.state[s]:
 			CampSites.State.CLEARED:
-				if now >= sites.timer[s] and d_sq >= respawn_sq:
+				var instant := sites.respawn_time[s] <= 0.0
+				if now >= sites.timer[s] and (instant or d_sq >= respawn_sq):
 					sites.make_dormant(s)
+					if d_sq <= spawn_sq:
+						_spawn_site(s, now)
 			CampSites.State.DORMANT:
 				if d_sq <= spawn_sq:
 					_spawn_site(s, now)

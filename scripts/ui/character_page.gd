@@ -1,6 +1,7 @@
 class_name CharacterPage
 extends RefCounted
-## The CHARACTER tab: job path, skills, stat totals and New Game.
+## The CHARACTER tab: job path and skills on the left; attributes (spend
+## points with + and +5), stat totals and New Game on the right.
 
 const PLUS_WIDTH := 64.0
 
@@ -29,9 +30,12 @@ func build(parent: Container, confirm_new_game: bool) -> Control:
 	var right := MenuWidgets.column(columns)
 	var focus := _build_job(left)
 	var plus := _build_skills(left)
+	var raise := _build_attributes(right)
 	_build_totals(right)
 	_build_new_game(right, confirm_new_game)
-	return focus if focus != null else plus
+	if focus != null:
+		return focus
+	return raise if raise != null else plus
 
 
 func _build_job(parent: VBoxContainer) -> Control:
@@ -88,6 +92,40 @@ func _build_skills(parent: VBoxContainer) -> Control:
 		row.add_child(plus)
 		if first == null and not plus.disabled:
 			first = plus
+	return first
+
+
+func _build_attributes(parent: VBoxContainer) -> Control:
+	var table := _progress.attribute_table
+	if table == null:
+		return null
+	var points := _progress.attribute_points
+	parent.add_child(MenuWidgets.title("ATTRIBUTES   (%d point%s)" % [points,
+			"" if points == 1 else "s"]))
+	var first: Control = null
+	for a in table.attributes.size():
+		var def := table.attributes[a]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		parent.add_child(row)
+		var effects: PackedStringArray = []
+		for k in def.stats.size():
+			effects.append(PlayerStat.describe(def.stats[k], def.per_point[k]))
+		var text := "%s  %s   %d\n%s per point" % [def.short_name, def.display_name,
+				_progress.attributes[a], ", ".join(effects)]
+		var l := MenuWidgets.label(text, MenuWidgets.SMALL_FONT, def.color)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.tooltip_text = def.description
+		row.add_child(l)
+		for amount: int in [1, 5]:
+			var b := MenuWidgets.button("+" if amount == 1 else "+5")
+			b.custom_minimum_size.x = PLUS_WIDTH
+			b.disabled = points <= 0
+			_style_plus(b)
+			b.pressed.connect(_menu.raise_attribute.bind(a, amount))
+			row.add_child(b)
+			if first == null and not b.disabled:
+				first = b
 	return first
 
 

@@ -1,15 +1,20 @@
 class_name ItemData
 extends RefCounted
-## One item: a slot, a rarity, a name, the stats it rolled, and its refine
-## level. Each refine level adds upgrade_bonus to every stat.
+## One item: a kind (LootConfig.item_kinds), its slot, a rarity, a name, the
+## stats it rolled (its kind's implicit first), and its refine level. Each
+## refine level adds upgrade_bonus to every stat.
 
 ## An AffixDef.Slot value.
 var slot: int
+## Index into LootConfig.item_kinds, or -1 when unknown (very old saves).
+var kind: int = -1
+## Takes both hands: equipping it empties the off hand.
+var two_handed: bool = false
 var rarity: int
 var item_name: String
 var stats: PackedInt32Array = []
 var values: PackedFloat32Array = []
-## Zone level it dropped in.
+## Level of the camp it dropped from.
 var item_level: int = 1
 ## +0 .. LootConfig.upgrade_max.
 var upgrade_level: int = 0

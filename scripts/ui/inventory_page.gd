@@ -1,19 +1,34 @@
 class_name InventoryPage
 extends RefCounted
 ## The INVENTORY tab, in three columns:
-##   EQUIPPED - one card per slot (Wand, Charm, Vest) with its stats.
-##   BACKPACK - a grid of tiles bordered in rarity color, plus Salvage All.
-##   DETAILS  - the selected item, compared stat by stat against what is
-##              equipped in its slot, with Equip, Salvage and Upgrade.
+##   EQUIPPED - a card per position (main and off hand, armor, amulet, two
+##              rings, belt) with the item's icon.
+##   BACKPACK - a grid of icon tiles bordered in rarity color, plus Salvage
+##              All for each rarity and for everything.
+##   DETAILS  - the selected item, compared stat by stat against what wearing
+##              it would take off, with Equip (left or right for rings),
+##              Unequip, Salvage and Upgrade.
+## Hovering or focusing an item shows its tooltip (ItemTooltip) beside it.
 
-const TILE_SIZE := Vector2(104, 66)
-const GRID_COLUMNS := 4
-const CARD_HEIGHT := 60.0
-const EQUIPPED_WIDTH := 290.0
-const DETAILS_WIDTH := 360.0
-## Rarities Salvage All offers, and which need a second press to confirm.
-const SALVAGE_ALL_RARITIES: PackedInt32Array = [0, 1]
-const CONFIRM_RARITY := 1
+const TILE_SIZE := Vector2(70, 70)
+const GRID_COLUMNS := 6
+const CARD_SIZE := Vector2(170, 58)
+const EQUIPPED_WIDTH := 350.0
+const DETAILS_WIDTH := 330.0
+## Equipment positions in the order the cards show, two per row.
+const CARD_ORDER: PackedInt32Array = [
+	Inventory.Equip.MAIN_HAND, Inventory.Equip.OFF_HAND, Inventory.Equip.ARMOR,
+	Inventory.Equip.AMULET, Inventory.Equip.RING_1, Inventory.Equip.RING_2, Inventory.Equip.BELT,
+]
+## Outline shown in an empty position.
+const EMPTY_GLYPHS: PackedInt32Array = [
+	ItemKindDef.Icon.WAND, ItemKindDef.Icon.AMULET, ItemKindDef.Icon.ROBE, ItemKindDef.Icon.TOME,
+	ItemKindDef.Icon.BELT, ItemKindDef.Icon.RING, ItemKindDef.Icon.RING,
+]
+## Salvage All buttons: one per rarity, then -1 for everything. All but
+## commons need a second press to confirm.
+const SALVAGE_ALL_CHOICES: PackedInt32Array = [0, 1, 2, -1]
+const NO_CONFIRM := -2
 
 ## The selected item (equipped or in the backpack), or null.
 var selected: ItemData
@@ -25,7 +40,7 @@ var _menu: CharacterMenu
 var _inventory: Inventory
 var _loot: LootConfig
 var _refinery: Refinery
-var _confirm_rarity := -1
+var _confirm_rarity := NO_CONFIRM
 
 
 func _init(menu: CharacterMenu, inventory: Inventory, loot: LootConfig,
@@ -40,34 +55,39 @@ func _init(menu: CharacterMenu, inventory: Inventory, loot: LootConfig,
 func reset() -> void:
 	selected = null
 	result_text = ""
-	_confirm_rarity = -1
+	_confirm_rarity = NO_CONFIRM
 
 
 func select(item: ItemData) -> void:
 	selected = null if selected == item else item
 	result_text = ""
-	_confirm_rarity = -1
+	_confirm_rarity = NO_CONFIRM
 
 
 func is_equipped(item: ItemData) -> bool:
-	return item != null and _inventory.equipped[item.slot] == item
+	return _inventory.is_equipped(item)
 
 
-## Salvage All for a rarity: magic asks twice, commons go at once.
-## Returns the stones gained (0 if only asking for confirmation).
+## Salvage All for a rarity (-1: everything in the backpack). Commons go at
+## once; the rest ask twice. Returns the stones gained (0 if only asking).
 func press_salvage_all(rarity: int) -> int:
-	if rarity == CONFIRM_RARITY and _confirm_rarity != rarity:
+	if rarity != 0 and _confirm_rarity != rarity:
 		_confirm_rarity = rarity
 		return 0
-	_confirm_rarity = -1
-	if selected != null and not is_equipped(selected) and selected.rarity == rarity:
+	_confirm_rarity = NO_CONFIRM
+	if selected != null and not is_equipped(selected) and (rarity < 0 or selected.rarity == rarity):
 		selected = null
 	var preview: Array = _inventory.salvage_all_preview(rarity, _loot.salvage_stones)
 	var gained := _inventory.salvage_all(rarity, _loot.salvage_stones)
-	result_text = "Salvaged %d %s item%s for %d stones" % [preview[0],
-			_loot.rarity_names[rarity].to_lower(), "" if preview[0] == 1 else "s", gained]
+	result_text = "Salvaged %d %sitem%s for %d stones" % [preview[0],
+			_salvage_name(rarity).to_lower() + " " if rarity >= 0 else "",
+			"" if preview[0] == 1 else "s", gained]
 	result_color = Color(0.8, 0.85, 1.0)
 	return gained
+
+
+func _salvage_name(rarity: int) -> String:
+	return _loot.rarity_names[rarity] if rarity >= 0 else "Everything"
 
 
 ## Builds into parent and returns the control that should take focus.
@@ -87,25 +107,32 @@ func build(parent: Container) -> Control:
 
 func _build_equipped(parent: VBoxContainer) -> Control:
 	parent.add_child(MenuWidgets.title("EQUIPPED"))
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	parent.add_child(grid)
 	var first: Control = null
-	for slot in _inventory.equipped.size():
-		var item := _inventory.equipped[slot]
-		var slot_name := _loot.slot_names[slot].to_upper()
+	for position in CARD_ORDER:
+		var item := _inventory.equipped[position]
+		var card := MenuWidgets.slot_card(Inventory.EQUIP_NAMES[position], item,
+				EMPTY_GLYPHS[position], _loot, item != null and item == selected, CARD_SIZE)
+		grid.add_child(card)
 		if item == null:
-			parent.add_child(MenuWidgets.empty_card("%s\nempty" % slot_name,
-					Vector2(0, CARD_HEIGHT)))
 			continue
-		var card := MenuWidgets.button("%s\n%s" % [slot_name, item.display_name()])
-		card.custom_minimum_size.y = CARD_HEIGHT
-		card.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		MenuWidgets.style_item(card, _loot.rarity_colors[item.rarity], item == selected)
-		card.pressed.connect(_menu.select_item.bind(item))
-		parent.add_child(card)
-		parent.add_child(MenuWidgets.label("  " + "\n  ".join(item.describe_lines()),
-				MenuWidgets.SMALL_FONT - 2, Color(1, 1, 1, 0.75)))
+		_hook_item(card, item)
 		if first == null:
 			first = card
 	return first
+
+
+## Click selects; hover or focus shows the tooltip.
+func _hook_item(control: Button, item: ItemData) -> void:
+	control.pressed.connect(_menu.select_item.bind(item))
+	control.mouse_entered.connect(_menu.show_tooltip.bind(item, control))
+	control.focus_entered.connect(_menu.show_tooltip.bind(item, control))
+	control.mouse_exited.connect(_menu.hide_tooltip.bind(control))
+	control.focus_exited.connect(_menu.hide_tooltip.bind(control))
 
 
 func _build_backpack(parent: VBoxContainer) -> Control:
@@ -122,12 +149,8 @@ func _build_backpack(parent: VBoxContainer) -> Control:
 			grid.add_child(MenuWidgets.empty_card("", TILE_SIZE))
 			continue
 		var item := _inventory.backpack[index]
-		var plus := "  +%d" % item.upgrade_level if item.upgrade_level > 0 else ""
-		var tile := MenuWidgets.button("%s%s\n%s" % [_loot.slot_names[item.slot].to_upper(), plus,
-				_loot.rarity_names[item.rarity]], MenuWidgets.SMALL_FONT - 2)
-		tile.custom_minimum_size = TILE_SIZE
-		MenuWidgets.style_item(tile, _loot.rarity_colors[item.rarity], item == selected)
-		tile.pressed.connect(_menu.select_item.bind(item))
+		var tile := MenuWidgets.item_tile(item, _loot, item == selected, TILE_SIZE)
+		_hook_item(tile, item)
 		grid.add_child(tile)
 		if first == null:
 			first = tile
@@ -136,22 +159,28 @@ func _build_backpack(parent: VBoxContainer) -> Control:
 
 
 func _build_salvage_all(parent: VBoxContainer) -> void:
-	var row := HBoxContainer.new()
-	parent.add_child(row)
-	for rarity in SALVAGE_ALL_RARITIES:
+	parent.add_child(MenuWidgets.label("SALVAGE ALL (equipped items are never touched)",
+			MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	parent.add_child(grid)
+	for rarity in SALVAGE_ALL_CHOICES:
 		var preview: Array = _inventory.salvage_all_preview(rarity, _loot.salvage_stones)
-		var rarity_name := _loot.rarity_names[rarity].to_upper()
-		var text := "SALVAGE ALL %s\n%d items -> %d stones" % [rarity_name, preview[0], preview[1]]
+		var label := _salvage_name(rarity).to_upper()
+		var text := "%s\n%d items -> %d stones" % [label, preview[0], preview[1]]
 		if _confirm_rarity == rarity:
-			text = "TAP AGAIN TO SALVAGE\n%d %s items" % [preview[0], rarity_name.to_lower()]
-		var b := MenuWidgets.button(text, MenuWidgets.SMALL_FONT - 2)
+			text = "TAP AGAIN\nsalvage %d items" % preview[0]
+		var b := MenuWidgets.button(text, MenuWidgets.SMALL_FONT - 3)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size.y = MenuWidgets.BUTTON_HEIGHT * 1.3
+		b.custom_minimum_size.y = MenuWidgets.BUTTON_HEIGHT * 1.2
 		b.disabled = preview[0] == 0
+		var color := _loot.rarity_colors[rarity] if rarity >= 0 else Color(1.0, 0.6, 0.4)
 		b.add_theme_color_override("font_color", MenuWidgets.BAD_COLOR if _confirm_rarity == rarity
-				else _loot.rarity_colors[rarity])
+				else color)
 		b.pressed.connect(_menu.salvage_all.bind(rarity))
-		row.add_child(b)
+		grid.add_child(b)
 
 
 func _build_details(parent: VBoxContainer) -> Control:
@@ -164,64 +193,50 @@ func _build_details(parent: VBoxContainer) -> Control:
 	var item := selected
 	var color := _loot.rarity_colors[item.rarity]
 	var equipped := is_equipped(item)
-	parent.add_child(MenuWidgets.label(item.display_name(), MenuWidgets.FONT_SIZE, color))
-	parent.add_child(MenuWidgets.label("%s %s   -   item lv %d%s" % [_loot.rarity_names[item.rarity],
-			_loot.slot_names[item.slot], item.item_level, "   -   EQUIPPED" if equipped else ""],
-			MenuWidgets.SMALL_FONT - 1, MenuWidgets.DIM_COLOR))
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	parent.add_child(head)
+	var icon := ItemIcon.make(ItemIcon.glyph_for(item, _loot), color)
+	icon.custom_minimum_size = Vector2(56, 56)
+	head.add_child(icon)
+	var names := VBoxContainer.new()
+	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(names)
+	names.add_child(MenuWidgets.label(item.display_name(), MenuWidgets.FONT_SIZE - 2, color))
+	names.add_child(MenuWidgets.label(ItemTooltip.describe_kind(item, _loot) + ("   -   EQUIPPED"
+			if equipped else ""), MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
 	if equipped:
 		parent.add_child(MenuWidgets.label("  " + "\n  ".join(item.describe_lines())))
 	else:
-		_build_comparison(parent, item)
+		ItemTooltip.add_comparison(parent, item, _inventory, _loot, MenuWidgets.SMALL_FONT)
 	var focus: Control = null
-	if not equipped:
-		var row := HBoxContainer.new()
-		parent.add_child(row)
-		var equip := MenuWidgets.button("EQUIP")
-		equip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		equip.pressed.connect(_menu.equip_item.bind(item))
-		row.add_child(equip)
+	var row := HBoxContainer.new()
+	parent.add_child(row)
+	if equipped:
+		var off := MenuWidgets.button("UNEQUIP")
+		off.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		off.disabled = _inventory.backpack.size() >= _inventory.backpack_size
+		off.pressed.connect(_menu.unequip.bind(_inventory.position_of(item)))
+		row.add_child(off)
+	else:
+		for position in Inventory.positions_for(item.slot):
+			var rings := item.slot == AffixDef.Slot.RING
+			var equip := MenuWidgets.button(("EQUIP " + Inventory.EQUIP_NAMES[position].get_slice(" ",
+					0).to_upper()) if rings else "EQUIP")
+			equip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			equip.disabled = not _inventory.can_equip(item, position)
+			equip.pressed.connect(_menu.equip_item.bind(item, position))
+			row.add_child(equip)
+			if focus == null and not equip.disabled:
+				focus = equip
 		var salvage := MenuWidgets.button("SALVAGE +%d" % Inventory.salvage_value(item,
 				_loot.salvage_stones))
 		salvage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		salvage.pressed.connect(_menu.salvage_item.bind(item))
 		row.add_child(salvage)
-		focus = equip
 	var upgrade := _build_refine(parent, item)
 	_add_result(parent)
 	return focus if focus != null else upgrade
-
-
-func _build_comparison(parent: VBoxContainer, item: ItemData) -> void:
-	var current := _inventory.equipped[item.slot]
-	if current == null:
-		parent.add_child(MenuWidgets.label("Your %s slot is empty - all of this is a gain:" %
-				_loot.slot_names[item.slot].to_lower(), MenuWidgets.SMALL_FONT, MenuWidgets.DIM_COLOR))
-	else:
-		parent.add_child(MenuWidgets.label("Compared with your %s:" % current.display_name(),
-				MenuWidgets.SMALL_FONT, MenuWidgets.DIM_COLOR))
-	for row in ItemCompare.compare(item, current):
-		var stat: int = row["stat"]
-		var change: ItemCompare.Change = row["change"]
-		var text := ""
-		var color := MenuWidgets.TEXT_COLOR
-		match change:
-			ItemCompare.Change.BETTER:
-				text = "%s   (%s)" % [PlayerStat.describe(stat, row["value"]),
-						PlayerStat.describe_delta(stat, row["delta"])]
-				color = MenuWidgets.GOOD_COLOR
-			ItemCompare.Change.WORSE:
-				text = "%s   (%s)" % [PlayerStat.describe(stat, row["value"]),
-						PlayerStat.describe_delta(stat, row["delta"])]
-				color = MenuWidgets.BAD_COLOR
-			ItemCompare.Change.SAME:
-				text = "%s   (same)" % PlayerStat.describe(stat, row["value"])
-			ItemCompare.Change.GAINED:
-				text = "%s   (new)" % PlayerStat.describe(stat, row["value"])
-				color = MenuWidgets.GOOD_COLOR
-			ItemCompare.Change.LOST:
-				text = "loses %s" % PlayerStat.describe(stat, -float(row["delta"]))
-				color = MenuWidgets.BAD_COLOR
-		parent.add_child(MenuWidgets.label("  " + text, MenuWidgets.SMALL_FONT, color))
 
 
 func _build_refine(parent: VBoxContainer, item: ItemData) -> Control:
