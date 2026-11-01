@@ -1,7 +1,7 @@
 class_name ItemGenerator
 extends RefCounted
 ## Rolls random items: slot, rarity, then distinct affixes allowed in that
-## slot, with values growing with the zone level.
+## slot, with values growing with the level of the camp that dropped it.
 
 var _config: LootConfig
 var _rng := RandomNumberGenerator.new()

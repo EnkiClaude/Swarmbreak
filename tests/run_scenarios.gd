@@ -17,7 +17,8 @@ var _feedback: CombatFeedback
 var _popup: BreakPopup
 var _corpses: CorpseSystem
 var _camera: CameraRig
-var _zone: ZoneDirector
+var _world: WorldDirector
+var _camps: CampDirector
 var _slams_inside := 0
 var _slams_outside := 0
 var _slam_damage := 0.0
@@ -44,12 +45,13 @@ func _run() -> void:
 	_corpses = _main.get_node("Corpses") as CorpseSystem
 	_camera = _main.get_node("CameraRig") as CameraRig
 	await _frames(5)  # nodes finish _ready during the first frames
-	_zone = _main.get("zone") as ZoneDirector
+	_world = _main.get("world") as WorldDirector
+	_camps = _world.camps
 	_god_mode(true)
 
-	_scenario("the zone starts with sleeping camps", _zone_starts_asleep)
-	_scenario("every zone has a sleeping camp boss", _zone_has_boss)
-	_scenario("the zone is dressed in its theme", _zone_theme_applied)
+	_scenario("the game starts in town", _starts_in_town)
+	await _scenario_async("camps stream in around the player, asleep", _camps_stream_in)
+	await _scenario_async("a new region is announced and its look eases in", _region_change)
 	await _scenario_async("the right stick turns the camera and the aim follows", _camera_turns)
 	await _scenario_async("a camp wakes when the player comes near", _camp_wakes_on_approach)
 	await _scenario_async("lure wakes camps in range and hurries them", _lure_wakes_camps)
@@ -74,8 +76,11 @@ func _run() -> void:
 	await _scenario_async("a slain boss drops rare loot and stones", _boss_loot)
 	await _scenario_async("enemies hurt the player; dodging grants i-frames", _damage_and_dodge)
 	await _scenario_async("without mana the nova does not cast", _nova_needs_mana)
-	await _scenario_async("dying restarts the zone", _death_restarts_zone)
-	await _scenario_async("clearing every camp starts the next zone", _clear_advances_zone)
+	await _scenario_async("a cleared camp comes back after its timer", _camp_respawns)
+	await _scenario_async("far camps leave the swarm, near ones come in", _camps_stream_out)
+	await _scenario_async("a gate leads into a dungeon and its exit back out", _dungeon_round_trip)
+	await _scenario_async("dungeon spawners keep monsters coming", _dungeon_spawners)
+	await _scenario_async("dying sends the player back to town", _death_returns_to_town)
 	await _scenario_async("New Game erases the save and starts over", _new_game)
 
 	print("%d scenario checks failed" % _failures.size())
@@ -118,13 +123,73 @@ func _refill() -> void:
 	_player.vitals.health = _player.vitals.max_health
 
 
-func _zone_theme_applied() -> void:
-	var arena := _main.get_node("Arena") as Arena
-	var config := _main.get("zone_config") as ZoneConfig
-	_check(arena.theme == config.theme_for(_zone.level), "zone %d uses its theme" % _zone.level)
-	_check(arena.get_node_or_null("Scenery/Floor") != null, "the floor is built")
-	var env := (_main.get_node("WorldEnvironment") as WorldEnvironment).environment
-	_check(env.fog_enabled == (arena.theme.fog_density > 0.0), "the theme's fog is applied")
+func _starts_in_town() -> void:
+	_check(_world.space == WorldMap.OVERWORLD, "starts in the open world")
+	_check(_world.is_town(), "starts in town (%s)" % _world.location_name())
+	_check(_player.ground_position().distance_to(_world.map.town_spawn()) < 1.0,
+			"standing at the town spawn")
+	var overworld := _main.get_node_or_null("World/Overworld") as Node3D
+	_check(overworld != null and overworld.visible, "the open world is shown")
+	var hall := _main.get_node_or_null("World/Dungeon0") as Node3D
+	_check(hall != null and not hall.visible, "dungeons are hidden")
+	var awake := 0
+	for i in _swarm.state.count:
+		awake += _swarm.state.awake[i]
+	_check(awake == 0, "%d enemies awake in town" % awake)
+
+
+func _world_config() -> WorldConfig:
+	return _main.get("world_config") as WorldConfig
+
+
+## The open-world region (other than town) with the lowest level.
+func _easy_region() -> int:
+	var config := _world_config()
+	var best := -1
+	for r in config.regions.size():
+		if not config.regions[r].is_town \
+				and (best < 0 or config.regions[r].level < config.regions[best].level):
+			best = r
+	return best
+
+
+func _camps_stream_in() -> void:
+	var spot := _world.map.region_center(_easy_region())
+	_teleport(spot)
+	await _frames(30)
+	var sites := _camps.sites
+	var config := _world_config()
+	var expected := 0
+	var spawned := 0
+	for s in sites.size():
+		var d := sites.centers[s].distance_to(spot)
+		if sites.state[s] == CampSites.State.SPAWNED:
+			spawned += 1
+			expected += sites.alive[s]
+			_check(d <= config.despawn_radius, "site %d in the swarm is near (%.0f m)" % [s, d])
+		elif sites.state[s] == CampSites.State.DORMANT:
+			_check(d > config.spawn_radius, "site %d within reach streamed in (%.0f m)" % [s, d])
+	_check(spawned >= 3, "%d camps streamed in" % spawned)
+	_check(_swarm.enemy_count() == expected, "%d enemies vs %d camp members" % [
+			_swarm.enemy_count(), expected])
+
+
+func _region_change() -> void:
+	var town := _world.map.town_spawn()
+	_teleport(town)
+	await _frames(3)
+	_check(_world.is_town(), "back in town")
+	var region := _easy_region()
+	var hud := _main.get_node("HudLayer/Hud") as Hud
+	_teleport(_world.map.region_center(region))
+	await _frames(2)
+	_check(_world.region == region, "entered region %d (in %d)" % [region, _world.region])
+	_check(hud.banner_showing(), "the region's name is announced")
+	var theme := _world_config().regions[region].theme
+	_check(_world.atmosphere.target == theme, "the atmosphere heads for the region's look")
+	await _frames(roundi(_world_config().atmosphere_blend_time * 60.0) + 30)
+	_check(_world.atmosphere.fog_gap() < 0.001, "and settles there (gap %.4f)" %
+			_world.atmosphere.fog_gap())
 
 
 func _camera_turns() -> void:
@@ -142,22 +207,8 @@ func _camera_turns() -> void:
 	_camera.reset_view()
 
 
-func _zone_starts_asleep() -> void:
-	_check(_zone.level == 1, "starts at zone 1")
-	_check(_zone.camp_centers.size() >= 10, "%d camps placed" % _zone.camp_centers.size())
-	_check(_swarm.enemy_count() == _zone.alive_total,
-			"%d enemies vs %d camp members" % [_swarm.enemy_count(), _zone.alive_total])
-	var awake := 0
-	for i in _swarm.state.count:
-		awake += _swarm.state.awake[i]
-	_check(awake == 0, "%d enemies awake at the start" % awake)
-	for c in _zone.camp_centers:
-		if c.length() < _zone_config().safe_start_radius:
-			_check(false, "camp at %s is inside the safe start area" % c)
-
-
-func _zone_config() -> ZoneConfig:
-	return _main.get("zone_config") as ZoneConfig
+func _go_to_town() -> void:
+	_teleport(_world.map.town_spawn())
 
 
 func _teleport(to: Vector2) -> void:
@@ -172,42 +223,60 @@ func _camp_awake_members(camp: int) -> int:
 	return n
 
 
+## A camp in the swarm and still asleep, or -1.
+func _sleeping_camp(exclude: int = -1) -> int:
+	var sites := _camps.sites
+	for s in sites.size():
+		if s != exclude and sites.state[s] == CampSites.State.SPAWNED and sites.awake[s] == 0 \
+				and sites.is_spawner[s] == 0 and sites.has_boss[s] == 0:
+			return s
+	return -1
+
+
+## A spot just outside a camp's aggro range, on the side away from every other camp.
+func _beside(camp: int, gap: float) -> Vector2:
+	var center := _camps.sites.centers[camp]
+	var region_center := _world.map.region_center(_world.map.region_at(center))
+	var away := (region_center - center).normalized() if center != region_center else Vector2.RIGHT
+	return center + away * (_world_config().aggro_radius + gap)
+
+
 func _camp_wakes_on_approach() -> void:
-	var center: Vector2 = _zone.camp_centers[0]
-	var away := (Vector2.ZERO - center).normalized()
-	var aggro := _zone_config().aggro_radius
-	_teleport(center + away * (aggro + 4.0))
+	_teleport(_world.map.region_center(_easy_region()))
+	await _frames(20)
+	var camp := _sleeping_camp()
+	_check(camp >= 0, "a sleeping camp nearby")
+	if camp < 0:
+		return
+	var center := _camps.sites.centers[camp]
+	_teleport(_beside(camp, 4.0))
 	await _frames(5)
-	_check(_zone.camp_awake[0] == 0, "camp 0 stays asleep outside aggro range")
-	_teleport(center + away * (aggro - 2.0))
+	_check(_camps.sites.awake[camp] == 0, "camp stays asleep outside aggro range")
+	_teleport(center + (_beside(camp, 4.0) - center).normalized() * (_world_config().aggro_radius - 2.0))
 	await _frames(3)
-	_check(_zone.camp_awake[0] == 1, "camp 0 wakes inside aggro range")
-	_check(_camp_awake_members(0) == _zone.camp_alive[0],
-			"all %d members of camp 0 woke (%d)" % [_zone.camp_alive[0], _camp_awake_members(0)])
-	_teleport(Vector2.ZERO)
+	_check(_camps.sites.awake[camp] == 1, "camp wakes inside aggro range")
+	_check(_camp_awake_members(camp) == _camps.sites.alive[camp],
+			"all %d members woke (%d)" % [_camps.sites.alive[camp], _camp_awake_members(camp)])
+	_go_to_town()
 
 
 func _lure_wakes_camps() -> void:
-	var target := -1
-	for camp in _zone.camp_centers.size():
-		if _zone.camp_awake[camp] == 0:
-			target = camp
-			break
+	var target := _sleeping_camp()
 	_check(target >= 0, "a sleeping camp to lure")
 	if target < 0:
 		return
 	var lure: LureConfig = _player.config.lure
-	var center: Vector2 = _zone.camp_centers[target]
-	var spot := center + (Vector2.ZERO - center).normalized() * (_zone_config().aggro_radius + 6.0)
+	var center: Vector2 = _camps.sites.centers[target]
+	var spot := _beside(target, 6.0)
 	_teleport(spot)
 	await _frames(2)
-	_check(_zone.camp_awake[target] == 0, "camp still asleep before the lure")
+	_check(_camps.sites.awake[target] == 0, "camp still asleep before the lure")
 	_refill()
 	Input.action_press("skill_lure")
 	await _frames(1)
 	Input.action_release("skill_lure")
 	await _frames(1)
-	_check(_zone.camp_awake[target] == 1, "lure woke camp %d from %.0f m" % [
+	_check(_camps.sites.awake[target] == 1, "lure woke camp %d from %.0f m" % [
 			target, spot.distance_to(center)])
 	var spent := _player.vitals.max_mana - _player.vitals.mana
 	_check(spent > lure.mana_cost * 0.8, "lure cost mana (%.1f)" % spent)
@@ -216,7 +285,7 @@ func _lure_wakes_camps() -> void:
 		if _swarm.state.camp_ids[i] == target and _swarm.state.boost_until[i] > _swarm.now():
 			boosted += 1
 	_check(boosted > 0, "lured enemies are sped up")
-	_teleport(Vector2.ZERO)
+	_go_to_town()
 
 
 func _player_moves() -> void:
@@ -403,8 +472,9 @@ func _nova_needs_mana() -> void:
 	_refill()
 
 
-func _death_restarts_zone() -> void:
-	var level := _zone.level
+func _death_returns_to_town() -> void:
+	_teleport(_world.map.region_center(_easy_region()))
+	await _frames(5)
 	_god_mode(false)
 	_player.vitals.health = 1.0
 	_place_pack(_player.ground_position(), 1.6, 24)
@@ -413,23 +483,106 @@ func _death_restarts_zone() -> void:
 	_check(_popup.is_showing(), "death message shows")
 	await _frames(roundi(_player.config.respawn_delay * 60.0) + 10)
 	_check(not _player.vitals.is_dead(), "player is back after the respawn delay")
-	_check(_zone.level == level, "same zone level after dying")
-	_check(_swarm.enemy_count() == _zone.alive_total and _zone.alive_total > 0,
-			"zone camps respawned (%d)" % _swarm.enemy_count())
+	_check(_world.is_town(), "woke up in town (%s)" % _world.location_name())
+	_check(_player.vitals.health == _player.vitals.max_health, "at full health")
 	_god_mode(true)
 
 
-func _clear_advances_zone() -> void:
-	var level := _zone.level
-	var camps := _zone.camp_centers.size()
+func _camp_respawns() -> void:
+	var config := _world_config()
+	var saved_time := config.camp_respawn_time
+	config.camp_respawn_time = 0.5
+	_teleport(_world.map.region_center(_easy_region()))
+	await _frames(20)
+	var camp := _sleeping_camp()
+	_check(camp >= 0, "a camp to clear")
+	if camp >= 0:
+		for i in _swarm.state.count:
+			if _swarm.state.camp_ids[i] == camp:
+				_swarm.state.health[i] = 0.0
+		await _frames(2)
+		_check(_camps.sites.state[camp] == CampSites.State.CLEARED, "camp %d cleared" % camp)
+		_teleport(_camps.sites.centers[camp] + Vector2(config.respawn_min_distance + 6.0, 0.0))
+		await _frames(60)
+		_check(_camps.sites.state[camp] == CampSites.State.SPAWNED,
+				"camp %d came back (state %d)" % [camp, _camps.sites.state[camp]])
+	config.camp_respawn_time = saved_time
+
+
+func _camps_stream_out() -> void:
+	var config := _world_config()
+	var near := _world.map.region_center(_easy_region())
+	_teleport(near)
+	await _frames(20)
+	var before := _swarm.enemy_count()
+	# Opposite side of the world: the old camps (asleep) leave.
+	_teleport(-near)
+	await _frames(20)
+	var sites := _camps.sites
+	for s in sites.size():
+		if sites.state[s] == CampSites.State.SPAWNED and sites.awake[s] == 0:
+			_check(sites.centers[s].distance_to(-near) <= config.despawn_radius,
+					"sleeping site %d out of range left" % s)
+	_check(before > 0, "there were camps before (%d)" % before)
+
+
+func _dungeon_round_trip() -> void:
+	var map := _world.map
+	_teleport(map.gate_exit_point(0))
+	await _frames(5)
+	_teleport(map.gate_position(0))
+	var config := _world_config()
+	await _frames(roundi(config.fade_time * 60.0) * 2 + 20)
+	_check(_world.space == 0, "inside dungeon 0 (space %d)" % _world.space)
+	_check(not _world.is_travelling() and _world.fade == 0.0, "faded back in")
+	_check(_player.ground_position().distance_to(map.arrival_point(0)) < 1.0,
+			"standing at the arrival point")
+	var hall := _main.get_node("World/Dungeon0") as Node3D
+	var overworld := _main.get_node("World/Overworld") as Node3D
+	_check(hall.visible and not overworld.visible, "only the dungeon is shown")
+	_check(_world.level() == config.dungeons[0].level, "dungeon level applies")
+	_check(_swarm.damage_multiplier > 1.0, "dungeon monsters hit harder (%.2f)" %
+			_swarm.damage_multiplier)
+	_check(_swarm.enemy_count() > 0, "dungeon camps streamed in (%d)" % _swarm.enemy_count())
+	_teleport(map.exit_position(0))
+	await _frames(roundi(config.fade_time * 60.0) * 2 + 20)
+	_check(_world.space == WorldMap.OVERWORLD, "back in the open world")
+	_check(_player.ground_position().distance_to(map.gate_exit_point(0)) < 1.0,
+			"standing outside the gate")
+
+
+func _dungeon_spawners() -> void:
+	var map := _world.map
+	_world.enter(0, map.arrival_point(0))
+	await _frames(5)
+	var sites := _camps.sites
+	var spawner := -1
+	for s in sites.size():
+		if sites.is_spawner[s] != 0:
+			spawner = s
+			break
+	_check(spawner >= 0, "the dungeon has a spawner")
+	if spawner < 0:
+		return
+	_teleport(sites.centers[spawner] + Vector2(signf(-sites.centers[spawner].x) * 6.0, 0.0))
+	await _frames(120)
+	var count := _members_of(spawner)
+	_check(count >= 4, "the spawner filled up (%d)" % count)
 	for i in _swarm.state.count:
-		_swarm.state.health[i] = 0.0
-	await _frames(3)
-	_check(_zone.is_cleared(), "zone cleared once every camp member is dead")
-	await _frames(150)
-	_check(_zone.level == level + 1, "moved on to zone %d (at %d)" % [level + 1, _zone.level])
-	_check(_zone.camp_centers.size() > camps, "the next zone has more camps (%d > %d)" % [
-			_zone.camp_centers.size(), camps])
+		if _swarm.state.camp_ids[i] == spawner:
+			_swarm.state.health[i] = 0.0
+	await _frames(60)
+	_check(_members_of(spawner) >= 1, "and new ones came at once (%d)" % _members_of(spawner))
+	_world.return_to_town()
+	await _frames(2)
+
+
+func _members_of(camp: int) -> int:
+	var n := 0
+	for i in _swarm.state.count:
+		if _swarm.state.camp_ids[i] == camp:
+			n += 1
+	return n
 
 
 func _main_var(name: String) -> Variant:
@@ -439,11 +592,9 @@ func _main_var(name: String) -> Variant:
 func _camp_drops_loot() -> void:
 	var loot := _main.get_node("Loot") as LootSystem
 	var inventory := _main_var("inventory") as Inventory
-	var camp := -1
-	for c in _zone.camp_centers.size():
-		if _zone.camp_alive[c] > 0 and not _camp_has_boss(c):
-			camp = c
-			break
+	_teleport(_world.map.region_center(_easy_region()))
+	await _frames(20)
+	var camp := _sleeping_camp()
 	_check(camp >= 0, "a camp to clear")
 	if camp < 0:
 		return
@@ -454,7 +605,7 @@ func _camp_drops_loot() -> void:
 			at = _swarm.state.positions[i]
 	var before := loot.ground_count()
 	await _frames(2)
-	_check(_zone.camp_alive[camp] == 0, "camp %d cleared" % camp)
+	_check(_camps.sites.alive[camp] == 0, "camp %d cleared" % camp)
 	var dropped := loot.ground_count() - before
 	_check(dropped >= 1, "camp dropped %d items" % dropped)
 	var held := inventory.backpack.size()
@@ -469,7 +620,7 @@ func _camp_drops_loot() -> void:
 			now_held += 1
 	_check(now_held >= held + dropped, "walked over the loot and picked up %d" % (now_held - held))
 	_check(loot.ground_count() == before, "nothing left on the ground")
-	_teleport(Vector2.ZERO)
+	_go_to_town()
 
 
 func _character_menu() -> void:
@@ -534,14 +685,6 @@ func _camp_has_boss(camp: int) -> bool:
 	return false
 
 
-func _zone_has_boss() -> void:
-	var bosses := _bosses()
-	_check(bosses.count() >= 1, "%d bosses in zone 1" % bosses.count())
-	var i := bosses.index_of(0)
-	_check(i >= 0 and _swarm.state.awake[i] == 0, "the boss sleeps with its camp")
-	_check(_swarm.state.health[i] > 400.0, "bosses are tough (%.0f hp)" % _swarm.state.health[i])
-
-
 ## Clears the swarm and spawns one lone, awake boss next to the player.
 func _lone_boss(offset: Vector2) -> int:
 	var bosses := _bosses()
@@ -591,7 +734,7 @@ func _boss_slam() -> void:
 	bosses.slammed.disconnect(_on_test_slam)
 	_god_mode(true)
 	_refill()
-	_teleport(Vector2.ZERO)
+	_go_to_town()
 
 
 func _boss_loot() -> void:
@@ -613,7 +756,7 @@ func _boss_loot() -> void:
 		if item != null and item.rarity >= 2:
 			rare = true
 	_check(rare, "a rare item from the boss is in the inventory")
-	_teleport(Vector2.ZERO)
+	_go_to_town()
 
 
 func _stormcaller_aftershocks() -> void:
@@ -678,8 +821,7 @@ func _autosave_and_load() -> void:
 			_main_var("skill_tree") as SkillTree)
 	var copy_inventory := Inventory.new(inventory.backpack_size)
 	var store := SaveStore.new(SCENARIO_SAVE)
-	var zone := SaveCodec.decode(store.read(), copy, copy_inventory, jobs, 50, 10)
-	_check(zone == _zone.level, "saved zone %d (playing %d)" % [zone, _zone.level])
+	SaveCodec.decode(store.read(), copy, copy_inventory, jobs, 50, 10)
 	_check(copy.level == progress.level and copy.job == progress.job,
 			"level %d and job %d restored" % [copy.level, copy.job])
 	_check(copy_inventory.stones == inventory.stones, "stones restored")
@@ -706,7 +848,7 @@ func _new_game() -> void:
 	_check(not menu.is_open() and not paused, "confirmed: menu closed, game running")
 	_check(progress.level == 1 and progress.job == -1, "back to a level 1 character")
 	_check(inventory.stones == 0 and inventory.backpack.is_empty(), "inventory emptied")
-	_check(_zone.level == 1, "back to zone 1")
+	_check(_world.is_town(), "back in town")
 	var data := SaveStore.new(SCENARIO_SAVE).read()
 	_check(int(data.get("progress", {}).get("level", 0)) == 1, "the save was overwritten")
 

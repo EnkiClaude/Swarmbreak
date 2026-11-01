@@ -1,10 +1,11 @@
 class_name ArenaProps
 extends RefCounted
-## Builds a zone's static props from its ZoneTheme, one MultiMeshInstance3D
-## per mesh kind: pillars with bases and capitals along the inside of the
-## walls, glowing lanterns on some of them, and houses with stacked roofs and
-## trees outside the walls. Props are scenery only: enemies and the player
-## never collide with them, which is why none stand inside the arena.
+## Builds static props from a ZoneTheme, one MultiMeshInstance3D per mesh
+## kind: pillars with bases and capitals along the inside of the walls,
+## glowing lanterns on some of them, and houses with stacked roofs and trees
+## outside the walls. Props are scenery only: enemies and the player never
+## collide with them, which is why none stand inside a hall. The house, tree
+## and batch helpers are shared with the open world's scenery.
 
 const PILLAR_SEGMENTS := 12
 const LANTERN_SEGMENTS := 8
@@ -17,15 +18,24 @@ const PLACEMENT_TRIES := 30
 
 static func build(parent: Node3D, theme: ZoneTheme, half_extent: float, wall_thickness: float,
 		rng: RandomNumberGenerator) -> void:
-	var lit := _lit_material()
-	var glow := _glow_material()
+	var lit := lit_material()
+	var glow := glow_material()
 	if theme.pillar_spacing > 0.0:
 		_build_pillars(parent, theme, half_extent, lit, glow)
 	var taken: Array[Vector2] = []
-	if theme.house_count > 0:
-		_build_houses(parent, theme, half_extent + wall_thickness, rng, lit, taken)
-	if theme.tree_count > 0:
-		_build_trees(parent, theme, half_extent + wall_thickness, rng, lit, taken)
+	var inner := half_extent + wall_thickness
+	var houses: Array[Vector2] = []
+	for n in theme.house_count:
+		var at := outside_spot(inner, theme.outside_reach, rng, taken)
+		if not is_nan(at.x):
+			houses.append(at)
+	add_houses(parent, theme, houses, Vector2.ZERO, rng, lit)
+	var trees: Array[Vector2] = []
+	for n in theme.tree_count:
+		var at := outside_spot(inner, theme.outside_reach, rng, taken)
+		if not is_nan(at.x):
+			trees.append(at)
+	add_trees(parent, theme, trees, rng, lit)
 
 
 ## Ground positions where pillars stand, just inside the walls.
@@ -65,41 +75,39 @@ static func _build_pillars(parent: Node3D, theme: ZoneTheme, half_extent: float,
 			var at := p + inward * (r + 0.45)
 			lanterns.append(Transform3D(Basis.from_scale(Vector3(0.38, 0.7, 0.38)),
 					Vector3(at.x, height * 0.55, at.y)))
-	_add_batch(parent, "Pillars", _cylinder(1.0, 1.0, PILLAR_SEGMENTS, lit), shafts,
+	add_batch(parent, "Pillars", cylinder(1.0, 1.0, PILLAR_SEGMENTS, lit), shafts,
 			theme.pillar_color, true)
-	_add_batch(parent, "PillarTrims", _box(lit), trims, theme.pillar_trim_color, true)
+	add_batch(parent, "PillarTrims", box(lit), trims, theme.pillar_trim_color, true)
 	if not lanterns.is_empty():
-		_add_batch(parent, "Lanterns", _cylinder(0.8, 1.0, LANTERN_SEGMENTS, glow), lanterns,
+		add_batch(parent, "Lanterns", cylinder(0.8, 1.0, LANTERN_SEGMENTS, glow), lanterns,
 				theme.lantern_color, false)
 
 
-static func _build_houses(parent: Node3D, theme: ZoneTheme, inner: float,
-		rng: RandomNumberGenerator, lit: Material, taken: Array[Vector2]) -> void:
+## Houses at the given spots, each turned to face `facing`. Half get a
+## second, smaller story.
+static func add_houses(parent: Node3D, theme: ZoneTheme, spots: Array[Vector2], facing: Vector2,
+		rng: RandomNumberGenerator, lit: Material) -> void:
 	var bodies: Array[Transform3D] = []
 	var roofs: Array[Transform3D] = []
-	for n in theme.house_count:
-		var at := outside_spot(inner, theme.outside_reach, rng, taken)
-		if is_nan(at.x):
-			continue
+	for at in spots:
 		var w := rng.randf_range(6.0, 10.0)
 		var d := rng.randf_range(5.0, 8.0)
 		var tall := rng.randf_range(3.0, 4.2)
-		var yaw := atan2(at.x, at.y)  # face the arena
-		var turn := Basis(Vector3.UP, yaw)
+		var toward := facing - at
+		var turn := Basis(Vector3.UP, atan2(-toward.x, -toward.y))
 		var origin := Vector3(at.x, 0.0, at.y)
 		bodies.append(Transform3D(turn * Basis.from_scale(Vector3(w, tall, d)),
 				origin + Vector3(0.0, tall * 0.5, 0.0)))
 		roofs.append(_roof(turn, origin + Vector3(0.0, tall, 0.0), w * 1.35, d * 1.4, tall * 0.55))
 		if rng.randf() < 0.5:
-			# A second, smaller story with its own roof.
 			var upper := tall * 0.7
 			var base_y := tall + tall * 0.35
 			bodies.append(Transform3D(turn * Basis.from_scale(Vector3(w * 0.55, upper, d * 0.55)),
 					origin + Vector3(0.0, base_y + upper * 0.5, 0.0)))
 			roofs.append(_roof(turn, origin + Vector3(0.0, base_y + upper, 0.0), w * 0.85, d * 0.9,
 					upper * 0.6))
-	_add_batch(parent, "Houses", _box(lit), bodies, theme.house_color, true)
-	_add_batch(parent, "Roofs", _cylinder(0.0, 1.0, 4, lit), roofs, theme.roof_color, true)
+	add_batch(parent, "Houses", box(lit), bodies, theme.house_color, true)
+	add_batch(parent, "Roofs", cylinder(0.0, 1.0, 4, lit), roofs, theme.roof_color, true)
 
 
 ## A four-sided pyramid roof of the given footprint, sitting on base.
@@ -112,15 +120,14 @@ static func _roof(turn: Basis, base: Vector3, width: float, depth: float, height
 			base + Vector3(0.0, height * 0.5, 0.0))
 
 
-static func _build_trees(parent: Node3D, theme: ZoneTheme, inner: float,
-		rng: RandomNumberGenerator, lit: Material, taken: Array[Vector2]) -> void:
+## Trees at the given spots: leafy, or bare with three branches when the
+## theme's leaf color is fully transparent.
+static func add_trees(parent: Node3D, theme: ZoneTheme, spots: Array[Vector2],
+		rng: RandomNumberGenerator, lit: Material) -> void:
 	var trunks: Array[Transform3D] = []
 	var canopies: Array[Transform3D] = []
 	var bare := theme.leaf_color.a <= 0.0
-	for n in theme.tree_count:
-		var at := outside_spot(inner, theme.outside_reach, rng, taken)
-		if is_nan(at.x):
-			continue
+	for at in spots:
 		var tall := rng.randf_range(3.5, 6.5)
 		var r := rng.randf_range(0.22, 0.4)
 		var origin := Vector3(at.x, 0.0, at.y)
@@ -138,9 +145,8 @@ static func _build_trees(parent: Node3D, theme: ZoneTheme, inner: float,
 			var spread := rng.randf_range(2.0, 3.2)
 			canopies.append(Transform3D(Basis.from_scale(Vector3(spread, spread * 0.75, spread)),
 					origin + Vector3(0.0, tall + spread * 0.3, 0.0)))
-	_add_batch(parent, "Trunks", _cylinder(0.7, 1.0, 6, lit), trunks, theme.trunk_color, true)
-	if not canopies.is_empty():
-		_add_batch(parent, "Canopies", _sphere(lit), canopies, theme.leaf_color, true)
+	add_batch(parent, "Trunks", cylinder(0.7, 1.0, 6, lit), trunks, theme.trunk_color, true)
+	add_batch(parent, "Canopies", sphere(lit), canopies, theme.leaf_color, true)
 
 
 ## A random spot in the ring outside the walls, at least OUTSIDE_SPACING from
@@ -164,7 +170,7 @@ static func outside_spot(inner: float, reach: float, rng: RandomNumberGenerator,
 	return Vector2(NAN, NAN)
 
 
-static func _add_batch(parent: Node3D, batch_name: String, mesh: Mesh,
+static func add_batch(parent: Node3D, batch_name: String, mesh: Mesh,
 		transforms: Array[Transform3D], color: Color, shadows: bool) -> void:
 	if transforms.is_empty():
 		return
@@ -184,7 +190,7 @@ static func _add_batch(parent: Node3D, batch_name: String, mesh: Mesh,
 	parent.add_child(instance)
 
 
-static func _lit_material() -> StandardMaterial3D:
+static func lit_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.vertex_color_use_as_albedo = true
 	material.vertex_color_is_srgb = true
@@ -193,7 +199,7 @@ static func _lit_material() -> StandardMaterial3D:
 
 
 ## Unshaded and drawn brighter than its color, so the glow picks it up.
-static func _glow_material() -> StandardMaterial3D:
+static func glow_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.vertex_color_use_as_albedo = true
@@ -203,7 +209,7 @@ static func _glow_material() -> StandardMaterial3D:
 
 
 ## Unit-height cylinder centered on its origin.
-static func _cylinder(top: float, bottom: float, segments: int, material: Material) -> Mesh:
+static func cylinder(top: float, bottom: float, segments: int, material: Material) -> Mesh:
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = top
 	mesh.bottom_radius = bottom
@@ -214,14 +220,14 @@ static func _cylinder(top: float, bottom: float, segments: int, material: Materi
 	return mesh
 
 
-static func _box(material: Material) -> Mesh:
+static func box(material: Material) -> Mesh:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3.ONE
 	mesh.material = material
 	return mesh
 
 
-static func _sphere(material: Material) -> Mesh:
+static func sphere(material: Material) -> Mesh:
 	var mesh := SphereMesh.new()
 	mesh.radius = 1.0
 	mesh.height = 2.0

@@ -1,29 +1,26 @@
 class_name Arena
 extends Node3D
-## Builds the zone's scenery from a ZoneTheme: the floor (reaching past the
-## walls for outdoor zones), the four walls with trim bands, an optional
-## ceiling, the props (ArenaProps) and the sky, fog and light
-## (ArenaAtmosphere). apply_theme() rebuilds it all; call it at zone start,
-## never during combat.
+## A walled hall built from a ZoneTheme (a dungeon): the floor (reaching past
+## the walls when it has no ceiling), the four walls with trim bands, an
+## optional ceiling and the props (ArenaProps). Built once at load; the sky,
+## fog and light come from WorldAtmosphere.
 
 const FLOOR_SHADER := preload("res://shaders/zone_floor.gdshader")
 const TRIM_HEIGHT := 0.5
 const TRIM_DEPTH := 0.15
 
-@export var config: ArenaConfig
-
-## The theme applied last, or null.
 var theme: ZoneTheme
+var half_extent := 40.0
+var wall_thickness := 0.8
 var _scenery: Node3D
 
 
-## seed makes prop placement repeatable per zone level.
-func apply_theme(new_theme: ZoneTheme, environment: Environment, sun: DirectionalLight3D,
+## seed makes prop placement repeatable.
+func build(p_theme: ZoneTheme, p_half_extent: float, p_wall_thickness: float,
 		seed_value: int = 0) -> void:
-	theme = new_theme
-	if _scenery != null:
-		remove_child(_scenery)
-		_scenery.queue_free()
+	theme = p_theme
+	half_extent = p_half_extent
+	wall_thickness = p_wall_thickness
 	_scenery = Node3D.new()
 	_scenery.name = "Scenery"
 	add_child(_scenery)
@@ -33,13 +30,11 @@ func apply_theme(new_theme: ZoneTheme, environment: Environment, sun: Directiona
 		_build_ceiling()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
-	ArenaProps.build(_scenery, theme, config.half_extent, config.wall_thickness, rng)
-	if environment != null and sun != null:
-		ArenaAtmosphere.apply(theme, environment, sun)
+	ArenaProps.build(_scenery, theme, half_extent, wall_thickness, rng)
 
 
 func _build_floor() -> void:
-	var reach := config.half_extent + (theme.outside_reach if theme.ceiling_height <= 0.0 else 2.0)
+	var reach := half_extent + (theme.outside_reach if theme.ceiling_height <= 0.0 else 2.0)
 	var plane := PlaneMesh.new()
 	plane.size = Vector2.ONE * reach * 2.0
 	var material := ShaderMaterial.new()
@@ -63,11 +58,18 @@ func _build_floor() -> void:
 
 
 func _build_walls() -> void:
-	var wall := _material(theme.wall_color)
-	var trim := _material(theme.wall_trim_color)
-	var h := config.half_extent
-	var t := config.wall_thickness
-	var height := theme.wall_height
+	add_walls(_scenery, half_extent, wall_thickness, theme.wall_height, theme.wall_color,
+			theme.wall_trim_color)
+
+
+## Four walls around -half_extent..half_extent with trim bands at the bottom
+## and top. Shared with the open world's edge.
+static func add_walls(parent: Node3D, half: float, thickness: float, height: float,
+		color: Color, trim_color: Color) -> void:
+	var wall := _material(color)
+	var trim := _material(trim_color)
+	var h := half
+	var t := thickness
 	var offset := h + t * 0.5
 	var length := h * 2.0 + t * 2.0
 	for side in 4:
@@ -79,14 +81,14 @@ func _build_walls() -> void:
 		var trim_size := size + (Vector3(0.0, 0.0, TRIM_DEPTH * 2.0) if along_x
 				else Vector3(TRIM_DEPTH * 2.0, 0.0, 0.0))
 		trim_size.y = minf(TRIM_HEIGHT, height * 0.4)
-		_add_box(size, at + Vector3(0.0, height * 0.5, 0.0), wall)
-		_add_box(trim_size, at + Vector3(0.0, trim_size.y * 0.5, 0.0), trim)
-		_add_box(trim_size, at + Vector3(0.0, height - trim_size.y * 0.5, 0.0), trim)
+		_add_box(parent, size, at + Vector3(0.0, height * 0.5, 0.0), wall)
+		_add_box(parent, trim_size, at + Vector3(0.0, trim_size.y * 0.5, 0.0), trim)
+		_add_box(parent, trim_size, at + Vector3(0.0, height - trim_size.y * 0.5, 0.0), trim)
 
 
 func _build_ceiling() -> void:
 	var plane := PlaneMesh.new()
-	plane.size = Vector2.ONE * (config.half_extent + config.wall_thickness) * 2.0
+	plane.size = Vector2.ONE * (half_extent + wall_thickness) * 2.0
 	plane.flip_faces = true
 	plane.material = _material(theme.ceiling_color)
 	var ceiling := MeshInstance3D.new()
@@ -97,14 +99,14 @@ func _build_ceiling() -> void:
 	_scenery.add_child(ceiling)
 
 
-func _add_box(size: Vector3, at: Vector3, material: Material) -> void:
+static func _add_box(parent: Node3D, size: Vector3, at: Vector3, material: Material) -> void:
 	var box := BoxMesh.new()
 	box.size = size
 	box.material = material
 	var instance := MeshInstance3D.new()
 	instance.mesh = box
 	instance.position = at
-	_scenery.add_child(instance)
+	parent.add_child(instance)
 
 
 static func _material(color: Color) -> StandardMaterial3D:

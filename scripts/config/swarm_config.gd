@@ -19,6 +19,9 @@ extends Resource
 @export var max_attackers: int = 10
 ## Flow field cell edge in meters.
 @export var flow_cell_size: float = 2.0
+## The flow field covers a square this many meters from its center; in a
+## bigger space it follows the player.
+@export var flow_half_extent: float = 64.0
 ## Inside this distance enemies steer straight at the player instead of the field.
 ## Separation considers at most this many neighbours per enemy. Lower is
 ## cheaper in dense packs but lets crowds compress more.

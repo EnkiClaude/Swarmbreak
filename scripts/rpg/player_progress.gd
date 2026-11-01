@@ -1,7 +1,7 @@
 class_name PlayerProgress
 extends RefCounted
 ## Level, XP and skill points, how many points sit in each skill, and the
-## chosen job and its rank. Survives death and zone changes.
+## chosen job and its rank. Survives death and travel.
 
 signal leveled_up(level: int)
 signal job_changed(job: int, rank: int)

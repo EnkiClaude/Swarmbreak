@@ -1,38 +1,46 @@
 class_name HudMinimap
 extends RefCounted
 ## Draws the round minimap: the area around the player turned so the
-## camera's view points up, the arena walls as a dotted line, camps as dots
-## (pinned to the rim when out of range), the player as an arrow, a faint
-## view cone, and a bronze rim with a marker for north.
+## camera's view points up, the space's outer walls as a dotted line, camps
+## in range as dots, gates as diamonds (pinned to the rim when out of range,
+## so a dungeon is easy to find), the player as an arrow, a faint view cone,
+## and a bronze rim with a marker for north.
 
 const WALL_DOT_SPACING := 4.0
 const RIM_WIDTH := 6.0
 const VIEW_CONE_DEGREES := 30.0
 const NORTH_PLATE_RADIUS := 10.0
 const FONT_SIZE := 14
+const GATE_SIZE := 5.0
 
 
 ## yaw is the camera's (CameraRig.yaw()); facing the player's ground direction.
-static func draw(canvas: CanvasItem, center: Vector2, config: HudConfig, zone: ZoneDirector,
-		player_pos: Vector2, facing: Vector2, yaw: float, half_extent: float) -> void:
+static func draw(canvas: CanvasItem, center: Vector2, config: HudConfig, world: WorldDirector,
+		player_pos: Vector2, facing: Vector2, yaw: float) -> void:
 	var r := config.minimap_radius
 	var scale_factor := r / config.minimap_range
 	canvas.draw_circle(center, r, config.minimap_back_color)
 	_draw_view_cone(canvas, center, r, config.minimap_player_color)
-	_draw_walls(canvas, center, r, scale_factor, player_pos, yaw, half_extent,
-			config.minimap_wall_color)
-	if zone != null:
-		for camp in zone.camp_centers.size():
-			if zone.camp_alive[camp] <= 0:
+	if world != null:
+		_draw_walls(canvas, center, r, scale_factor, player_pos, yaw,
+				world.map.half_extent(world.space), config.minimap_wall_color)
+		var sites := world.camps.sites
+		var site_count := sites.size() if sites != null else 0
+		for camp in site_count:
+			if sites.alive[camp] <= 0:
 				continue
-			var at := to_map(zone.camp_centers[camp], player_pos, yaw, scale_factor)
-			var dot := clampf(sqrt(float(zone.camp_alive[camp])) * 0.7, 2.0, 6.0)
+			var at := to_map(sites.centers[camp], player_pos, yaw, scale_factor)
+			var dot := clampf(sqrt(float(sites.alive[camp])) * 0.7, 2.0, 6.0)
 			if at.length() > r - dot - 2.0:
-				at = at.normalized() * (r - 5.0)
-				dot = 2.5
-			var color := config.minimap_awake_color if zone.camp_awake[camp] != 0 \
+				continue
+			var color := config.minimap_awake_color if sites.awake[camp] != 0 \
 					else config.minimap_camp_color
 			canvas.draw_circle(center + at, dot, color)
+		for gate in world.gate_positions():
+			var at := to_map(gate, player_pos, yaw, scale_factor)
+			if at.length() > r - 7.0:
+				at = at.normalized() * (r - 7.0)
+			_draw_gate(canvas, center + at, config.frame_color)
 	_draw_player(canvas, center, facing.rotated(yaw), config.minimap_player_color)
 	canvas.draw_arc(center, r, 0.0, TAU, 64, config.minimap_ring_color, RIM_WIDTH, true)
 	canvas.draw_arc(center, r + RIM_WIDTH * 0.5, 0.0, TAU, 64, config.frame_color, 1.5, true)
@@ -71,6 +79,14 @@ static func _draw_walls(canvas: CanvasItem, center: Vector2, r: float, scale_fac
 			var at := to_map(wall, player_pos, yaw, scale_factor)
 			if at.length() < r - 3.0:
 				canvas.draw_circle(center + at, 1.2, color)
+
+
+static func _draw_gate(canvas: CanvasItem, at: Vector2, color: Color) -> void:
+	var s := GATE_SIZE
+	canvas.draw_colored_polygon(PackedVector2Array([at + Vector2(0.0, -s), at + Vector2(s, 0.0),
+			at + Vector2(0.0, s), at + Vector2(-s, 0.0)]), color)
+	canvas.draw_polyline(PackedVector2Array([at + Vector2(0.0, -s), at + Vector2(s, 0.0),
+			at + Vector2(0.0, s), at + Vector2(-s, 0.0), at + Vector2(0.0, -s)]), Color.BLACK, 1.0)
 
 
 static func _draw_player(canvas: CanvasItem, center: Vector2, dir: Vector2, color: Color) -> void:

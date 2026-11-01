@@ -22,6 +22,14 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M7:** the open world. A 3x3 map of regions around the town of Jade
+  Village, getting harder away from it, with seamless walking between them
+  (each region's name, ground and light blend in). Camps stream in as you
+  approach and come back a minute after you clear them. Two dungeons behind
+  gates (Crimson Sanctum, Moonstone Crypt) hold tougher monsters, better
+  drops, a boss, and spawners that refill at once for farming. Dying sends
+  you back to town. On the web build, `?region=0` to `?region=8` or
+  `?dungeon=1` / `?dungeon=2` jump straight there.
 - **M6:** the eastern-fantasy look. A third-person camera behind the
   player that the right stick (or the captured mouse) turns; five zone
   themes in turn (Jade Village, Vermilion Hall, Moonstone Crypt, Sunscorched
@@ -29,8 +37,7 @@ and its frame rate says little about the Deck.
   houses, trees, fog and light; lightning on the nova, fire bursts, pillars
   of light and floating damage numbers; a framed character panel, a round
   minimap that turns with the camera, and a skill column with cooldowns.
-  All art is original and generated in code. On the web build,
-  `?zone=3` (for example) jumps to a zone to preview it.
+  All art is original and generated in code.
 - **M5:** saving. Autosaves your character, gear and zone; reload to carry
   on; New Game on the character screen starts over.
 - **M4:** jobs, bosses and refining. Choose a path at level 10 (Stormcaller,

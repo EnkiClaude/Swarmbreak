@@ -40,6 +40,11 @@ func setup(config: BoltConfig, effects: EffectSystem, arena_half_extent: float) 
 	add_child(_batch)
 
 
+## Bolts leaving -half_extent..half_extent vanish.
+func set_bounds(half_extent: float) -> void:
+	_half_extent = half_extent
+
+
 ## Fires one bolt from origin along direction (unit, XZ plane). False if the pool is full.
 func fire(origin: Vector2, direction: Vector2) -> bool:
 	if not _pool.spawn(origin + direction * _config.muzzle_offset, direction * _config.speed,

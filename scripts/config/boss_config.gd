@@ -1,17 +1,13 @@
 class_name BossConfig
 extends Resource
-## Camp bosses: which camps get one, how tough they are and their ground slam.
+## Camp bosses: how tough they are, their ground slam and their rewards.
 
 @export var display_name: String = "Camp Warlord"
 ## Index of the boss in SwarmConfig.enemy_types.
 @export var type_index: int = 2
-## Camps at least this big may get a boss.
-@export var min_camp_size: int = 20
-@export var chance: float = 0.45
-## Every zone has at least this many bosses (the biggest camps get them).
-@export var guaranteed_per_zone: int = 1
-@export var max_per_zone: int = 8
-## Boss health multiplies by (1 + this) per zone level above 1.
+## Most bosses in the swarm at once (camps streamed in near the player).
+@export var max_active: int = 8
+## Boss health multiplies by (1 + this) per camp level above 1.
 @export var health_growth: float = 0.3
 
 @export_group("Slam")

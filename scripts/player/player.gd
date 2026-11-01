@@ -41,6 +41,11 @@ func setup(camera_rig: CameraRig, arena_half_extent: float) -> void:
 	_half_extent = arena_half_extent
 
 
+## Keeps the player inside -half_extent..half_extent on X and Z.
+func set_bounds(half_extent: float) -> void:
+	_half_extent = half_extent
+
+
 ## Hooks up progression: vitals and movement then follow stat changes.
 func set_stats(p_stats: PlayerStats) -> void:
 	stats = p_stats

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ZoneTheme" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/zone_theme.gd" id="1_theme"]
+
+[resource]
+script = ExtResource("1_theme")
+display_name = "Bamboo Meadow"
+floor_pattern = 2
+floor_noise = 0.25
+floor_roughness = 0.95
+show_sky = true
+glow_strength = 0.5
+floor_color = Color(0.36, 0.46, 0.2, 1)
+floor_alt_color = Color(0.42, 0.5, 0.24, 1)
+grout_color = Color(0.42, 0.36, 0.24, 1)
+tree_count = 30
+trunk_color = Color(0.45, 0.5, 0.25, 1)
+leaf_color = Color(0.35, 0.55, 0.22, 1)
+house_count = 2
+house_color = Color(0.7, 0.6, 0.45, 1)
+roof_color = Color(0.3, 0.26, 0.2, 1)
+sky_top_color = Color(0.4, 0.58, 0.82, 1)
+sky_horizon_color = Color(0.78, 0.84, 0.86, 1)
+fog_color = Color(0.75, 0.8, 0.82, 1)
+fog_density = 0.004
+ambient_color = Color(0.65, 0.72, 0.7, 1)
+ambient_energy = 0.7
+sun_color = Color(1, 0.96, 0.85, 1)
+sun_energy = 1.3
+sun_elevation = 52.0
+sun_azimuth = 30.0

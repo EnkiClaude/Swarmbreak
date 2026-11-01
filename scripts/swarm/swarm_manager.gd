@@ -23,6 +23,8 @@ var total_kills: int = 0
 var last_xp := 0.0
 ## Extra damage marked enemies take (set from the Warlord job's perks).
 var mark_damage_bonus := 0.0
+## Contact damage multiplies by this (set from the player's region or dungeon).
+var damage_multiplier := 1.0
 ## Most kills from a single damage event: the biggest "break" so far.
 var best_break: int = 0
 
@@ -37,6 +39,9 @@ var _effects: EffectSystem
 var _corpses: CorpseSystem
 var _death_effects: PackedInt32Array = []
 var _half_extent: float
+## Half the flow field's size. In a bigger space the field follows the player.
+var _flow_half := 0.0
+var _flow_follows := false
 var _time := 0.0
 var _frame_usec := 0
 
@@ -52,6 +57,7 @@ func setup(arena_half_extent: float, effects: EffectSystem = null,
 	state = SwarmState.new(config.capacity, max_camps, max_bosses)
 	_grid = SpatialHash.new(config.hash_cell_size, config.hash_buckets, config.capacity)
 	_flow = FlowField.new(arena_half_extent, config.flow_cell_size)
+	_flow_half = arena_half_extent
 	_steering = SwarmSteering.new(state, _grid, _flow, _types,
 			config.direct_chase_distance, arena_half_extent, config.max_separation_neighbours,
 			config.max_attackers)
@@ -128,7 +134,25 @@ func type_max_health(type_id: int) -> float:
 	return _types.max_health[type_id]
 
 
-## Removes every enemy, e.g. when a zone restarts.
+## Keeps enemies inside -half_extent..half_extent. The flow field covers at
+## most the size given to setup(); a bigger space makes it follow the player.
+func set_bounds(half_extent: float) -> void:
+	_half_extent = half_extent
+	_steering.set_bounds(half_extent)
+	_flow_follows = half_extent > _flow_half
+	if not _flow_follows:
+		_flow.set_origin(Vector2(-_flow_half, -_flow_half))
+
+
+## Removes a camp's members without killing them (no XP, loot or effects).
+## Call outside the damage window: indices change. Returns how many left.
+func remove_camp(camp: int) -> int:
+	var removed := state.remove_camp(camp)
+	_renderer.draw(state, _time)
+	return removed
+
+
+## Removes every enemy, e.g. when the player changes space.
 func clear() -> void:
 	state.clear()
 	_renderer.draw(state, _time)
@@ -140,7 +164,7 @@ func now() -> float:
 
 ## Damage per second the player is taking from touching enemies, as of the last simulate().
 func contact_dps() -> float:
-	return _steering.contact_dps
+	return _steering.contact_dps * damage_multiplier
 
 
 func contact_count() -> int:
@@ -159,6 +183,11 @@ func simulate(delta: float, player_pos: Vector2, player_radius: float,
 		boost_multiplier: float = 1.0) -> void:
 	var start := Time.get_ticks_usec()
 	_time += delta
+	if _flow_follows:
+		# Recenter in steps of a quarter window, so the field rarely moves.
+		var step := _flow_half * 0.5
+		var corner := (player_pos / step).round() * step - Vector2(_flow_half, _flow_half)
+		_flow.set_origin(corner)
 	_flow.update(player_pos)
 	_grid.build(state.positions, state.count)
 	_steering.step(player_pos, player_radius, delta, _time, boost_multiplier)

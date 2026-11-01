@@ -5,7 +5,8 @@ extends RefCounted
 ## Once cells are blocked, costs come from a chamfer distance transform with 1
 ## and sqrt(2) steps, and each cell's direction is the negative cost gradient,
 ## which routes around obstacles and reads smoother than stepping to the
-## cheapest neighbour. The field only rebuilds when the goal enters a new cell.
+## cheapest neighbour. The field only rebuilds when the goal enters a new cell
+## or the grid moves (set_origin). Positions outside the grid use its edge cells.
 
 const UNREACHED := 1.0e9
 const DIAGONAL := 1.41421356
@@ -43,6 +44,15 @@ func cell_index(p: Vector2) -> int:
 	var x := clampi(int((p.x - origin.x) * inv_cell_size), 0, cols - 1)
 	var z := clampi(int((p.y - origin.y) * inv_cell_size), 0, rows - 1)
 	return z * cols + x
+
+
+## Moves the grid so its corner sits at new_origin (a window that follows the
+## player across a world bigger than the grid). Forces a rebuild.
+func set_origin(new_origin: Vector2) -> void:
+	if new_origin == origin:
+		return
+	origin = new_origin
+	_goal_cell = -1
 
 
 ## Marks a cell as impassable (or clears it). Forces a rebuild on the next update().

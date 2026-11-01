@@ -47,6 +47,11 @@ func _init(state: SwarmState, grid: SpatialHash, flow: FlowField, types: SwarmTy
 	_max_attackers = max_attackers
 
 
+## Enemies stay inside -half_extent..half_extent on X and Z.
+func set_bounds(half_extent: float) -> void:
+	_half_extent = half_extent
+
+
 ## now is swarm time (for lure boosts); boost_multiplier scales boosted speed.
 func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 0.0,
 		boost_multiplier: float = 1.0) -> void:

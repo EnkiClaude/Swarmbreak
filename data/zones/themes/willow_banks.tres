@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ZoneTheme" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/zone_theme.gd" id="1_theme"]
+
+[resource]
+script = ExtResource("1_theme")
+display_name = "Willow Banks"
+floor_pattern = 2
+floor_noise = 0.25
+floor_roughness = 0.95
+show_sky = true
+glow_strength = 0.5
+floor_color = Color(0.28, 0.42, 0.28, 1)
+floor_alt_color = Color(0.34, 0.45, 0.36, 1)
+grout_color = Color(0.32, 0.36, 0.34, 1)
+tree_count = 26
+trunk_color = Color(0.3, 0.25, 0.18, 1)
+leaf_color = Color(0.38, 0.55, 0.38, 1)
+house_count = 4
+house_color = Color(0.72, 0.66, 0.56, 1)
+roof_color = Color(0.2, 0.28, 0.3, 1)
+sky_top_color = Color(0.38, 0.55, 0.75, 1)
+sky_horizon_color = Color(0.75, 0.82, 0.86, 1)
+fog_color = Color(0.68, 0.78, 0.8, 1)
+fog_density = 0.006
+ambient_color = Color(0.6, 0.7, 0.75, 1)
+ambient_energy = 0.7
+sun_color = Color(1, 0.95, 0.88, 1)
+sun_energy = 1.2
+sun_elevation = 46.0
+sun_azimuth = 50.0
