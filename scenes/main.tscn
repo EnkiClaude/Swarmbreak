@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3]
+[gd_scene load_steps=37 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/arena/arena.gd" id="2_arena"]
@@ -31,6 +31,8 @@
 [ext_resource type="Resource" path="res://data/rpg/jobs.tres" id="29_jobs"]
 [ext_resource type="Resource" path="res://data/zones/boss.tres" id="30_boss"]
 [ext_resource type="Resource" path="res://data/save.tres" id="31_save"]
+[ext_resource type="Script" path="res://scripts/effects/damage_numbers.gd" id="32_numbers"]
+[ext_resource type="Resource" path="res://data/damage_numbers.tres" id="33_numbers_cfg"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.32, 0.38, 0.48, 1)
@@ -59,6 +61,7 @@ loot_config = ExtResource("26_loot")
 job_tree = ExtResource("29_jobs")
 boss_config = ExtResource("30_boss")
 save_config = ExtResource("31_save")
+damage_numbers_config = ExtResource("33_numbers_cfg")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")
@@ -90,6 +93,9 @@ script = ExtResource("11_projectiles")
 
 [node name="Effects" type="Node3D" parent="."]
 script = ExtResource("12_effects")
+
+[node name="DamageNumbers" type="Node3D" parent="."]
+script = ExtResource("32_numbers")
 
 [node name="Corpses" type="Node3D" parent="."]
 script = ExtResource("15_corpses")

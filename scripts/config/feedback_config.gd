@@ -51,3 +51,5 @@ extends Resource
 @export var vibration_per_kill: float = 0.01
 @export var vibration_max: float = 1.0
 @export var vibration_duration: float = 0.18
+## A pillar of light on the player at level-up and job choice, and on slain bosses.
+@export var pillar_effect: EffectType

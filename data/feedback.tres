@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="FeedbackConfig" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="FeedbackConfig" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/feedback_config.gd" id="1_feedback"]
 
+[ext_resource type="Resource" path="res://data/effects/light_pillar.tres" id="90_pillar"]
 [resource]
 script = ExtResource("1_feedback")
 hitstop_min_kills = 6
@@ -37,3 +38,4 @@ vibration_nova = 0.35
 vibration_per_kill = 0.01
 vibration_max = 1.0
 vibration_duration = 0.18
+pillar_effect = ExtResource("90_pillar")

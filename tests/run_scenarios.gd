@@ -49,6 +49,8 @@ func _run() -> void:
 
 	_scenario("the zone starts with sleeping camps", _zone_starts_asleep)
 	_scenario("every zone has a sleeping camp boss", _zone_has_boss)
+	_scenario("the zone is dressed in its theme", _zone_theme_applied)
+	await _scenario_async("the right stick turns the camera and the aim follows", _camera_turns)
 	await _scenario_async("a camp wakes when the player comes near", _camp_wakes_on_approach)
 	await _scenario_async("lure wakes camps in range and hurries them", _lure_wakes_camps)
 	await _scenario_async("clearing a camp drops loot you can pick up", _camp_drops_loot)
@@ -114,6 +116,30 @@ func _god_mode(on: bool) -> void:
 func _refill() -> void:
 	_player.vitals.mana = _player.vitals.max_mana
 	_player.vitals.health = _player.vitals.max_health
+
+
+func _zone_theme_applied() -> void:
+	var arena := _main.get_node("Arena") as Arena
+	var config := _main.get("zone_config") as ZoneConfig
+	_check(arena.theme == config.theme_for(_zone.level), "zone %d uses its theme" % _zone.level)
+	_check(arena.get_node_or_null("Scenery/Floor") != null, "the floor is built")
+	var env := (_main.get_node("WorldEnvironment") as WorldEnvironment).environment
+	_check(env.fog_enabled == (arena.theme.fog_density > 0.0), "the theme's fog is applied")
+
+
+func _camera_turns() -> void:
+	var yaw_before := _camera.yaw()
+	Input.action_press("aim_right", 1.0)
+	await _frames(30)
+	Input.action_release("aim_right")
+	await _frames(2)
+	var turned := angle_difference(yaw_before, _camera.yaw())
+	_check(turned < -0.5, "holding right turns the camera right (turned %.2f rad)" % turned)
+	var forward := _camera.forward()
+	_check(_player.aim_direction.dot(forward) > 0.99, "the aim follows the camera")
+	var rig_ground := Vector2(_camera.global_position.x, _camera.global_position.z)
+	_check(rig_ground.distance_to(_player.ground_position()) < 1.0, "the camera follows the player")
+	_camera.reset_view()
 
 
 func _zone_starts_asleep() -> void:
@@ -250,7 +276,9 @@ func _nova_breaks_pack() -> void:
 	_check(kills >= 100, "nova killed only %d of a 150 pack inside its radius" % kills)
 	_check(_swarm.best_break >= kills, "best break recorded (%d)" % _swarm.best_break)
 	_check(_effects.active_count() > 0, "death and nova effects are showing")
-	await _frames(30)
+	var numbers := _main.get_node("DamageNumbers") as DamageNumbers
+	_check(numbers.active_count() > 0, "damage numbers float over the pack")
+	await _frames(120)  # level-up light pillars last 1.5 s
 	_check(_effects.active_count() == 0, "effects expire (%d left)" % _effects.active_count())
 
 

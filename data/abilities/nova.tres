@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="NovaConfig" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="NovaConfig" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/nova_config.gd" id="1_nova"]
 [ext_resource type="Resource" path="res://data/effects/nova_ring.tres" id="2_ring"]
+[ext_resource type="Resource" path="res://data/effects/lightning.tres" id="3_strike"]
 
 [resource]
 script = ExtResource("1_nova")
@@ -11,3 +12,5 @@ knockback = 14.0
 cooldown = 1.2
 mana_cost = 35.0
 effect = ExtResource("2_ring")
+strike_effect = ExtResource("3_strike")
+strikes = 8

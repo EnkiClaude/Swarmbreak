@@ -9,6 +9,9 @@ extends Node3D
 
 ## Emitted by every damage event that kills at least one enemy.
 signal enemies_killed(count: int, center: Vector2)
+## Emitted by every damage event that hits anything, with a sample of the hits
+## (see SwarmCombat.hit_positions): where enemies stood and the damage taken.
+signal enemies_hit(positions: PackedVector2Array, amounts: PackedFloat32Array, count: int)
 
 @export var config: SwarmConfig
 
@@ -168,9 +171,26 @@ func damage_circle(center: Vector2, radius: float, damage: float, knockback: flo
 			_time + config.hit_flash_duration, _time, mark_damage_bonus)
 	total_kills += kills
 	best_break = maxi(best_break, kills)
+	if _combat.hit_sample_count > 0:
+		enemies_hit.emit(_combat.hit_positions, _combat.hit_amounts, _combat.hit_sample_count)
 	if kills > 0:
 		enemies_killed.emit(kills, center)
 	return kills
+
+
+## Where the last damage_circle() hit enemies: a sample of up to
+## SwarmCombat.HIT_SAMPLES positions, hit_sample_count() of them valid.
+func hit_positions() -> PackedVector2Array:
+	return _combat.hit_positions
+
+
+func hit_sample_count() -> int:
+	return _combat.hit_sample_count
+
+
+## Aim assist (see SwarmCombat.assisted_aim). Works at any point in the frame.
+func assisted_aim(origin: Vector2, dir: Vector2, max_range: float, min_dot: float) -> Vector2:
+	return _combat.assisted_aim(origin, dir, max_range, min_dot)
 
 
 ## Index of a live enemy touching the circle, or -1.

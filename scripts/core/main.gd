@@ -2,7 +2,7 @@ extends Node3D
 ## Wires the game together and runs the frame. Order each frame:
 ##   player -> swarm.simulate -> player attacks -> bolts -> swarm.resolve_deaths
 ##   -> zone (camp wake-ups, deaths) -> player damage -> swarm.draw -> effects
-##   -> corpses -> popup -> hud -> camera
+##   -> damage numbers -> corpses -> popup -> hud -> camera
 ## Damage has to land between simulate() and resolve_deaths(), while enemy
 ## indices still match the spatial hash. During hit-stop only the camera
 ## (shake), popup and HUD advance.
@@ -25,6 +25,7 @@ const START_POSITION := Vector3.ZERO
 @export var job_tree: JobTree
 @export var boss_config: BossConfig
 @export var save_config: SaveConfig
+@export var damage_numbers_config: DamageNumbersConfig
 
 var combat: PlayerCombat
 var zone: ZoneDirector
@@ -36,6 +37,7 @@ var refinery: Refinery
 var save: SaveManager
 
 var _loot_rng := RandomNumberGenerator.new()
+var _pillar_effect := -1
 
 ## Seconds until the pending zone (re)start, or < 0 when none is pending.
 var _restart_in := -1.0
@@ -47,6 +49,7 @@ var _restart_level := 1
 @onready var _swarm: SwarmManager = $Swarm
 @onready var _projectiles: ProjectileSystem = $Projectiles
 @onready var _effects: EffectSystem = $Effects
+@onready var _numbers: DamageNumbers = $DamageNumbers
 @onready var _corpses: CorpseSystem = $Corpses
 @onready var _sfx: SfxPlayer = $Sfx
 @onready var _popup: BreakPopup = $BreakPopup
@@ -56,6 +59,8 @@ var _restart_level := 1
 @onready var _menu: CharacterMenu = $CharacterMenu
 @onready var _touch: TouchControls = $TouchLayer/TouchControls
 @onready var _overlay: DebugOverlay = $DebugOverlay
+@onready var _environment: WorldEnvironment = $WorldEnvironment
+@onready var _sun: DirectionalLight3D = $Sun
 
 
 func _ready() -> void:
@@ -67,10 +72,13 @@ func _ready() -> void:
 	progress.leveled_up.connect(_on_leveled_up)
 	_player.setup(_camera_rig, half_extent)
 	_player.set_stats(stats)
+	_camera_rig.set_bounds(half_extent)
 	_camera_rig.follow(_player)
 	_corpses.setup(_swarm.config.enemy_types, feedback_config)
 	_swarm.setup(half_extent, _effects, _corpses, zone_config.max_camps, boss_config.max_per_zone)
 	_projectiles.setup(_player.config.bolt, _effects, half_extent)
+	_numbers.setup(damage_numbers_config, _swarm)
+	_pillar_effect = _effects.register(feedback_config.pillar_effect)
 	bosses = BossSystem.new(boss_config, _swarm, _effects)
 	bosses.slammed.connect(_on_boss_slammed)
 	bosses.boss_killed.connect(_on_boss_killed)
@@ -86,21 +94,35 @@ func _ready() -> void:
 	_menu.job_chosen.connect(_on_job_chosen)
 	_menu.refined.connect(_on_refined)
 	_menu.opened.connect(_touch.release_all)
+	_menu.opened.connect(_camera_rig.release_mouse)
 	_sfx.setup(audio_config)
 	_popup.setup(feedback_config)
 	_feedback.setup(feedback_config, audio_config, _camera_rig, _popup, _sfx, _swarm, combat,
 			_projectiles, _player)
 	_hud.setup(_player.vitals, zone, _player, half_extent, progress)
 	_hud.setup_bosses_and_jobs(bosses, boss_config.display_name, job_tree)
+	_hud.setup_camera_and_skills(_camera_rig, combat)
 	_overlay.swarm = _swarm
 	_overlay.combat = combat
 	save = SaveManager.new(save_config, progress, inventory, job_tree,
 			progression_config.max_level, loot_config.upgrade_max)
 	var level := save.load_game()
+	var previewed := _url_zone()
+	if previewed > 0:
+		level = previewed
 	stats.recompute()
 	_connect_autosave()
 	start_zone(level)
 	_greet()
+
+
+## Web only: index.html?zone=N starts at zone N, to preview a zone's look.
+func _url_zone() -> int:
+	if not OS.has_feature("web"):
+		return 0
+	var query := str(JavaScriptBridge.eval("window.location.search", true))
+	var found := RegEx.create_from_string("zone=(\\d+)").search(query)
+	return int(found.get_string(1)) if found != null else 0
 
 
 ## Every change worth keeping schedules an autosave.
@@ -145,17 +167,23 @@ func _notification(what: int) -> void:
 		save.save_now()
 
 
-## Resets the player and spawns the given level's camps.
+## Resets the player, dresses the arena in the level's theme and spawns its camps.
 func start_zone(level: int) -> void:
 	_restart_in = -1.0
+	var theme := zone_config.theme_for(level)
+	if theme != null and theme != _arena.theme:
+		_arena.apply_theme(theme, _environment.environment, _sun, zone_config.zone_seed + level)
 	zone.generate(level, Vector2(START_POSITION.x, START_POSITION.z))
 	_loot.clear()
 	_player.reset_to(START_POSITION)
 	_player.vitals.reset()
+	_camera_rig.reset_view()
 	_camera_rig.follow(_player)
 	if save != null:
 		save.set_zone_level(level)
 	_popup.show_message("ZONE %d" % level, Color(0.85, 0.9, 1.0), ZONE_MESSAGE_TIME)
+	if theme != null:
+		_hud.banner(theme.display_name.to_upper(), Color(1.0, 0.85, 0.55), ZONE_MESSAGE_TIME)
 
 
 func _process(delta: float) -> void:
@@ -185,8 +213,10 @@ func _process(delta: float) -> void:
 	_update_zone_flow(dt)
 	_swarm.draw()
 	_effects.tick(dt)
+	_numbers.tick(dt)
 	_corpses.tick(dt)
 	_popup.tick(dt)
+	_hud.show_skills = not _touch.visible
 	_hud.tick(dt)
 	_camera_rig.tick(dt)
 	save.tick(dt)
@@ -236,6 +266,7 @@ func _on_camp_cleared(_camp: int, at: Vector2, last_camp: bool) -> void:
 
 
 func _on_boss_killed(_slot: int, at: Vector2) -> void:
+	_effects.spawn(_pillar_effect, Vector3(at.x, 0.0, at.y), 2.0)
 	_loot.drop(at, boss_config.extra_drops, zone.level, boss_config.min_drop_rarity)
 	inventory.add_stones(boss_config.stones)
 	_hud.banner("%s SLAIN" % boss_config.display_name.to_upper(), Color(1.0, 0.7, 0.3), 2.0)
@@ -252,6 +283,7 @@ func _on_boss_slammed(_center: Vector2, _inside: bool, damage: float) -> void:
 
 func _on_job_chosen(job: int) -> void:
 	_hud.banner(job_tree.jobs[job].display_name.to_upper(), job_tree.jobs[job].color, 2.0)
+	_effects.spawn(_pillar_effect, _player.position, 1.0)
 	_feedback.level_up()
 
 
@@ -280,6 +312,7 @@ func _on_leveled_up(level: int) -> void:
 	_player.vitals.health = _player.vitals.max_health
 	_player.vitals.mana = _player.vitals.max_mana
 	_hud.banner("LEVEL %d" % level, progression_config.level_up_color, 1.8)
+	_effects.spawn(_pillar_effect, _player.position, 1.0)
 	_feedback.level_up()
 
 

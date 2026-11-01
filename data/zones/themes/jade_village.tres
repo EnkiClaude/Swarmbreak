@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="ZoneTheme" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/zone_theme.gd" id="1_theme"]
+
+[resource]
+script = ExtResource("1_theme")
+display_name = "Jade Village"
+floor_pattern = 2
+floor_color = Color(0.33, 0.42, 0.2, 1)
+floor_alt_color = Color(0.45, 0.4, 0.26, 1)
+grout_color = Color(0.4, 0.34, 0.24, 1)
+floor_noise = 0.25
+floor_roughness = 0.95
+wall_height = 1.2
+wall_color = Color(0.42, 0.3, 0.2, 1)
+wall_trim_color = Color(0.55, 0.16, 0.12, 1)
+pillar_spacing = 16.0
+pillar_height = 2.6
+pillar_radius = 0.18
+pillar_color = Color(0.45, 0.32, 0.2, 1)
+pillar_trim_color = Color(0.55, 0.16, 0.12, 1)
+lantern_every = 1
+lantern_color = Color(1, 0.55, 0.3, 1)
+house_count = 14
+house_color = Color(0.78, 0.7, 0.58, 1)
+roof_color = Color(0.22, 0.25, 0.3, 1)
+tree_count = 18
+trunk_color = Color(0.33, 0.24, 0.16, 1)
+leaf_color = Color(0.28, 0.48, 0.2, 1)
+outside_reach = 45.0
+show_sky = true
+sky_top_color = Color(0.38, 0.55, 0.8, 1)
+sky_horizon_color = Color(0.72, 0.78, 0.84, 1)
+fog_color = Color(0.7, 0.76, 0.8, 1)
+fog_density = 0.004
+ambient_color = Color(0.65, 0.7, 0.75, 1)
+ambient_energy = 0.7
+sun_color = Color(1, 0.95, 0.85, 1)
+sun_energy = 1.3
+sun_elevation = 50.0
+sun_azimuth = 35.0
+glow_strength = 0.6

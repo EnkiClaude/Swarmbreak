@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="ZoneTheme" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/zone_theme.gd" id="1_theme"]
+
+[resource]
+script = ExtResource("1_theme")
+display_name = "Sunscorched Temple"
+floor_pattern = 1
+floor_color = Color(0.45, 0.33, 0.19, 1)
+floor_alt_color = Color(0.38, 0.27, 0.15, 1)
+grout_color = Color(0.3, 0.2, 0.1, 1)
+tile_size = 2.5
+grout_width = 0.05
+floor_noise = 0.25
+floor_roughness = 0.9
+wall_height = 6.0
+wall_color = Color(0.5, 0.36, 0.2, 1)
+wall_trim_color = Color(0.38, 0.26, 0.14, 1)
+pillar_spacing = 12.0
+pillar_height = 5.0
+pillar_radius = 0.9
+pillar_color = Color(0.45, 0.32, 0.18, 1)
+pillar_trim_color = Color(0.35, 0.24, 0.13, 1)
+lantern_every = 1
+lantern_color = Color(1, 0.6, 0.25, 1)
+house_count = 0
+tree_count = 0
+show_sky = true
+sky_top_color = Color(0.55, 0.45, 0.35, 1)
+sky_horizon_color = Color(0.85, 0.7, 0.5, 1)
+fog_color = Color(0.6, 0.45, 0.3, 1)
+fog_density = 0.008
+ambient_color = Color(1, 0.8, 0.6, 1)
+ambient_energy = 0.45
+sun_color = Color(1, 0.8, 0.55, 1)
+sun_energy = 1.1
+sun_elevation = 38.0
+sun_azimuth = -30.0
+glow_strength = 0.8

@@ -27,10 +27,12 @@ to the swarm or rendering.
 - **Touch is a third path for phone testing.** `TouchControls` turns touches
   into the same input actions, so gameplay never reads touch directly. Mouse
   emulation from touch is off (it would turn every tap into a left click).
-- **Controller-first twin-stick input.** Left stick moves (camera-relative), right
-  stick aims. Mouse and keyboard are the second path: WASD moves, the mouse aims
-  once it moves. Every action needs a controller binding first. Read input through
-  actions in `project.godot`, never raw keycodes or joypad buttons.
+- **Controller-first third-person input.** Left stick moves (camera-relative),
+  right stick turns the camera (the `aim_*` actions), and attacks go where the
+  camera looks, with a little aim assist on bolts. Mouse and keyboard are the
+  second path: WASD moves, clicking the game captures the mouse and moving it
+  turns the camera. Every action needs a controller binding first. Read input
+  through actions in `project.godot`, never raw keycodes or joypad buttons.
 
 ## Style
 
@@ -56,18 +58,21 @@ data/               Tuning resources (.tres). Edit these to tune the game.
   enemies/          One EnemyType per enemy kind.
   abilities/        Nova, bolt and lure tuning.
   zones/            Camp generation per zone level, camp bosses.
+    themes/         One ZoneTheme per look: floor, walls, props, fog, light.
   rpg/              XP curve, skill tree, jobs, loot tables, affixes, refining.
   effects/          One EffectType per pooled visual effect.
 scenes/main.tscn    Arena scene.
 scripts/
   config/           Resource classes that define the shape of data/ files.
   core/main.gd      Wiring and per-frame tick order.
-  arena/            Floor and border.
-  camera/           Angled orthographic follow camera.
+  arena/            Zone scenery from a ZoneTheme: floor, walls, props
+                    (pillars, lanterns, houses, trees), sky, fog and sun.
+  camera/           Third-person follow camera (turns with the right stick).
   player/           Player, health/mana (PlayerVitals), dodge, twin-stick input.
   zone/             ZoneDirector: camps, waking, lure, zone clear.
   boss/             BossSystem: camp bosses, telegraphed ground slam.
-  hud/              Health/mana/XP bars, minimap, pickup messages, hurt flash.
+  hud/              Character panel, round minimap, skill column, pickup
+                    messages, hurt flash.
   rpg/              Stats, XP, levels, jobs, items, rolls, inventory, Refinery.
   loot/             Ground loot: drops, magnet, pickup.
   ui/               Character screen: CHARACTER tab (path, skills, totals) and
@@ -75,7 +80,8 @@ scripts/
   save/             Save file: codec (Dictionary <-> progress), store, autosave.
   swarm/            Swarm state, flow field, spatial hash, steering, rendering.
   combat/           Damage queries, abilities, cooldowns, pooled bolts.
-  effects/          Pooled visual effects.
+  effects/          Pooled visual effects (rings, bursts, light pillars,
+                    lightning) and pooled floating damage numbers.
   render/           InstanceBatch: MultiMesh helper for pooled things.
   feedback/         Hit feel: hit-stop, break popup, flying corpses.
   audio/            Pooled sound voices and generated placeholder sounds.
@@ -95,6 +101,13 @@ members spawn asleep (`SwarmState.awake == 0`) and cost almost nothing until
 they wake: when the player comes within aggro range, when any member is hit
 (`SwarmState.camp_alarm`), or when the lure reaches them. Clearing every camp
 moves to the next level (more, bigger camps); dying restarts the current one.
+
+Each zone level wears the next `ZoneTheme` in `ZoneConfig.themes` (village,
+lacquered hall, crypt, temple court, wastes, then around again). Themes are
+purely visual and built once at zone start by `Arena`; props are MultiMeshes
+that stand only along or outside the walls, because nothing collides with
+them. The art is original and generated in code (no imported assets yet).
+In the web build, `index.html?zone=N` starts at zone N to preview a look.
 
 ## Progression and loot
 
@@ -165,8 +178,9 @@ runs the slam: stun, telegraph ring for `slam_windup`, then damage inside
    death effects; `ZoneDirector.record_deaths()` and `tick()` count camp
    deaths and wake camps; `BossSystem.tick()` runs slams; the player takes
    contact damage.
-5. `SwarmManager.draw()`, `EffectSystem.tick()`, `CorpseSystem.tick()`,
-   `BreakPopup.tick()`, `CameraRig.tick()` (follow and shake).
+5. `SwarmManager.draw()`, `EffectSystem.tick()`, `DamageNumbers.tick()`,
+   `CorpseSystem.tick()`, `BreakPopup.tick()`, `CameraRig.tick()` (turn,
+   follow, pull in near walls, shake).
 
 `CombatFeedback` listens to `SwarmManager.enemies_killed`, `PlayerCombat`'s
 cast signals and `ProjectileSystem.bolt_burst`, and answers with hit-stop,
@@ -219,7 +233,7 @@ run, except errors from the headless dummy renderer.
 | Action          | Controller          | Keyboard / mouse  |
 |-----------------|---------------------|-------------------|
 | Move            | Left stick          | WASD / arrows     |
-| Aim             | Right stick         | Mouse             |
+| Turn camera     | Right stick         | Mouse (click to capture, Esc frees) |
 | Fire bolts      | RT (hold)           | Left mouse (hold) |
 | Nova            | RB                  | Q / right mouse   |
 | Lure            | LB                  | E                 |
@@ -231,8 +245,8 @@ run, except errors from the headless dummy renderer.
 | Toggle overlay  | L3 (left stick)     | F3                |
 
 On touchscreens: the left half of the screen is a floating move stick; FIRE
-(bottom right) is held to fire and dragged to aim; NOVA, LURE and DODGE sit
-around it; HUD, CHAR, +100 and BAG at the top.
+(bottom right) is held to fire and dragged sideways to turn the camera; NOVA,
+LURE and DODGE sit around it; HUD, CHAR, +100 and BAG at the top.
 
 ## Git
 

@@ -62,7 +62,7 @@ async function shot(name) {
 await page.goto("http://localhost:8060/index.html");
 await page.waitForTimeout(12000);
 await shot("boot");
-await page.mouse.click(480, 300); // focus the canvas
+await page.mouse.click(480, 300); // focus the canvas (and capture the mouse)
 await page.keyboard.down("KeyD");
 await page.waitForTimeout(1500);
 await page.keyboard.up("KeyD");
@@ -111,6 +111,13 @@ await page.reload();
 await page.waitForTimeout(12000);
 await shot("reloaded");
 await page.waitForTimeout(500);
+
+// Every zone theme: index.html?zone=N starts there.
+for (const zone of [2, 3, 4, 5]) {
+  await page.goto(`http://localhost:8060/index.html?zone=${zone}`);
+  await page.waitForTimeout(10000);
+  await shot(`zone${zone}`);
+}
 
 await browser.close();
 server.close();

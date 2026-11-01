@@ -4,8 +4,9 @@
 
 [resource]
 script = ExtResource("1_effect")
+additive = true
 shape = 0
-color = Color(1, 0.55, 0.3, 0.9)
+color = Color(1, 0.55, 0.25, 0.55)
 duration = 0.25
 start_scale = 1.0
 end_scale = 1.8
