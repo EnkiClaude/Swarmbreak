@@ -11,6 +11,8 @@ var count: int = 0
 ## Positions and velocities live on the XZ plane: Vector2.y is world Z.
 var positions: PackedVector2Array
 var velocities: PackedVector2Array
+## Unit direction each enemy faces (XZ), for drawing. Set while it moves.
+var headings: PackedVector2Array
 var type_ids: PackedInt32Array
 var health: PackedFloat32Array
 ## Swarm time until which the enemy shows its hit flash.
@@ -49,6 +51,8 @@ func _init(p_capacity: int, max_camps: int = 1, max_bosses: int = 1) -> void:
 	positions.fill(Vector2.ZERO)
 	velocities.resize(capacity)
 	velocities.fill(Vector2.ZERO)
+	headings.resize(capacity)
+	headings.fill(Vector2.DOWN)
 	type_ids.resize(capacity)
 	type_ids.fill(0)
 	health.resize(capacity)
@@ -92,6 +96,8 @@ func spawn(pos: Vector2, type_id: int, max_health: float = 1.0, camp_id: int = -
 	var i := count
 	positions[i] = pos
 	velocities[i] = Vector2.ZERO
+	# Sleeping camps face every which way.
+	headings[i] = Vector2.from_angle(pos.x * 2.1 + pos.y * 3.7)
 	type_ids[i] = type_id
 	health[i] = max_health
 	flash_until[i] = 0.0
@@ -175,6 +181,7 @@ func clear() -> void:
 func _move(from: int, to: int) -> void:
 	positions[to] = positions[from]
 	velocities[to] = velocities[from]
+	headings[to] = headings[from]
 	type_ids[to] = type_ids[from]
 	health[to] = health[from]
 	flash_until[to] = flash_until[from]

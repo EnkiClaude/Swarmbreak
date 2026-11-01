@@ -1,9 +1,21 @@
 class_name EnemyType
 extends Resource
-## Tuning for one kind of swarm enemy. Each type gets its own MultiMesh.
+## Tuning for one kind of swarm enemy. Each type gets its own MultiMesh,
+## drawn with its model (CharacterModels) in its three colors.
+
+## The shape it's built as.
+enum Model { GOBLIN, OGRE, WARLORD, SKELETON, TREANT, WISP }
 
 @export var display_name: String = "Enemy"
+@export var model: Model = Model.GOBLIN
+## Main color (skin, bark, bone, robe), then a second (clothes, leaves, cape)
+## and an accent (eyes, gems, blade edges).
 @export var color: Color = Color(0.85, 0.25, 0.2)
+@export var secondary_color: Color = Color(0.4, 0.3, 0.2)
+@export var accent_color: Color = Color(1.0, 0.85, 0.3)
+## Walk cycle speed (radians per second) and how far limbs swing (radians).
+@export var walk_cycle_speed: float = 9.0
+@export var walk_swing: float = 0.6
 @export var max_health: float = 20.0
 ## Fraction of knockback ignored (1 = immovable).
 @export var knockback_resist: float = 0.0

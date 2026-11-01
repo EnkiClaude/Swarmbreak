@@ -18,6 +18,8 @@
 [sub_resource type="Resource" id="Region_0"]
 script = ExtResource("2_region")
 display_name = "Ashen Wastes"
+enemy_type = 3
+heavy_type = 4
 theme = ExtResource("10_ashen_wastes")
 level = 5
 is_town = false
@@ -30,6 +32,8 @@ boss_camps = 2
 [sub_resource type="Resource" id="Region_1"]
 script = ExtResource("2_region")
 display_name = "Sunscorched Steps"
+enemy_type = 3
+heavy_type = 1
 theme = ExtResource("18_sunscorched_temple")
 level = 3
 is_town = false
@@ -42,6 +46,8 @@ boss_camps = 1
 [sub_resource type="Resource" id="Region_2"]
 script = ExtResource("2_region")
 display_name = "Red Dust Flats"
+enemy_type = 0
+heavy_type = 1
 theme = ExtResource("17_red_dust_flats")
 level = 4
 is_town = false
@@ -54,6 +60,8 @@ boss_camps = 1
 [sub_resource type="Resource" id="Region_3"]
 script = ExtResource("2_region")
 display_name = "Bamboo Meadow"
+enemy_type = 0
+heavy_type = 1
 theme = ExtResource("11_bamboo_meadow")
 level = 1
 is_town = false
@@ -66,6 +74,8 @@ boss_camps = 0
 [sub_resource type="Resource" id="Region_4"]
 script = ExtResource("2_region")
 display_name = "Jade Village"
+enemy_type = 0
+heavy_type = 1
 theme = ExtResource("14_jade_village")
 level = 1
 is_town = true
@@ -78,6 +88,8 @@ boss_camps = 0
 [sub_resource type="Resource" id="Region_5"]
 script = ExtResource("2_region")
 display_name = "Willow Banks"
+enemy_type = 0
+heavy_type = 1
 theme = ExtResource("20_willow_banks")
 level = 2
 is_town = false
@@ -90,6 +102,8 @@ boss_camps = 1
 [sub_resource type="Resource" id="Region_6"]
 script = ExtResource("2_region")
 display_name = "Mistfen"
+enemy_type = 5
+heavy_type = 4
 theme = ExtResource("15_mistfen")
 level = 4
 is_town = false
@@ -102,6 +116,8 @@ boss_camps = 1
 [sub_resource type="Resource" id="Region_7"]
 script = ExtResource("2_region")
 display_name = "Cedar Hollow"
+enemy_type = 5
+heavy_type = 4
 theme = ExtResource("12_cedar_hollow")
 level = 2
 is_town = false
@@ -114,6 +130,8 @@ boss_camps = 1
 [sub_resource type="Resource" id="Region_8"]
 script = ExtResource("2_region")
 display_name = "Ember Ridge"
+enemy_type = 3
+heavy_type = 1
 theme = ExtResource("13_ember_ridge")
 level = 5
 is_town = false
@@ -126,6 +144,8 @@ boss_camps = 2
 [sub_resource type="Resource" id="Dungeon_0"]
 script = ExtResource("3_dungeon")
 display_name = "Crimson Sanctum"
+enemy_type = 0
+heavy_type = 1
 theme = ExtResource("19_vermilion_hall")
 half_extent = 40.0
 level = 4
@@ -152,6 +172,8 @@ stones_multiplier = 2.0
 [sub_resource type="Resource" id="Dungeon_1"]
 script = ExtResource("3_dungeon")
 display_name = "Moonstone Crypt"
+enemy_type = 3
+heavy_type = 4
 theme = ExtResource("16_moonstone_crypt")
 half_extent = 40.0
 level = 7

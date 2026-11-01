@@ -200,8 +200,10 @@ func _spawn_site(s: int, now: float) -> void:
 
 ## Spawns one monster of site s (heavy by the site's chance). Returns its index.
 func _spawn_member(s: int, is_awake: bool, at: Vector2) -> int:
-	var heavy_type := 1 if _swarm.config.enemy_types.size() > 1 else 0
-	var type_id := heavy_type if _rng.randf() < sites.heavy_chance[s] else 0
+	var last := _swarm.config.enemy_types.size() - 1
+	var type_id := sites.heavy_type[s] if _rng.randf() < sites.heavy_chance[s] \
+			else sites.light_type[s]
+	type_id = clampi(type_id, 0, last)
 	var i := _swarm.spawn_at(at, type_id, s, is_awake)
 	if i >= 0:
 		_swarm.state.health[i] *= health_multiplier(sites.levels[s])

@@ -4,6 +4,9 @@ extends Node3D
 ## the blow that killed them, tumble, bounce and shrink away. One pool and
 ## InstanceBatch per enemy type, sharing that type's swarm mesh.
 
+## Models stand on their origin, so a corpse rests with it just off the ground.
+const CORPSE_REST_HEIGHT := 0.1
+
 var _config: FeedbackConfig
 var _pools: Array[CorpsePool] = []
 var _batches: Array[InstanceBatch] = []
@@ -24,8 +27,9 @@ func setup(types: Array[EnemyType], config: FeedbackConfig) -> void:
 		add_child(batch)
 		_batches.append(batch)
 		_pools.append(CorpsePool.new(per_type))
-		_colors.append(t.color.darkened(config.corpse_darken))
-		_rest_heights.append(t.body_radius)
+		# The model carries its own colors; the tint only darkens it.
+		_colors.append(Color.WHITE.darkened(config.corpse_darken))
+		_rest_heights.append(CORPSE_REST_HEIGHT)
 
 
 ## Launches a corpse at ground position pos with the enemy's dying velocity (XZ).
