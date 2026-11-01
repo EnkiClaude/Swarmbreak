@@ -5,6 +5,10 @@ extends RefCounted
 ## the current quest, and eggs to choose: one as the quest's reward, or any
 ## while standing at the Egg Keeper (free, for testing).
 
+## Columns keep a width so their wrapping text lays out in lines, not words.
+const PET_COLUMN_WIDTH := 420.0
+const EGG_COLUMN_WIDTH := 340.0
+
 var _menu: CharacterMenu
 var _inventory: Inventory
 var _loot: LootConfig
@@ -28,8 +32,8 @@ func build(parent: Container) -> Control:
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 28)
 	parent.add_child(columns)
-	_build_pet(MenuWidgets.column(columns))
-	return _build_eggs(MenuWidgets.column(columns))
+	_build_pet(MenuWidgets.column(columns, PET_COLUMN_WIDTH))
+	return _build_eggs(MenuWidgets.column(columns, EGG_COLUMN_WIDTH))
 
 
 func _build_pet(parent: VBoxContainer) -> void:
@@ -48,8 +52,13 @@ func _build_pet(parent: VBoxContainer) -> void:
 		var icon := ItemIcon.make(ItemKindDef.Icon.EGG, def.color)
 		icon.custom_minimum_size = Vector2(56, 56)
 		head.add_child(icon)
-		head.add_child(MenuWidgets.label("%s\nLevel %d   -   %s" % [item.item_name, item.pet_level,
-				"egg" if stage == 0 else "stage %d" % stage], MenuWidgets.SMALL_FONT + 2, def.color))
+		var name_label := MenuWidgets.label("%s\nLevel %d   -   %s" % [item.item_name,
+				item.pet_level, "egg" if stage == 0 else "stage %d" % stage],
+				MenuWidgets.SMALL_FONT + 2, def.color)
+		# A wrapping label in a row needs the row's width, or it gets none and
+		# breaks after every word.
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		head.add_child(name_label)
 		if item.pet_level < _pets.max_level:
 			parent.add_child(MenuWidgets.label("XP %d / %d   (earns %d%% of your kill XP as a bonus; yours isn't reduced)" % [
 					floori(item.pet_xp), ceili(PetRules.xp_to_next(_pets, item.pet_level)),
