@@ -322,7 +322,7 @@ run, except errors from the headless dummy renderer.
 | Fire bolts      | X or RT (hold)      | Left mouse (hold) |
 | Nova            | RB                  | Q / right mouse   |
 | Lure            | LB                  | E                 |
-| Dodge           | A                   | Space / Shift     |
+| Dodge           | LT                  | Space / Shift     |
 | Character       | Start               | Tab / C           |
 | Inventory       | Y                   | I                 |
 | Switch menu tab | LB / RB             | Q / E             |

@@ -1,38 +1,50 @@
 class_name GamepadCompat
 extends RefCounted
-## Makes the right trigger fire on controllers Godot has no layout for.
-## Browsers and some drivers report such pads raw, where the right trigger
-## arrives as button 7 (the left-stick click in Godot's layout) or as axis 5
-## resting at -1. For those pads only, a held trigger presses attack_fire,
-## and raw button 7 must not toggle the debug overlay (is_raw_l3()).
+## Makes the triggers work on controllers Godot has no layout for. Browsers
+## and some drivers report such pads raw, where the left and right triggers
+## arrive as buttons 6 and 7 (Start and the left-stick click in Godot's
+## layout) or as axes 4 and 5 resting at -1. For those pads only, a held
+## right trigger presses attack_fire and a held left trigger presses dodge,
+## and buttons 6 and 7 must not open the menu or toggle the overlay
+## (is_raw_trigger()).
 
-const RAW_TRIGGER_BUTTON := 7
+const RAW_LEFT_TRIGGER := 6
+const RAW_RIGHT_TRIGGER := 7
 const TRIGGER_THRESHOLD := 0.3
 
-var _pressing := false
+var _firing := false
+var _dodging := false
 
 
-## True if the event is a raw pad's button 7: really its right trigger.
-static func is_raw_l3(event: InputEvent) -> bool:
-	return event is InputEventJoypadButton \
-			and (event as InputEventJoypadButton).button_index == RAW_TRIGGER_BUTTON \
-			and not Input.is_joy_known(event.device)
+## True if the event is a raw pad's button 6 or 7: really a trigger.
+static func is_raw_trigger(event: InputEvent) -> bool:
+	if not event is InputEventJoypadButton or Input.is_joy_known(event.device):
+		return false
+	var button := (event as InputEventJoypadButton).button_index
+	return button == RAW_LEFT_TRIGGER or button == RAW_RIGHT_TRIGGER
 
 
-## Call every frame: holds attack_fire while a raw pad's trigger is held.
+## Call every frame: holds the trigger actions while a raw pad's triggers are held.
 func tick() -> void:
-	var held := false
+	var fire := false
+	var dodge := false
 	for device in Input.get_connected_joypads():
 		if Input.is_joy_known(device):
 			continue
-		if Input.is_joy_button_pressed(device, RAW_TRIGGER_BUTTON) \
-				or Input.get_joy_axis(device, JOY_AXIS_TRIGGER_RIGHT) > TRIGGER_THRESHOLD:
-			held = true
-	if held and not _pressing:
-		Input.action_press("attack_fire")
-	elif not held and _pressing:
-		Input.action_release("attack_fire")
-	_pressing = held
+		fire = fire or Input.is_joy_button_pressed(device, RAW_RIGHT_TRIGGER) \
+				or Input.get_joy_axis(device, JOY_AXIS_TRIGGER_RIGHT) > TRIGGER_THRESHOLD
+		dodge = dodge or Input.is_joy_button_pressed(device, RAW_LEFT_TRIGGER) \
+				or Input.get_joy_axis(device, JOY_AXIS_TRIGGER_LEFT) > TRIGGER_THRESHOLD
+	_firing = _hold("attack_fire", fire, _firing)
+	_dodging = _hold("dodge", dodge, _dodging)
+
+
+static func _hold(action: String, held: bool, was: bool) -> bool:
+	if held and not was:
+		Input.action_press(action)
+	elif not held and was:
+		Input.action_release(action)
+	return held
 
 
 ## "Xbox Controller (mapped)" lines for the debug overlay.

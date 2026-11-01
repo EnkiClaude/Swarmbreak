@@ -248,7 +248,7 @@ func _draw_skills() -> void:
 	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 2, SKILL_ROWS),
 			HudSkills.Glyph.LURE, "LB", lure_ready, lure_usable)
 	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 3, SKILL_ROWS),
-			HudSkills.Glyph.DODGE, "A", _player.dash_cooldown.progress(), true)
+			HudSkills.Glyph.DODGE, "LT", _player.dash_cooldown.progress(), true)
 
 
 func _draw_boss_bar() -> void:

@@ -166,6 +166,8 @@ func show_tab(new_tab: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if GamepadCompat.is_raw_trigger(event):
+		return
 	if event.is_action_pressed("character_menu"):
 		toggle()
 	elif event.is_action_pressed("menu_inventory"):

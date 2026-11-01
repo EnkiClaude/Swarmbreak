@@ -11,7 +11,7 @@ Swarm %.2f ms   Sim total %.2f ms
 Enemies %d / %d
 Kills %d   Best break %d
 Nova %s
-RT/LMB fire  RB/Q nova  LB/E lure  A/Space dodge
+RT/LMB fire  RB/Q nova  LB/E lure  LT/Space dodge
 Tab/Start: character   [+] or View: spawn %d   [F3] or L3: hide
 Controllers: %s"""
 
@@ -38,7 +38,7 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("debug_toggle_overlay") and not GamepadCompat.is_raw_l3(event):
+	if event.is_action_pressed("debug_toggle_overlay") and not GamepadCompat.is_raw_trigger(event):
 		visible = not visible
 
 
