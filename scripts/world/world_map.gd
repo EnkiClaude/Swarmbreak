@@ -7,9 +7,10 @@ extends RefCounted
 
 const OVERWORLD := -1
 ## In a dungeon hall the exit gate stands this far inside the south wall
-## (+Z), and the player arrives a little in front of it, facing north.
+## (+Z), and the player arrives in front of it, facing north: far enough
+## that the camera behind the player is clear of the gate.
 const EXIT_INSET := 4.0
-const ARRIVAL_INSET := 9.0
+const ARRIVAL_INSET := 17.0
 ## Coming out of a dungeon, the player stands this far south of its gate.
 const GATE_STEP_OUT := 5.0
 
@@ -131,10 +132,11 @@ func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
 	if def.has_boss:
 		sites.add(Vector2(0.0, -h + config.edge_margin + 2.0), def.boss_camp_size, def.level,
 				def.heavy_chance, true)
-	# Spawners stand on the side walls, halfway down the hall.
+	# Spawners stand on the side walls in the far half of the hall, out of
+	# range of the arrival point.
 	for k in def.spawner_count:
 		var side := -1.0 if k % 2 == 0 else 1.0
-		var along := lerpf(h * 0.4, -h * 0.4, float(k) / maxf(def.spawner_count - 1, 1))
+		var along := lerpf(0.0, -h * 0.5, float(k) / maxf(def.spawner_count - 1, 1))
 		sites.add(Vector2(side * (h - config.edge_margin), along), def.spawner_population,
 				def.level, def.heavy_chance, false, true, def.spawner_interval)
 	var limit := h - config.edge_margin

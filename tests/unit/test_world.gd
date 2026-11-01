@@ -92,6 +92,10 @@ func test_dungeons_have_a_boss_spawners_and_room_to_arrive() -> void:
 				"arrival is clear of the exit")
 		check(map.gate_exit_point(d).distance_to(map.gate_position(d)) > config.gate_radius,
 				"leaving is clear of the entrance")
+		for s in sites.size():
+			if sites.is_spawner[s] != 0:
+				check(sites.centers[s].distance_to(map.arrival_point(d)) > config.spawner_range,
+						"%s: spawners don't start on arrival" % def.display_name)
 
 
 func test_remove_camp_keeps_the_rest_and_frees_its_boss_quietly() -> void:
