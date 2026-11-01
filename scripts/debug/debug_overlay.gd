@@ -29,7 +29,8 @@ func _ready() -> void:
 	layer = 100
 	var panel := PanelContainer.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.position = Vector2(8.0, 8.0)
+	# Below the HUD's character panel.
+	panel.position = Vector2(8.0, 190.0)
 	_label = Label.new()
 	panel.add_child(_label)
 	add_child(panel)

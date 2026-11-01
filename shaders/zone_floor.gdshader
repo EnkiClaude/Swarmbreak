@@ -67,7 +67,7 @@ void fragment() {
 		float lean = h;
 		if (pattern == 0) {
 			lean = mod(cell.x + cell.y, 2.0) * 0.7 + h * 0.3;
-			specular = 0.6;
+			specular = 0.4;
 		}
 		col = mix(base_color, alt_color, lean);
 		col *= 1.0 + (fbm(p * 0.6) - 0.5) * noise_amount * 2.0;
