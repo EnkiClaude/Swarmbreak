@@ -4,12 +4,13 @@ extends RefCounted
 ## (Equip) match AffixDef.Slot for every slot but rings, which have two. A
 ## two-handed weapon and an off-hand item can't be worn together: equipping
 ## one moves the other to the backpack, so that needs room there.
-## Talismans live in the backpack and are never worn. Wearing several pieces
+## Talismans are counted per id (TalismanRules), outside the backpack, so
+## equal ones stack; they're never worn. Wearing several pieces
 ## of a set adds its bonuses (sets) to total().
 
 signal changed
 
-## How sort_backpack() orders the backpack (talismans always last).
+## How sort_backpack() orders the backpack.
 enum SortMode { SLOT, RARITY, LEVEL, NEWEST }
 const SORT_NAMES: PackedStringArray = ["Slot", "Rarity", "Level", "Newest"]
 
@@ -36,6 +37,8 @@ var blessed_stones: int = 0
 ## Item sets, for set bonuses (null: no sets).
 var sets: SetList
 var sort_mode: SortMode = SortMode.SLOT
+## Talisman id -> how many are carried.
+var talismans: Dictionary = {}
 ## Stamp for the next item that arrives (ItemData.acquired).
 var next_acquired: int = 1
 
@@ -93,8 +96,6 @@ func displaced_by(item: ItemData, position: int) -> Array[ItemData]:
 
 ## True if the item fits position and the backpack can take what it displaces.
 func can_equip(item: ItemData, position: int = -1) -> bool:
-	if item.is_talisman:
-		return false
 	if position < 0:
 		position = target_for(item)
 	if not positions_for(item.slot).has(position):
@@ -143,8 +144,6 @@ func unequip(position: int) -> bool:
 
 ## An empty position the item could go in without taking anything off, or -1.
 func free_position(item: ItemData) -> int:
-	if item.is_talisman:
-		return -1
 	for position in positions_for(item.slot):
 		if equipped[position] == null and displaced_by(item, position).is_empty():
 			return position
@@ -216,7 +215,7 @@ func salvage_all(rarity: int, salvage_table: PackedInt32Array) -> int:
 	return gained
 
 
-## Orders the backpack by sort_mode, talismans always last:
+## Orders the backpack by sort_mode:
 ##   SLOT    by slot, then best rarity and refine level first
 ##   RARITY  best rarity first, then highest level, then slot
 ##   LEVEL   highest item level first, then best rarity
@@ -224,8 +223,6 @@ func salvage_all(rarity: int, salvage_table: PackedInt32Array) -> int:
 func sort_backpack() -> void:
 	var mode := sort_mode
 	backpack.sort_custom(func(a: ItemData, b: ItemData) -> bool:
-		if a.is_talisman != b.is_talisman:
-			return b.is_talisman
 		match mode:
 			SortMode.RARITY:
 				if a.rarity != b.rarity:
@@ -270,6 +267,34 @@ func add_stones(amount: int) -> void:
 	changed.emit()
 
 
+func talisman_count(id: int) -> int:
+	return talismans.get(id, 0)
+
+
+func add_talisman(id: int, amount: int = 1) -> void:
+	talismans[id] = talisman_count(id) + amount
+	changed.emit()
+
+
+## Removes one talisman of the id. False if there was none.
+func take_talisman(id: int) -> bool:
+	var have := talisman_count(id)
+	if have <= 0:
+		return false
+	if have == 1:
+		talismans.erase(id)
+	else:
+		talismans[id] = have - 1
+	return true
+
+
+## Talisman ids carried, in a stable order.
+func talisman_ids() -> Array:
+	var ids := talismans.keys()
+	ids.sort()
+	return ids
+
+
 func add_blessed_stones(amount: int) -> void:
 	blessed_stones += amount
 	changed.emit()
@@ -281,6 +306,7 @@ func reset() -> void:
 	backpack.clear()
 	stones = 0
 	blessed_stones = 0
+	talismans.clear()
 	changed.emit()
 
 

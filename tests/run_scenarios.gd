@@ -1142,32 +1142,36 @@ func _talisman_menu() -> void:
 	inventory.notify_changed()
 	menu.open(CharacterMenu.Tab.INVENTORY)
 	await _frames(1)
+	# Vigor (max health), the lowest tier.
+	var kind := -1
+	for k in loot_config.talismans.size():
+		if loot_config.talismans[k].stats[0] == PlayerStat.Id.MAX_HEALTH:
+			kind = k
+	_check(kind >= 0, "a max-health talisman exists")
+	var id := TalismanRules.id_of(maxi(kind, 0), 0)
 	var stat := PlayerStat.Id.MAX_HEALTH
+	var gain := TalismanRules.values_of(loot_config, id)[0]
 	var before := stats.value(stat)
 	var applied := false
 	for n in 30:
-		var talisman := ItemData.new()
-		talisman.is_talisman = true
-		talisman.rarity = 1
-		talisman.item_name = "Talisman of Max Health"
-		talisman.stats = PackedInt32Array([stat])
-		talisman.values = PackedFloat32Array([7.0])
-		inventory.backpack.append(talisman)
-		menu.select_item(talisman)
-		var result := menu.apply_talisman(talisman, gear)
-		_check(not inventory.backpack.has(talisman), "the talisman is used up")
+		inventory.add_talisman(id)
+		menu.select_talisman(id)
+		var had := inventory.talisman_count(id)
+		var result := menu.apply_talisman(id, gear)
+		_check(inventory.talisman_count(id) == had - 1, "the talisman is used up")
 		if result == TalismanRules.Result.SUCCESS:
 			applied = true
 			break
 	_check(applied, "a talisman took")
 	_check(inventory.equipped[Inventory.Equip.HELM] == gear, "the helm is still worn")
-	_check(is_equal_approx(stats.value(stat), minf(before + 7.0, PlayerStat.CAPS[stat])),
+	_check(is_equal_approx(stats.value(stat), minf(before + gain, PlayerStat.CAPS[stat])),
 			"its stat counts (%.1f -> %.1f)" % [before, stats.value(stat)])
 	_check(gear.talisman_sockets_used == 1, "one socket used of %d" %
 			loot_config.talisman_sockets[gear.rarity])
 	menu.close()
 	inventory.backpack.assign(saved_backpack)
 	inventory.equipped.assign(saved_equipped)
+	inventory.talismans.clear()
 	inventory.notify_changed()
 	await _frames(1)
 

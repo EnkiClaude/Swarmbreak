@@ -24,8 +24,6 @@ var faded := false
 
 ## The icon an item shows.
 static func glyph_for(item: ItemData, loot: LootConfig) -> int:
-	if item.is_talisman:
-		return ItemKindDef.Icon.TALISMAN
 	if item.kind >= 0 and item.kind < loot.item_kinds.size():
 		return loot.item_kinds[item.kind].icon
 	return SLOT_DEFAULTS[clampi(item.slot, 0, SLOT_DEFAULTS.size() - 1)]

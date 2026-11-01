@@ -90,27 +90,43 @@ func test_set_pieces_and_bonuses() -> void:
 	check(level_ten.values[0] > level_one.values[0], "pieces grow with level")
 
 
-func test_talismans_roll_and_cannot_be_worn() -> void:
+func test_talismans_are_fixed_per_kind_and_tier_and_stack() -> void:
 	var config := _loot()
-	var generator := ItemGenerator.new(config, 11)
-	var inventory := Inventory.new(16)
-	for n in 200:
-		var t := generator.roll_talisman(5)
-		check(t.is_talisman, "is a talisman")
-		check(t.rarity <= config.talisman_max_rarity, "never set rarity")
-		check_eq(t.stats.size(), config.talisman_stat_counts[t.rarity], "stats by rarity")
-	var talisman := generator.roll_talisman(1)
-	check(not inventory.can_equip(talisman), "can't be worn")
-	check(inventory.add(talisman), "goes into the backpack")
-	check(inventory.backpack.has(talisman) and inventory.position_of(talisman) < 0,
-			"in the backpack, not worn")
+	var rules := TalismanRules.new(config, 11)
+	check(config.talismans.size() >= 8, "many kinds of talisman (%d)" % config.talismans.size())
+	var hints := {}
+	for def in config.talismans:
+		hints[def.build_hint] = true
+		check_eq(def.values.size(), def.stats.size(), "%s lines up" % def.talisman_name)
+	check(hints.size() >= 4, "for different builds (%d)" % hints.size())
+	var inventory := Inventory.new(4)
+	var first := -1
+	for n in 300:
+		var id := rules.roll()
+		check(TalismanRules.is_valid(config, id), "a real talisman")
+		check(TalismanRules.tier_of(id) <= config.talisman_max_rarity, "never set rarity")
+		inventory.add_talisman(id)
+		if first < 0:
+			first = id
+	check(inventory.backpack.is_empty(), "talismans take no backpack room")
+	check(inventory.talisman_ids().size() < 300, "equal talismans stack")
+	# Same kind and tier: the same values, every time.
+	check_eq(TalismanRules.values_of(config, first), TalismanRules.values_of(config, first),
+			"fixed values")
+	var low := TalismanRules.id_of(0, 0)
+	var high := TalismanRules.id_of(0, 4)
+	check(TalismanRules.values_of(config, high)[0] > TalismanRules.values_of(config, low)[0],
+			"a higher tier gives more")
+	check(TalismanRules.display_name(config, high).begins_with(config.rarity_names[4]),
+			"named by tier: %s" % TalismanRules.display_name(config, high))
+	check(rules.roll(3) % TalismanRules.TIERS >= 3, "a minimum tier holds")
 
 
 func test_applying_talismans_never_harms_gear() -> void:
 	var config := _loot()
-	var generator := ItemGenerator.new(config, 5)
 	var rules := TalismanRules.new(config, 99)
-	var inventory := Inventory.new(64)
+	var inventory := Inventory.new(8)
+	var id := TalismanRules.id_of(0, 2)
 	var failures_seen := 0
 	var gear: ItemData = null
 	for _round in 10:
@@ -121,45 +137,35 @@ func test_applying_talismans_never_harms_gear() -> void:
 		gear.stats = PackedInt32Array([PlayerStat.Id.MAX_HEALTH])
 		gear.values = PackedFloat32Array([20.0])
 		inventory.equip_item(gear)
-		failures_seen += _fill_sockets(config, generator, rules, inventory, gear)
+		check_eq(rules.sockets(gear), config.talisman_sockets[4], "sockets by rarity")
+		var successes := 0
+		var attempts := 0
+		while rules.free_sockets(gear) > 0 and attempts < 200:
+			attempts += 1
+			inventory.add_talisman(id)
+			var before := inventory.talisman_count(id)
+			var result := rules.apply(id, gear, inventory)
+			check_eq(inventory.talisman_count(id), before - 1, "one is used up either way")
+			check(inventory.is_equipped(gear), "the gear stays worn")
+			check_eq(gear.values[0], 20.0, "its own stats are untouched")
+			if result == TalismanRules.Result.SUCCESS:
+				successes += 1
+			else:
+				failures_seen += 1
+				check_eq(result, TalismanRules.Result.FAILED, "or it fails")
+		check_eq(successes, config.talisman_sockets[4], "fills every socket")
+		# Equal talismans stack on the gear too: the stat adds up per socket.
+		var stat := TalismanRules.stats_of(config, id)[0]
+		check_near(gear.value_of(stat), TalismanRules.values_of(config, id)[0] * successes
+				+ (20.0 if stat == PlayerStat.Id.MAX_HEALTH else 0.0) * gear.upgrade_multiplier(),
+				0.001, "stacked talismans add up")
 	check(failures_seen > 0, "some attempts fail (%d)" % failures_seen)
-	var extra := generator.roll_talisman(1)
-	inventory.backpack.append(extra)
-	check_eq(rules.apply(extra, gear, inventory), TalismanRules.Result.NO_SOCKET,
+	inventory.add_talisman(id)
+	check_eq(rules.apply(id, gear, inventory), TalismanRules.Result.NO_SOCKET,
 			"a full item takes no more")
-	check(inventory.backpack.has(extra), "and keeps the talisman")
-
-
-## Applies talismans until gear's sockets are full. Returns the failures.
-func _fill_sockets(config: LootConfig, generator: ItemGenerator, rules: TalismanRules,
-		inventory: Inventory, gear: ItemData) -> int:
-	check_eq(rules.sockets(gear), config.talisman_sockets[4], "sockets by rarity")
-	var successes := 0
-	var failures_seen := 0
-	var attempts := 0
-	while rules.free_sockets(gear) > 0 and attempts < 200:
-		attempts += 1
-		var talisman := generator.roll_talisman(1)
-		inventory.backpack.append(talisman)
-		var stats_before := gear.talisman_stats.size()
-		var chance := rules.chance_for(gear)
-		var result := rules.apply(talisman, gear, inventory)
-		check(not inventory.backpack.has(talisman), "the talisman is used up either way")
-		check(inventory.is_equipped(gear), "the gear stays worn")
-		check_eq(gear.values[0], 20.0, "its own stats are untouched")
-		if result == TalismanRules.Result.SUCCESS:
-			successes += 1
-			check_eq(gear.talisman_stats.size(), stats_before + talisman.stats.size(),
-					"success adds the talisman's stats")
-			check(gear.value_of(talisman.stats[0]) >= talisman.values[0] - 0.0001,
-					"which count toward the gear's value")
-		else:
-			failures_seen += 1
-			check_eq(result, TalismanRules.Result.FAILED, "or it fails")
-			check_eq(gear.talisman_stats.size(), stats_before, "failure adds nothing")
-		check(chance <= config.talisman_chances[0], "chance never above the first")
-	check_eq(successes, config.talisman_sockets[4], "fills every socket")
-	return failures_seen
+	check_eq(inventory.talisman_count(id), 1, "and keeps the talisman")
+	check_eq(rules.apply(TalismanRules.id_of(1, 0), gear, inventory),
+			TalismanRules.Result.INVALID, "can't apply one you don't have")
 
 
 func test_set_and_talisman_fields_save() -> void:
@@ -175,7 +181,13 @@ func test_set_and_talisman_fields_save() -> void:
 	check_eq(back.set_id, 3, "set survives")
 	check_eq(back.talisman_sockets_used, 1, "sockets used survive")
 	check_near(back.value_of(PlayerStat.Id.EVASION), 0.03, 0.0001, "talisman stats survive")
-	var talisman := ItemData.new()
-	talisman.is_talisman = true
-	check(SaveCodec.item_from_dict(SaveCodec.item_to_dict(talisman), 10).is_talisman,
-			"talismans stay talismans")
+	# Talisman stacks survive a save.
+	var progress := PlayerProgress.new(load("res://data/rpg/progression.tres") as ProgressionConfig,
+			load("res://data/rpg/skills.tres") as SkillTree,
+			load("res://data/rpg/attributes.tres") as AttributeTable)
+	var inventory := Inventory.new(8)
+	inventory.add_talisman(TalismanRules.id_of(3, 2), 4)
+	var data: Dictionary = JSON.parse_string(JSON.stringify(SaveCodec.encode(progress, inventory, 1)))
+	var loaded := Inventory.new(8)
+	SaveCodec.decode(data, progress, loaded, null, 99, 10)
+	check_eq(loaded.talisman_count(TalismanRules.id_of(3, 2)), 4, "talisman stacks survive")

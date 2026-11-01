@@ -30,9 +30,6 @@ var pet_xp: float = 0.0
 var acquired: int = 0
 ## Set items: index into SetList.sets, else -1.
 var set_id: int = -1
-## A talisman (not gear): its stats and values are what it gives the gear
-## it's applied to. Talismans can't be worn.
-var is_talisman: bool = false
 ## Gear only: stats from talismans applied to it (refining doesn't raise them).
 var talisman_stats: PackedInt32Array = []
 var talisman_values: PackedFloat32Array = []
@@ -41,7 +38,7 @@ var talisman_sockets_used: int = 0
 
 
 func is_pet() -> bool:
-	return slot == AffixDef.Slot.PET and not is_talisman
+	return slot == AffixDef.Slot.PET
 
 
 func is_set() -> bool:

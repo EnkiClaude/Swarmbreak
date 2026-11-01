@@ -221,7 +221,7 @@ func select_item(item: ItemData) -> void:
 	var again := item == _last_pick and now - _last_pick_msec <= DOUBLE_PICK_MSEC
 	_last_pick = item
 	_last_pick_msec = now
-	if again and not item.is_talisman:
+	if again:
 		_last_pick = null
 		toggle_equip(item)
 		return
@@ -231,8 +231,6 @@ func select_item(item: ItemData) -> void:
 
 ## Takes the item off if it's worn, otherwise wears it where it goes.
 func toggle_equip(item: ItemData) -> void:
-	if item.is_talisman:
-		return
 	var position := _inventory.position_of(item)
 	if position >= 0:
 		unequip(position)
@@ -365,21 +363,28 @@ func refine(item: ItemData, blessed: bool = false) -> Refinery.Result:
 	return result
 
 
-## Applies a backpack talisman to gear. The talisman is used up either way;
-## the gear only ever gains.
-func apply_talisman(talisman: ItemData, gear: ItemData) -> TalismanRules.Result:
-	var result := talismans.apply(talisman, gear, _inventory)
+## Shows a talisman stack in the details.
+func select_talisman(id: int) -> void:
+	_inventory_page.select_talisman(id)
+	_rebuild()
+
+
+## Applies one talisman of a stack to gear. It's used up either way; the
+## gear only ever gains.
+func apply_talisman(id: int, gear: ItemData) -> TalismanRules.Result:
+	var result := talismans.apply(id, gear, _inventory)
 	var page := _inventory_page
 	match result:
 		TalismanRules.Result.SUCCESS:
 			page.result_text = "The talisman took! %s gained its power." % gear.display_name()
 			page.result_color = MenuWidgets.GOOD_COLOR
 			page.selected = gear
+			page.selected_talisman = -1
 			page.focus_item = gear
 		TalismanRules.Result.FAILED:
+			# The stack stays selected, to try again.
 			page.result_text = "The talisman crumbled. %s is unharmed." % gear.display_name()
 			page.result_color = MenuWidgets.BAD_COLOR
-			page.selected = null
 		TalismanRules.Result.NO_SOCKET:
 			page.result_text = "No free socket on %s" % gear.display_name()
 			page.result_color = Color(1.0, 0.7, 0.3)

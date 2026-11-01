@@ -256,28 +256,22 @@ func test_backpack_sorts_by_each_mode() -> void:
 	new_common.item_level = 9
 	var mid_magic := _rolled(AffixDef.Slot.ARMOR, 1)
 	mid_magic.item_level = 5
-	var talisman := ItemData.new()
-	talisman.is_talisman = true
-	talisman.rarity = 4
 	old_rare.item_name = "rare"
 	new_common.item_name = "common"
 	mid_magic.item_name = "magic"
-	talisman.item_name = "talisman"
-	for item in [old_rare, talisman, mid_magic, new_common]:
+	for item in [old_rare, mid_magic, new_common]:
 		inventory.backpack.append(item)
 		item.acquired = inventory.next_acquired
 		inventory.next_acquired += 1
 	inventory.sort_mode = Inventory.SortMode.RARITY
 	inventory.sort_backpack()
-	check_eq(_names(inventory), ["rare", "magic", "common", "talisman"],
-			"rarity: best first, talismans last")
+	check_eq(_names(inventory), ["rare", "magic", "common"], "rarity: best first")
 	inventory.sort_mode = Inventory.SortMode.LEVEL
 	inventory.sort_backpack()
-	check_eq(_names(inventory), ["common", "magic", "rare", "talisman"], "level: highest first")
+	check_eq(_names(inventory), ["common", "magic", "rare"], "level: highest first")
 	inventory.sort_mode = Inventory.SortMode.NEWEST
 	inventory.sort_backpack()
-	check_eq(_names(inventory), ["common", "magic", "rare", "talisman"],
-			"newest first, talismans still last")
+	check_eq(_names(inventory), ["common", "magic", "rare"], "newest first")
 	check_eq(inventory.cycle_sort(), Inventory.SortMode.SLOT, "cycling wraps around to slot")
 	var picked := _rolled(AffixDef.Slot.BELT, 0)
 	var fresh := Inventory.new(8)

@@ -183,10 +183,13 @@ pool, values times `rarity_power`), growing with the camp's level.
 Set items (rarity 6, "Set", never rolled at random) come only from dungeon
 bosses (`data/rpg/sets.tres`, `SetList`/`SetDef`, `DungeonDef.set_index`):
 fixed pieces, and bonuses for wearing 2, 3 or 5 of a set, which
-`Inventory.total()` adds. Talismans (`ItemData.is_talisman`) live in the
-backpack and are never worn; applying one to worn gear (`TalismanRules`)
-fills one of the gear's sockets (by rarity) at a falling chance and adds
-its stats for good. A failure only destroys the talisman, never the gear.
+`Inventory.total()` adds. Talismans are a kind (`LootConfig.talismans`,
+`TalismanDef`: Fury, Tempest, Bulwark, Shadow... one per build) at a tier
+(a rarity, `talisman_tier_power`), with fixed values, so equal ones stack:
+`Inventory.talismans` counts them by id (`TalismanRules.id_of()`), outside
+the backpack. Applying one to worn gear (`TalismanRules.apply()`) fills
+one of the gear's sockets (by rarity) at a falling chance and adds its
+stats for good. A failure only destroys the talisman, never the gear.
 `Inventory` wears items in twelve positions (`Inventory.Equip`: main hand,
 amulet, armor, off hand, belt, two rings, helm, gloves, pants, boots, pet);
 the first five equal their `AffixDef.Slot`, later slots are slot + 1.
