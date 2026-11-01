@@ -78,7 +78,7 @@ static func _build_houses(parent: Node3D, theme: ZoneTheme, inner: float,
 	var bodies: Array[Transform3D] = []
 	var roofs: Array[Transform3D] = []
 	for n in theme.house_count:
-		var at := _outside_spot(inner, theme.outside_reach, rng, taken)
+		var at := outside_spot(inner, theme.outside_reach, rng, taken)
 		if is_nan(at.x):
 			continue
 		var w := rng.randf_range(6.0, 10.0)
@@ -118,7 +118,7 @@ static func _build_trees(parent: Node3D, theme: ZoneTheme, inner: float,
 	var canopies: Array[Transform3D] = []
 	var bare := theme.leaf_color.a <= 0.0
 	for n in theme.tree_count:
-		var at := _outside_spot(inner, theme.outside_reach, rng, taken)
+		var at := outside_spot(inner, theme.outside_reach, rng, taken)
 		if is_nan(at.x):
 			continue
 		var tall := rng.randf_range(3.5, 6.5)
@@ -145,7 +145,7 @@ static func _build_trees(parent: Node3D, theme: ZoneTheme, inner: float,
 
 ## A random spot in the ring outside the walls, at least OUTSIDE_SPACING from
 ## every taken spot (which it joins), or NAN when none was found.
-static func _outside_spot(inner: float, reach: float, rng: RandomNumberGenerator,
+static func outside_spot(inner: float, reach: float, rng: RandomNumberGenerator,
 		taken: Array[Vector2]) -> Vector2:
 	var near := inner + OUTSIDE_GAP
 	var far := inner + maxf(reach - OUTSIDE_GAP, OUTSIDE_GAP + 1.0)

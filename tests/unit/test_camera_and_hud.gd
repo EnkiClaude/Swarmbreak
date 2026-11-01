@@ -11,7 +11,7 @@ func test_camera_pulls_in_near_a_wall() -> void:
 	var d := CameraRig.clamped_distance(Vector2(0.0, 61.0), Vector2(0.0, 0.9), 11.0, 63.0, 1.0)
 	check_near(d, 2.0 / 0.9, 0.0001, "stops at the wall")
 	var corner := CameraRig.clamped_distance(Vector2(62.0, -62.5), Vector2(0.6, -0.6), 11.0,
-			63.0, 1.0)
+			63.0, 0.1)
 	check_near(corner, 0.5 / 0.6, 0.0001, "the nearer wall wins in a corner")
 
 

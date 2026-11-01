@@ -278,7 +278,7 @@ func _nova_breaks_pack() -> void:
 	_check(_effects.active_count() > 0, "death and nova effects are showing")
 	var numbers := _main.get_node("DamageNumbers") as DamageNumbers
 	_check(numbers.active_count() > 0, "damage numbers float over the pack")
-	await _frames(30)
+	await _frames(120)  # level-up light pillars last 1.5 s
 	_check(_effects.active_count() == 0, "effects expire (%d left)" % _effects.active_count())
 
 
