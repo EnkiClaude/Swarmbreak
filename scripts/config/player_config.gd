@@ -8,7 +8,13 @@ extends Resource
 ## Body radius used to keep enemies out of the player.
 @export var radius: float = 0.45
 @export var height: float = 1.8
+## The hero's robe, its trim and hat, and the staff's orb.
 @export var color: Color = Color(0.3, 0.75, 1.0)
+@export var secondary_color: Color = Color(0.85, 0.65, 0.25)
+@export var accent_color: Color = Color(0.6, 0.95, 1.0)
+## Walk cycle radians per meter walked, and how fast the casting arm rises.
+@export var stride_per_meter: float = 2.2
+@export var raise_speed: float = 10.0
 @export var max_health: float = 100.0
 @export var health_regen: float = 1.5
 @export var max_mana: float = 100.0

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EnemyType" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/enemy_type.gd" id="1_enemy_type"]
+[ext_resource type="Resource" path="res://data/effects/death_burst.tres" id="2_death"]
+
+[resource]
+script = ExtResource("1_enemy_type")
+display_name = "Wisp"
+model = 5
+color = Color(0.55, 0.75, 0.9, 1)
+secondary_color = Color(0.4, 0.55, 0.75, 1)
+accent_color = Color(0.8, 1, 1, 1)
+walk_cycle_speed = 6.0
+walk_swing = 0.3
+max_health = 14.0
+knockback_resist = 0.0
+xp = 1.2
+body_radius = 0.3
+body_height = 1.0
+max_speed = 5.2
+acceleration = 18.0
+separation_radius = 0.75
+separation_strength = 6.0
+contact_dps = 6.0
+attack_reach = 0.25
+cast_shadow = false
+death_effect = ExtResource("2_death")

@@ -121,8 +121,9 @@ func _place_region_camps(region: int, rng: RandomNumberGenerator,
 		sizes.append(rng.randi_range(def.camp_size_min, def.camp_size_max))
 	var bosses := _biggest(sizes, def.boss_camps)
 	for k in placed.size():
-		overworld_sites.add(placed[k], sizes[k], def.level, def.heavy_chance, bosses.has(k),
-				false, 0.0, config.camp_respawn_time)
+		var s := overworld_sites.add(placed[k], sizes[k], def.level, def.heavy_chance,
+				bosses.has(k), false, 0.0, config.camp_respawn_time)
+		overworld_sites.set_types(s, def.enemy_type, def.heavy_type)
 
 
 func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
@@ -153,6 +154,8 @@ func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
 		sites.add(at, rng.randi_range(def.camp_size_min, def.camp_size_max), def.level,
 				def.heavy_chance, false, false, 0.0, def.camp_respawn_time)
 		placed += 1
+	for s in sites.size():
+		sites.set_types(s, def.enemy_type, def.heavy_type)
 	return sites
 
 

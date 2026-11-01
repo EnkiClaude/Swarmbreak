@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SwarmConfig" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="SwarmConfig" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/swarm_config.gd" id="1_swarm"]
 [ext_resource type="Script" path="res://scripts/config/enemy_type.gd" id="2_enemy_type"]
@@ -6,6 +6,9 @@
 [ext_resource type="Resource" path="res://data/enemies/brute.tres" id="4_brute"]
 [ext_resource type="Resource" path="res://data/enemies/boss.tres" id="5_boss"]
 
+[ext_resource type="Resource" path="res://data/enemies/skeleton.tres" id="6_skeleton"]
+[ext_resource type="Resource" path="res://data/enemies/treant.tres" id="7_treant"]
+[ext_resource type="Resource" path="res://data/enemies/wisp.tres" id="8_wisp"]
 [resource]
 script = ExtResource("1_swarm")
 capacity = 4096
@@ -22,4 +25,4 @@ direct_chase_distance = 3.0
 max_tick_delta = 0.05
 hit_flash_duration = 0.08
 hit_flash_color = Color(1, 1, 1, 1)
-enemy_types = Array[ExtResource("2_enemy_type")]([ExtResource("3_grunt"), ExtResource("4_brute"), ExtResource("5_boss")])
+enemy_types = Array[ExtResource("2_enemy_type")]([ExtResource("3_grunt"), ExtResource("4_brute"), ExtResource("5_boss"), ExtResource("6_skeleton"), ExtResource("7_treant"), ExtResource("8_wisp")])

@@ -21,6 +21,9 @@ extends Resource
 @export var camp_count: int = 6
 @export var camp_size_min: int = 16
 @export var camp_size_max: int = 32
+## Swarm enemy types (SwarmConfig.enemy_types) of ordinary and heavy members.
+@export var enemy_type: int = 0
+@export var heavy_type: int = 1
 @export var heavy_chance: float = 0.25
 ## Monster contact damage multiplies by this on top of the level scaling.
 @export var damage_multiplier: float = 1.25

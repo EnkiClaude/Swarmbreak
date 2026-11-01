@@ -14,7 +14,10 @@ extends Resource
 @export var camp_count: int = 7
 @export var camp_size_min: int = 12
 @export var camp_size_max: int = 30
-## Chance each camp member is the second enemy type (brutes).
+## Swarm enemy types (SwarmConfig.enemy_types) of ordinary and heavy members.
+@export var enemy_type: int = 0
+@export var heavy_type: int = 1
+## Chance each camp member is heavy_type.
 @export var heavy_chance: float = 0.1
 ## The biggest this many camps get a boss at their center.
 @export var boss_camps: int = 1

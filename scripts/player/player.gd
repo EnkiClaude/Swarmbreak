@@ -8,7 +8,7 @@ extends Node3D
 
 signal dashed
 
-const AIM_MARKER_SIZE := Vector3(0.18, 0.18, 0.5)
+const HERO_SHADER := preload("res://shaders/hero.gdshader")
 
 @export var config: PlayerConfig
 
@@ -28,6 +28,10 @@ var _dash_left := 0.0
 var _dash_direction := Vector3.ZERO
 var _camera_rig: CameraRig
 var _half_extent: float
+var _hero_material: ShaderMaterial
+## Walk cycle angle and how far the casting arm is raised (0..1).
+var _stride := 0.0
+var _raise := 0.0
 
 
 func _ready() -> void:
@@ -91,6 +95,7 @@ func tick(delta: float, now: float = 0.0) -> void:
 	position.x = clampf(position.x, -_half_extent, _half_extent)
 	position.z = clampf(position.z, -_half_extent, _half_extent)
 	_update_aim(move, yaw)
+	_animate(delta)
 
 
 ## Faces the aim right away, e.g. as an attack goes off.
@@ -135,25 +140,24 @@ func _screen_to_world(v: Vector2, yaw: float) -> Vector3:
 	return Vector3(v.x, 0.0, v.y).rotated(Vector3.UP, yaw)
 
 
-func _build_visuals() -> void:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = config.color
+## Walks as fast as the player moves and raises the staff arm while attacking.
+func _animate(delta: float) -> void:
+	if _hero_material == null:
+		return
+	var speed := velocity.length() if _dash_left <= 0.0 else config.move_speed
+	_stride += speed * config.stride_per_meter * delta
+	var attacking := Input.is_action_pressed("attack_fire") or Input.is_action_pressed("attack_nova")
+	_raise = move_toward(_raise, 1.0 if attacking else 0.0, config.raise_speed * delta)
+	_hero_material.set_shader_parameter("walk", clampf(speed / config.move_speed, 0.0, 1.0))
+	_hero_material.set_shader_parameter("phase", _stride)
+	_hero_material.set_shader_parameter("raise", _raise)
 
-	var capsule := CapsuleMesh.new()
-	capsule.radius = config.radius
-	capsule.height = maxf(config.height, config.radius * 2.0)
-	capsule.material = material
+
+func _build_visuals() -> void:
+	_hero_material = ShaderMaterial.new()
+	_hero_material.shader = HERO_SHADER
 	var body := MeshInstance3D.new()
 	body.name = "Body"
-	body.mesh = capsule
-	body.position.y = capsule.height * 0.5
+	body.mesh = CharacterModels.hero(config.height, config.color, config.secondary_color,
+			config.accent_color, _hero_material)
 	add_child(body)
-
-	var marker_mesh := BoxMesh.new()
-	marker_mesh.size = AIM_MARKER_SIZE
-	marker_mesh.material = material
-	var marker := MeshInstance3D.new()
-	marker.name = "AimMarker"
-	marker.mesh = marker_mesh
-	marker.position = Vector3(0.0, capsule.height * 0.6, -(config.radius + AIM_MARKER_SIZE.z * 0.5))
-	add_child(marker)

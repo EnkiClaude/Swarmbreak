@@ -17,6 +17,9 @@ to the swarm or rendering.
   or physics queries for enemies.
 - **Render enemies with MultiMeshInstance3D, one per enemy type.** Upload the
   whole instance buffer once per frame (`MultiMesh.buffer`), not per-instance calls.
+  Each type's model is one mesh (`CharacterModels`); limbs walk in the vertex
+  shader (`shaders/rig.gdshaderinc`, rig in UV), driven by per-instance custom
+  data (walk amount, hit flash), so animation costs no extra CPU per enemy.
 - **Pool everything spawned in combat.** Enemies, projectiles, VFX, damage numbers
   and pickups come from preallocated pools. No `new()`, `instantiate()` or
   `queue_free()` in the combat loop. Allocating at load or setup is fine.
@@ -85,7 +88,9 @@ scripts/
   combat/           Damage queries, abilities, cooldowns, pooled bolts.
   effects/          Pooled visual effects (rings, bursts, light pillars,
                     lightning) and pooled floating damage numbers.
-  render/           InstanceBatch: MultiMesh helper for pooled things.
+  render/           InstanceBatch (MultiMesh helper for pooled things),
+                    ModelBuilder and CharacterModels (the hero and monsters,
+                    built from parts and rigged to walk).
   feedback/         Hit feel: hit-stop, break popup, flying corpses.
   audio/            Pooled sound voices and generated placeholder sounds.
   touch/            On-screen twin sticks and buttons for touchscreens.
@@ -122,6 +127,10 @@ monster every `spawn_interval` (0 in dungeons: one per frame), for builds
 that farm standing still. Dungeon camps, bosses included, also come back at
 once (`DungeonDef.camp_respawn_time` 0), asleep, right where they were.
 The swarm's camp id is the site index in the active space.
+
+Each region and dungeon names its monsters (`enemy_type`, `heavy_type`:
+indices into `SwarmConfig.enemy_types`: goblin, ogre, warlord boss,
+skeleton, treant, wisp).
 
 Levels: monster health, contact damage and XP grow with the level where the
 player is (`WorldDirector.level()`); items roll at the camp's level, and

@@ -62,6 +62,7 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 		return
 	var positions := _state.positions
 	var velocities := _state.velocities
+	var headings := _state.headings
 	var type_ids := _state.type_ids
 	var awake := _state.awake
 	var boost_until := _state.boost_until
@@ -115,6 +116,7 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 			var fx: int = clampi(int((p.x - f_origin.x) * f_inv), 0, f_cols - 1)
 			var fz: int = clampi(int((p.y - f_origin.y) * f_inv), 0, f_rows - 1)
 			seek = flow_dirs[fz * f_cols + fx]
+		headings[i] = seek
 
 		var r: float = sep_radius[t]
 		var r_sq: float = r * r
@@ -184,3 +186,4 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 	contact_dps = dps
 	_state.velocities = velocities
 	_state.positions = positions
+	_state.headings = headings

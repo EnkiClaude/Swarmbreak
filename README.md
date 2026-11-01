@@ -22,6 +22,13 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M9:** characters and monsters. The hero is a robed battle-mage with a
+  wide hat and an orb-topped staff, raised when casting; six monster models
+  (goblin, ogre, warlord boss, skeleton, treant, wisp) walk, face where
+  they're going and flash when hit. Regions field their own monsters:
+  goblins and ogres near town, wisps and treants in the forests and fens,
+  skeletons in the temple, wastes, ridge and crypt. All models are built in
+  code from simple shapes.
 - **M8:** gear and stats. The camera zooms out with the mouse wheel
   (D-pad, R3 or the touch ZOOM button). Seven equipment slots: main and off
   hand (two-handed staves and greatblades, or a wand or blade with a tome or

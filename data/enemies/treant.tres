@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EnemyType" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/enemy_type.gd" id="1_enemy_type"]
+[ext_resource type="Resource" path="res://data/effects/death_burst.tres" id="2_death"]
+
+[resource]
+script = ExtResource("1_enemy_type")
+display_name = "Treant"
+model = 4
+color = Color(0.36, 0.26, 0.18, 1)
+secondary_color = Color(0.3, 0.45, 0.2, 1)
+accent_color = Color(1, 0.8, 0.3, 1)
+walk_cycle_speed = 5.0
+walk_swing = 0.4
+max_health = 95.0
+knockback_resist = 0.6
+xp = 8.0
+body_radius = 0.6
+body_height = 1.8
+max_speed = 2.8
+acceleration = 8.0
+separation_radius = 1.2
+separation_strength = 7.0
+contact_dps = 15.0
+attack_reach = 0.35
+cast_shadow = false
+death_effect = ExtResource("2_death")

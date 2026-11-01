@@ -19,6 +19,9 @@ var is_spawner := PackedByteArray()
 var spawn_interval := PackedFloat32Array()
 ## Seconds before a cleared camp comes back; 0 = at once, even next to the player.
 var respawn_time := PackedFloat32Array()
+## Swarm enemy types of ordinary and heavy members.
+var light_type := PackedInt32Array()
+var heavy_type := PackedInt32Array()
 
 ## Runtime.
 var state := PackedByteArray()
@@ -44,11 +47,19 @@ func add(center: Vector2, members: int, level: int, heavy: float, boss: bool = f
 	is_spawner.append(1 if spawner else 0)
 	spawn_interval.append(interval)
 	respawn_time.append(respawn)
+	light_type.append(0)
+	heavy_type.append(1)
 	state.append(State.DORMANT)
 	alive.append(members)
 	awake.append(0)
 	timer.append(0.0)
 	return centers.size() - 1
+
+
+## Which monsters site s spawns: light for most members, heavy by its chance.
+func set_types(s: int, light: int, heavy: int) -> void:
+	light_type[s] = light
+	heavy_type[s] = heavy
 
 
 ## Puts every site that isn't cleared back to dormant: its members left the
