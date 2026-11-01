@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="DamageNumbersConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/damage_numbers_config.gd" id="1_numbers"]
+
+[resource]
+script = ExtResource("1_numbers")
+capacity = 48
+per_blow = 6
+lifetime = 0.75
+rise_speed = 1.8
+start_height = 1.4
+scatter = 0.4
+font_size = 64
+outline_size = 14
+pixel_size = 0.012
+color = Color(1, 0.95, 0.85, 1)
+outline_color = Color(0.15, 0.05, 0, 1)
+big_damage = 40.0
+big_color = Color(1, 0.75, 0.2, 1)
+big_scale = 1.4

@@ -31,6 +31,8 @@ var _nova: NovaConfig
 var _bolt: BoltConfig
 var _lure: LureConfig
 var _nova_effect := -1
+var _strike_effect := -1
+var _rng := RandomNumberGenerator.new()
 var _lure_effect := -1
 var _stats: PlayerStats
 ## Queued aftershocks: swarm time due, center, radius, damage. Fixed size.
@@ -56,6 +58,7 @@ func _init(player: Player, swarm: SwarmManager, projectiles: ProjectileSystem,
 	lure_cooldown = Cooldown.new(_lure.cooldown if _lure != null else 1.0)
 	bolt_cooldown = Cooldown.new(_bolt.fire_interval)
 	_nova_effect = effects.register(_nova.effect)
+	_strike_effect = effects.register(_nova.strike_effect)
 	if _lure != null:
 		_lure_effect = effects.register(_lure.effect)
 	swarm.enemies_killed.connect(_on_enemies_killed)
@@ -89,7 +92,10 @@ func tick(delta: float) -> void:
 	if _wants_to_fire() and bolt_cooldown.is_ready():
 		bolt_cooldown.trigger()
 		var aim := _player.aim_direction
-		if _projectiles.fire(_player.ground_position(), Vector2(aim.x, aim.z)):
+		var origin := _player.ground_position()
+		var dir := _swarm.assisted_aim(origin, Vector2(aim.x, aim.z), _bolt.aim_assist_range,
+				cos(deg_to_rad(_bolt.aim_assist_degrees)))
+		if _projectiles.fire(origin, dir):
 			bolt_fired.emit()
 
 
@@ -101,12 +107,14 @@ func _try_nova() -> void:
 			out_of_mana.emit()
 		return
 	nova_cooldown.trigger()
+	_player.face_aim()
 	var center := _player.ground_position()
 	nova_cast.emit(center)
 	var radius := _nova.radius * _mult(PlayerStat.Id.NOVA_RADIUS)
 	var damage := _nova.damage * _mult(PlayerStat.Id.NOVA_DAMAGE)
 	_swarm.damage_circle(center, radius, damage, _nova.knockback)
 	_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), radius)
+	_strike(center, radius, _nova.strikes)
 	var perks := _perks()
 	if perks != null:
 		for n in perks.nova_aftershocks:
@@ -137,9 +145,7 @@ func _try_lure() -> void:
 
 
 func _wants_to_fire() -> bool:
-	if Input.is_action_pressed("attack_fire"):
-		return true
-	return _bolt.auto_fire_on_aim and _player.is_stick_aiming()
+	return Input.is_action_pressed("attack_fire")
 
 
 func _on_enemies_killed(count: int, _center: Vector2) -> void:
@@ -172,6 +178,7 @@ func _run_aftershocks() -> void:
 		var radius := _shock_radius[k]
 		_swarm.damage_circle(center, radius, _shock_damage[k], _nova.knockback * 0.6)
 		_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), radius)
+		_strike(center, radius, _nova.strikes / 2)
 		aftershock.emit(center)
 		var last := _shock_count - 1
 		_shock_due[k] = _shock_due[last]
@@ -179,6 +186,19 @@ func _run_aftershocks() -> void:
 		_shock_radius[k] = _shock_radius[last]
 		_shock_damage[k] = _shock_damage[last]
 		_shock_count = last
+
+
+## Lightning on enemies the last damage_circle() hit, then on open ground
+## inside the circle until there are count strikes.
+func _strike(center: Vector2, radius: float, count: int) -> void:
+	if _strike_effect < 0:
+		return
+	var hits := _swarm.hit_positions()
+	var sampled := mini(_swarm.hit_sample_count(), count)
+	for k in count:
+		var at: Vector2 = hits[k] if k < sampled else center + Vector2.from_angle(_rng.randf() * TAU) \
+				* radius * sqrt(_rng.randf())
+		_effects.spawn(_strike_effect, Vector3(at.x, 0.0, at.y), 1.0)
 
 
 func pending_aftershocks() -> int:

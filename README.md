@@ -11,7 +11,8 @@ Open `project.godot` in Godot 4.3 or newer and press F5.
 **In a browser:** every push to `main` publishes a web build to
 https://enkiclaude.github.io/Swarmbreak/. Click the game once so it gets
 keyboard focus; a controller works too. On a phone, turn it sideways: the
-left thumb moves, hold FIRE to shoot (drag it to aim), and NOVA, LURE and
+left thumb moves, hold FIRE to shoot (drag it sideways to turn the camera),
+and NOVA, LURE and
 DODGE sit around it. Browsers use Godot's Compatibility
 renderer, so the web build looks a little different from the Steam Deck build,
 and its frame rate says little about the Deck.
@@ -21,6 +22,15 @@ and its frame rate says little about the Deck.
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.
+- **M6:** the eastern-fantasy look. A third-person camera behind the
+  player that the right stick (or the captured mouse) turns; five zone
+  themes in turn (Jade Village, Vermilion Hall, Moonstone Crypt, Sunscorched
+  Temple, Ashen Wastes) with their own floors, walls, pillars, lanterns,
+  houses, trees, fog and light; lightning on the nova, fire bursts, pillars
+  of light and floating damage numbers; a framed character panel, a round
+  minimap that turns with the camera, and a skill column with cooldowns.
+  All art is original and generated in code. On the web build,
+  `?zone=3` (for example) jumps to a zone to preview it.
 - **M5:** saving. Autosaves your character, gear and zone; reload to carry
   on; New Game on the character screen starts over.
 - **M4:** jobs, bosses and refining. Choose a path at level 10 (Stormcaller,
@@ -41,7 +51,7 @@ and its frame rate says little about the Deck.
 | Action          | Controller      | Keyboard / mouse    |
 |-----------------|-----------------|---------------------|
 | Move            | Left stick      | WASD / arrows       |
-| Aim             | Right stick     | Mouse               |
+| Turn camera     | Right stick     | Mouse (click to capture, Esc frees) |
 | Fire bolts      | RT (hold)       | Left mouse (hold)   |
 | Nova            | RB              | Q / right mouse     |
 | Lure            | LB              | E                   |

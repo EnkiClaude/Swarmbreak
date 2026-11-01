@@ -86,3 +86,30 @@ func test_hitting_a_sleeper_wakes_it_and_alarms_its_camp() -> void:
 	check_eq(state.awake[0], 1, "hit enemy wakes")
 	check_eq(state.awake[1], 0, "unhit camp mate still asleep until the camp wakes")
 	check_eq(state.camp_alarm[2], 1, "its camp is alarmed")
+
+
+func test_hits_are_sampled_across_a_big_pack() -> void:
+	var rig := Rig.new()
+	rig.spawn_ring(Vector2.ZERO, 1.5, 40)
+	rig.rebuild()
+	rig.combat.damage_circle(Vector2.ZERO, 3.0, 5.0, 0.0, 1.0)
+	check_eq(rig.combat.hit_count, 40, "every enemy hit")
+	check_eq(rig.combat.hit_sample_count, SwarmCombat.HIT_SAMPLES, "sample is capped")
+	for k in rig.combat.hit_sample_count:
+		check_near(rig.combat.hit_positions[k].length(), 1.5, 0.01, "sample %d is a hit enemy" % k)
+		check_near(rig.combat.hit_amounts[k], 5.0, 0.001, "sample %d damage" % k)
+	rig.combat.damage_circle(Vector2(10, 10), 1.0, 5.0, 0.0, 1.0)
+	check_eq(rig.combat.hit_sample_count, 0, "a miss clears the sample")
+
+
+func test_aim_assist_bends_toward_enemies_in_the_cone() -> void:
+	var rig := Rig.new()
+	rig.state.spawn(Vector2(1.0, -10.0), 0, 20.0)  # slightly right of straight ahead (-Y)
+	rig.state.spawn(Vector2(0.0, 5.0), 0, 20.0)  # behind
+	var ahead := Vector2(0.0, -1.0)
+	var dir := rig.combat.assisted_aim(Vector2.ZERO, ahead, 20.0, cos(deg_to_rad(12.0)))
+	check_near(dir.angle_to(Vector2(1.0, -10.0).normalized()), 0.0, 0.001, "aims at the enemy")
+	var wide := rig.combat.assisted_aim(Vector2(-6.0, 0.0), ahead, 20.0, cos(deg_to_rad(12.0)))
+	check(wide == ahead, "leaves the aim alone when no enemy is in the cone")
+	var far := rig.combat.assisted_aim(Vector2.ZERO, ahead, 5.0, cos(deg_to_rad(12.0)))
+	check(far == ahead, "ignores enemies out of range")

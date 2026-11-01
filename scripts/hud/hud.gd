@@ -1,14 +1,20 @@
 class_name Hud
 extends Control
-## Player-facing HUD: health, mana and XP bars, level and zone line, a hint
-## when skill points are waiting, a minimap of the camps, pickup messages and
-## a red edge flash when the player is hurt, a boss health bar while a boss
-## is awake nearby, and a prompt when a job path can be chosen.
+## Player-facing HUD. Top left, a framed character panel: level and job,
+## zone and camps left, health, mana and XP bars, with hints below it when
+## skill points or a job choice are waiting. Top right, a round minimap
+## (HudMinimap). Right edge, the skill column with cooldowns (HudSkills),
+## hidden while the touch buttons show. Also pickup messages, a banner for
+## level-ups and zone names, a boss health bar while a boss is awake nearby,
+## and a red edge flash when the player is hurt.
 ## Redraws every frame from the live game state; owns no game state itself.
 
 const TEXT_SIZE := 18
+const SMALL_TEXT_SIZE := 14
 const VIGNETTE_WIDTH := 48.0
-const XP_BAR_HEIGHT := 6.0
+const XP_BAR_HEIGHT := 5.0
+const PANEL_PADDING := 10.0
+const CORNER_SIZE := 6.0
 const TOAST_TIME := 3.5
 const TOAST_LINES := 4
 const TOAST_ORIGIN := Vector2(16.0, 0.72)
@@ -16,10 +22,11 @@ const TOAST_ORIGIN := Vector2(16.0, 0.72)
 ## it causes are both readable.
 const BANNER_Y := 0.34
 const BANNER_SIZE := 40
-const BOSS_BAR_Y := 0.15
+const BOSS_BAR_Y := 0.1
 const BOSS_BAR_WIDTH := 460.0
 const BOSS_BAR_HEIGHT := 14.0
 const BOSS_BAR_COLOR := Color(0.95, 0.45, 0.15)
+const SKILL_ROWS := 4
 
 @export var config: HudConfig
 
@@ -39,6 +46,10 @@ var _banner_duration := 1.0
 var _bosses: BossSystem
 var _boss_name := ""
 var _jobs: JobTree
+var _camera: CameraRig
+var _combat: PlayerCombat
+## The skill column hides while the touch buttons are on screen.
+var show_skills := true
 
 
 func setup(vitals: PlayerVitals, zone: ZoneDirector, player: Player, half_extent: float,
@@ -55,6 +66,11 @@ func setup(vitals: PlayerVitals, zone: ZoneDirector, player: Player, half_extent
 ## Flashes the screen edges; amount is damage taken this frame.
 func flash_hurt(amount: float) -> void:
 	_hurt = minf(_hurt + amount * 0.08, 1.0)
+
+
+func setup_camera_and_skills(camera: CameraRig, combat: PlayerCombat) -> void:
+	_camera = camera
+	_combat = combat
 
 
 func setup_bosses_and_jobs(bosses: BossSystem, boss_name: String, jobs: JobTree) -> void:
@@ -106,8 +122,10 @@ func tick(delta: float) -> void:
 func _draw() -> void:
 	if _vitals == null:
 		return
-	_draw_bars()
+	_draw_panel()
 	_draw_minimap()
+	if show_skills and _combat != null:
+		_draw_skills()
 	_draw_boss_bar()
 	_draw_toasts()
 	if _banner_left > 0.0:
@@ -119,33 +137,63 @@ func _draw() -> void:
 		_draw_vignette()
 
 
-func _draw_bars() -> void:
-	var center := config.bar_position * size
-	var w := config.bar_width
-	var h := config.bar_height
-	var top := center.y - h - config.bar_gap * 0.5
-	_draw_bar(Rect2(center.x - w * 0.5, top, w, h), _vitals.health / _vitals.max_health,
-			config.health_color, _health_text())
-	_draw_bar(Rect2(center.x - w * 0.5, top + h + config.bar_gap, w, h),
-			_vitals.mana / _vitals.max_mana, config.mana_color, "%d" % floori(_vitals.mana))
-	var line := ""
-	if _progress != null:
-		var xp_rect := Rect2(center.x - w * 0.5, top - XP_BAR_HEIGHT - 4.0, w, XP_BAR_HEIGHT)
-		var fraction := 1.0 if _progress.is_max_level() else _progress.xp / _progress.xp_to_next()
-		draw_rect(xp_rect, config.bar_back_color)
-		draw_rect(Rect2(xp_rect.position, Vector2(w * fraction, XP_BAR_HEIGHT)), config.xp_color)
-		line = "LV %d   " % _progress.level
-		top -= XP_BAR_HEIGHT + 4.0
-		if _jobs != null and _progress.can_choose_job(_jobs):
-			_draw_text_centered(Vector2(center.x, top - 58.0), "Choose your path - open CHAR",
-					Color(1.0, 0.85, 0.35))
-		if _progress.skill_points > 0:
-			_draw_text_centered(Vector2(center.x, top - 34.0), "%d skill point%s - open CHAR" % [
-					_progress.skill_points, "" if _progress.skill_points == 1 else "s"],
-					config.xp_color)
+func _draw_panel() -> void:
+	var at := config.panel_position
+	var w := config.panel_width
+	var inner := w - PANEL_PADDING * 2.0
+	var bars_top := at.y + PANEL_PADDING + TEXT_SIZE + SMALL_TEXT_SIZE + 10.0
+	var height := bars_top - at.y + config.bar_height * 2.0 + config.bar_gap * 2.0 \
+			+ XP_BAR_HEIGHT + PANEL_PADDING
+	var panel := Rect2(at, Vector2(w, height))
+	draw_rect(panel, config.panel_color)
+	_draw_frame(panel)
+	var x := at.x + PANEL_PADDING
+	var font := ThemeDB.fallback_font
+	var title := "LV %d" % (_progress.level if _progress != null else 1)
+	draw_string(font, Vector2(x, at.y + PANEL_PADDING + TEXT_SIZE - 2.0), title,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE, Color(1.0, 0.92, 0.75))
+	if _progress != null and _jobs != null and _progress.job >= 0:
+		var title_w := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE).x
+		draw_string(font, Vector2(x + title_w + 10.0, at.y + PANEL_PADDING + TEXT_SIZE - 2.0),
+				_progress.job_title(_jobs), HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_SIZE,
+				_jobs.jobs[_progress.job].color)
 	if _zone != null:
-		line += "ZONE %d   camps left %d" % [_zone.level, _zone.camps_left()]
-	_draw_text_centered(Vector2(center.x, top - 10.0), line, Color(1, 1, 1, 0.85))
+		draw_string(font, Vector2(x, at.y + PANEL_PADDING + TEXT_SIZE + SMALL_TEXT_SIZE + 2.0),
+				"Zone %d   -   %d camps left" % [_zone.level, _zone.camps_left()],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL_TEXT_SIZE, Color(1, 1, 1, 0.7))
+	var bar := Rect2(x, bars_top, inner, config.bar_height)
+	_draw_bar(bar, _vitals.health / _vitals.max_health, config.health_color, _health_text())
+	bar.position.y += config.bar_height + config.bar_gap
+	_draw_bar(bar, _vitals.mana / _vitals.max_mana, config.mana_color,
+			"%d / %d" % [floori(_vitals.mana), ceili(_vitals.max_mana)])
+	if _progress != null:
+		bar.position.y += config.bar_height + config.bar_gap
+		bar.size.y = XP_BAR_HEIGHT
+		var fraction := 1.0 if _progress.is_max_level() else _progress.xp / _progress.xp_to_next()
+		_draw_bar(bar, fraction, config.xp_color, "")
+		_draw_hints(Vector2(at.x, panel.end.y + 20.0))
+
+
+## Skill-point and job-choice hints under the panel.
+func _draw_hints(at: Vector2) -> void:
+	var font := ThemeDB.fallback_font
+	if _jobs != null and _progress.can_choose_job(_jobs):
+		draw_string(font, at, "Choose your path - open CHAR", HORIZONTAL_ALIGNMENT_LEFT, -1,
+				SMALL_TEXT_SIZE + 2, Color(1.0, 0.85, 0.35))
+		at.y += SMALL_TEXT_SIZE + 8.0
+	if _progress.skill_points > 0:
+		draw_string(font, at, "%d skill point%s - open CHAR" % [_progress.skill_points,
+				"" if _progress.skill_points == 1 else "s"], HORIZONTAL_ALIGNMENT_LEFT, -1,
+				SMALL_TEXT_SIZE + 2, config.xp_color)
+
+
+## Thin gold frame with small corner blocks.
+func _draw_frame(rect: Rect2) -> void:
+	draw_rect(rect, config.frame_color, false, 1.5)
+	var c := CORNER_SIZE
+	for corner: Vector2 in [rect.position, Vector2(rect.end.x, rect.position.y), rect.end,
+			Vector2(rect.position.x, rect.end.y)]:
+		draw_rect(Rect2(corner - Vector2(c, c) * 0.5, Vector2(c, c)), config.frame_color)
 
 
 ## Rounds both numbers the same way, so health never reads above max.
@@ -164,23 +212,28 @@ func _draw_bar(rect: Rect2, fraction: float, color: Color, label: String) -> voi
 
 
 func _draw_minimap() -> void:
-	if _zone == null:
-		return
-	var s := config.minimap_size
-	var origin := Vector2(size.x - s - config.minimap_margin, config.minimap_margin)
-	draw_rect(Rect2(origin, Vector2(s, s)), config.minimap_back_color)
-	var scale_factor := s / (_half_extent * 2.0)
-	for camp in _zone.camp_centers.size():
-		if _zone.camp_alive[camp] <= 0:
-			continue
-		var c: Vector2 = _zone.camp_centers[camp]
-		var dot := origin + (c + Vector2(_half_extent, _half_extent)) * scale_factor
-		var awake := _zone.camp_awake[camp] != 0
-		var radius := clampf(sqrt(float(_zone.camp_alive[camp])) * 0.7, 2.0, 6.0)
-		draw_circle(dot, radius, config.minimap_awake_color if awake else config.minimap_camp_color)
-	var p := _player.ground_position()
-	draw_circle(origin + (p + Vector2(_half_extent, _half_extent)) * scale_factor, 3.5,
-			config.minimap_player_color)
+	var r := config.minimap_radius
+	var center := Vector2(size.x - config.minimap_margin - r, config.minimap_margin + r)
+	var yaw := _camera.yaw() if _camera != null else 0.0
+	var facing := Vector2(_player.facing.x, _player.facing.z)
+	HudMinimap.draw(self, center, config, _zone, _player.ground_position(), facing, yaw,
+			_half_extent)
+
+
+func _draw_skills() -> void:
+	var mana := _vitals.mana
+	var pc := _player.config
+	var lure_ready := _combat.lure_cooldown.progress() if pc.lure != null else 0.0
+	var lure_usable := pc.lure != null and mana >= pc.lure.mana_cost
+	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 0, SKILL_ROWS),
+			HudSkills.Glyph.BOLT, "RT", 1.0, true)
+	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 1, SKILL_ROWS),
+			HudSkills.Glyph.NOVA, "RB", _combat.nova_cooldown.progress(),
+			mana >= pc.nova.mana_cost)
+	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 2, SKILL_ROWS),
+			HudSkills.Glyph.LURE, "LB", lure_ready, lure_usable)
+	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 3, SKILL_ROWS),
+			HudSkills.Glyph.DODGE, "A", _player.dash_cooldown.progress(), true)
 
 
 func _draw_boss_bar() -> void:

@@ -2,10 +2,15 @@ class_name EffectType
 extends Resource
 ## A pooled visual effect: one mesh instance that grows and fades out.
 ## Sizes are radii in meters; spawn() multiplies them by a per-instance size.
+## COLUMN is an open cylinder rising from the effect's height (a pillar of
+## light) and LIGHTNING a jagged bolt rising from it; for both, flatten is
+## the height in radii.
 
-enum Shape { SPHERE, RING }
+enum Shape { SPHERE, RING, COLUMN, LIGHTNING }
 
 @export var shape: Shape = Shape.SPHERE
+## Adds light instead of covering what's behind it: reads as glowing.
+@export var additive: bool = false
 @export var color: Color = Color(1, 1, 1, 0.8)
 @export var duration: float = 0.25
 @export var start_scale: float = 1.0

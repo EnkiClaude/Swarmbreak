@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EffectType" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/effect_type.gd" id="1_effect"]
+
+[resource]
+script = ExtResource("1_effect")
+shape = 2
+additive = true
+color = Color(1, 0.85, 0.45, 0.55)
+duration = 1.5
+start_scale = 0.5
+end_scale = 1.3
+flatten = 14.0
+height = 0.0
+capacity = 8

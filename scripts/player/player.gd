@@ -1,7 +1,8 @@
 class_name Player
 extends Node3D
-## Twin-stick player: left stick moves relative to the camera, right stick or
-## mouse aims. With no aim input, the player faces where it is moving.
+## Third-person player: the left stick moves relative to the camera, and
+## attacks aim where the camera looks. The player faces where it moves, and
+## turns toward the aim while attacking or standing still.
 ## Dodge dashes along the move direction (or the aim, when standing still)
 ## and makes the player briefly invulnerable.
 
@@ -12,8 +13,10 @@ const AIM_MARKER_SIZE := Vector3(0.18, 0.18, 0.5)
 @export var config: PlayerConfig
 
 var velocity := Vector3.ZERO
-## Unit vector on the XZ plane.
+## Unit vector on the XZ plane: where the camera looks.
 var aim_direction := Vector3.FORWARD
+## Unit vector on the XZ plane the body faces.
+var facing := Vector3.FORWARD
 
 var vitals: PlayerVitals
 var dash_cooldown: Cooldown
@@ -51,10 +54,6 @@ func _on_stats_changed() -> void:
 	dash_cooldown.duration = config.dash_cooldown * (1.0 - stats.value(PlayerStat.Id.DODGE_COOLDOWN))
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	_input.observe(event)
-
-
 ## Puts the player back at a spot, standing still.
 func reset_to(at: Vector3) -> void:
 	position = at
@@ -89,6 +88,11 @@ func tick(delta: float, now: float = 0.0) -> void:
 	_update_aim(move, yaw)
 
 
+## Faces the aim right away, e.g. as an attack goes off.
+func face_aim() -> void:
+	_face(aim_direction)
+
+
 func _start_dash(move: Vector2, yaw: float, now: float) -> void:
 	var dir := _screen_to_world(move, yaw)
 	if dir.length_squared() < 0.01:
@@ -101,28 +105,24 @@ func _start_dash(move: Vector2, yaw: float, now: float) -> void:
 	dashed.emit()
 
 
-## True while the right stick is held outside its deadzone.
-func is_stick_aiming() -> bool:
-	return _input.aim_source == TwinStickInput.AimSource.STICK \
-			and _input.stick_aim() != Vector2.ZERO
-
-
 func ground_position() -> Vector2:
 	return Vector2(position.x, position.z)
 
 
 func _update_aim(move: Vector2, yaw: float) -> void:
-	var dir := Vector3.ZERO
-	if _input.aim_source == TwinStickInput.AimSource.MOUSE:
-		dir = _camera_rig.mouse_ground_point() - global_position
-		dir.y = 0.0
+	aim_direction = _screen_to_world(Vector2.UP, yaw)
+	var attacking := Input.is_action_pressed("attack_fire") or Input.is_action_pressed("attack_nova")
+	if attacking or move == Vector2.ZERO or _dash_left > 0.0:
+		_face(_dash_direction if _dash_left > 0.0 else aim_direction)
 	else:
-		var stick := _input.stick_aim()
-		dir = _screen_to_world(stick if stick != Vector2.ZERO else move, yaw)
+		_face(_screen_to_world(move, yaw))
+
+
+func _face(dir: Vector3) -> void:
 	if dir.length_squared() < 0.0001:
 		return
-	aim_direction = dir.normalized()
-	rotation.y = atan2(-aim_direction.x, -aim_direction.z)
+	facing = dir.normalized()
+	rotation.y = atan2(-facing.x, -facing.z)
 
 
 ## Maps a screen-space stick vector onto the ground so "up" is away from the camera.

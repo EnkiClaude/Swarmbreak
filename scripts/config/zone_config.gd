@@ -27,3 +27,12 @@ extends Resource
 @export var placement_attempts: int = 400
 ## Most camps a zone can hold (sizes the wake flags).
 @export var max_camps: int = 128
+## How zones look; zone levels cycle through these in order.
+@export var themes: Array[ZoneTheme] = []
+
+
+## The theme for a zone level (1-based), or null when there are none.
+func theme_for(level: int) -> ZoneTheme:
+	if themes.is_empty():
+		return null
+	return themes[posmod(level - 1, themes.size())]

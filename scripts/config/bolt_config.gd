@@ -18,6 +18,8 @@ extends Resource
 @export var color: Color = Color(1.0, 0.85, 0.4)
 ## Pool size: the most bolts in flight at once.
 @export var capacity: int = 64
-## Fire whenever the right stick is held, as twin-stick shooters do.
-@export var auto_fire_on_aim: bool = false
+## Bolts bend toward the nearest enemy within this many degrees of the aim.
+@export var aim_assist_degrees: float = 12.0
+## Only enemies this close count for aim assist.
+@export var aim_assist_range: float = 20.0
 @export var burst_effect: EffectType

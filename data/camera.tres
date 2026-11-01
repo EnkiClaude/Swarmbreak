@@ -4,11 +4,20 @@
 
 [resource]
 script = ExtResource("1_camera")
-pitch_degrees = 55.0
-yaw_degrees = 45.0
-distance = 40.0
-ortho_size = 30.0
-follow_sharpness = 10.0
-shake_max_offset = 0.9
+fov_degrees = 55.0
+pitch_degrees = 26.0
+min_pitch_degrees = 10.0
+max_pitch_degrees = 60.0
+yaw_degrees = 0.0
+distance = 11.0
+min_distance = 3.0
+wall_margin = 1.0
+look_height = 1.5
+turn_speed = 150.0
+tilt_speed = 70.0
+mouse_sensitivity = 0.18
+far = 150.0
+follow_sharpness = 12.0
+shake_max_offset = 0.35
 shake_decay = 2.2
 shake_frequency = 28.0

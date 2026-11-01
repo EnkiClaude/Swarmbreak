@@ -9,3 +9,6 @@ extends Resource
 @export var cooldown: float = 1.2
 @export var mana_cost: float = 35.0
 @export var effect: EffectType
+## Lightning that strikes enemies the nova hits; open ground when it hits few.
+@export var strike_effect: EffectType
+@export var strikes: int = 8
