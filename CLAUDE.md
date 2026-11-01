@@ -130,8 +130,15 @@ The swarm's camp id is the site index in the active space.
 
 Dungeons (`DungeonLayout`) are a hallway running north from the entrance
 with rooms on both sides behind doorways and a boss room at the far end.
-Each room holds one camp (or a spawner), `depth_level_step` levels harder
-per room deeper, with more Geon and a better minimum rarity in deep rooms.
+Each side room holds `camps_per_room` camps (some rooms a spawner) and is
+one step deeper than the room before it (left, then right, pair by pair):
+`depth_level_step` levels harder, more Geon, and every `deep_rarity_depth`
+rooms a better minimum rarity. The boss room at the end is one big room:
+the boss, `boss_room_camps` camps around it and `boss_room_spawners`
+spawners. Rooms are separate fights: every camp has a home room
+(`DungeonLayout.homes_for()`, `SwarmSteering.set_homes()`) and its monsters
+are stopped at that room's edge. There are six dungeons, each a higher
+level tier, each boss dropping pieces of its own set.
 On entry `SwarmManager.set_layout()` rasterizes the plan onto the flow
 field: monsters route through doors (`FlowField` room mode, as cheap as
 open ground) and steering stops them at wall cells; the player
@@ -163,13 +170,21 @@ level's points to spend.
 The currency is Geon (`LootConfig.currency_name`; kept as `Inventory.stones`
 in code and saves). Clearing a camp drops loot where its last member died
 (`LootSystem.drop_rewards`): each drop is an item at `item_drop_chance`
-(1 in 10), otherwise a pile of Geon that grows with the camp's level and
-is picked up on touch. Bosses also drop a big pile; dungeons add drops and
+(1 in 10), else a talisman at `talisman_drop_chance`, otherwise a pile of
+Geon that grows with the camp's level and is picked up on touch. Bosses also drop a big pile; dungeons add drops and
 bigger piles. An item is a base kind
 (`ItemKindDef` in `data/rpg/loot.tres`: wand, blade, staff, greatblade,
 tome, shield, robe, plate, pendant, belt, ring) that sets the slot, whether
-it takes both hands, its icon and an implicit stat; then a rarity and that
-many affixes from the slot's pool, growing with the camp's level.
+it takes both hands, its icon and an implicit stat; then a rarity (common,
+magic, rare, epic, legendary: `rarity_affixes` affixes from the slot's
+pool, values times `rarity_power`), growing with the camp's level.
+Set items (rarity 6, "Set", never rolled at random) come only from dungeon
+bosses (`data/rpg/sets.tres`, `SetList`/`SetDef`, `DungeonDef.set_index`):
+fixed pieces, and bonuses for wearing 2, 3 or 5 of a set, which
+`Inventory.total()` adds. Talismans (`ItemData.is_talisman`) live in the
+backpack and are never worn; applying one to worn gear (`TalismanRules`)
+fills one of the gear's sockets (by rarity) at a falling chance and adds
+its stats for good. A failure only destroys the talisman, never the gear.
 `Inventory` wears items in twelve positions (`Inventory.Equip`: main hand,
 amulet, armor, off hand, belt, two rings, helm, gloves, pants, boots, pet);
 the first five equal their `AffixDef.Slot`, later slots are slot + 1.
@@ -326,6 +341,9 @@ run, except errors from the headless dummy renderer.
 | Character       | Start               | Tab / C           |
 | Inventory       | Y                   | I                 |
 | Switch menu tab | LB / RB             | Q / E             |
+| Menu: select / press | A              | Enter / click     |
+| Menu: back / close   | B              | Esc               |
+| Menu: move focus     | D-pad / left stick | Arrows        |
 | Spawn 100       | View / Back         | `=` or keypad `+` |
 | Zoom camera     | D-pad up/down       | Mouse wheel       |
 | Zoom steps      | R3 (right stick)    | Z                 |

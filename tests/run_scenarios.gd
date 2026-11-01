@@ -84,6 +84,10 @@ func _run() -> void:
 	await _scenario_async("the Egg Keeper gives an egg that follows and levels", _keeper_and_pet)
 	await _scenario_async("double-clicking an item wears it, again takes it off", _double_click)
 	await _scenario_async("a town gate leads into the dungeon and back to town", _town_gate)
+	await _scenario_async("a dungeon boss drops a piece of its set", _dungeon_set_drop)
+	await _scenario_async("a talisman applied from the inventory adds its stats", _talisman_menu)
+	await _scenario_async("in menus the controller's A presses and B closes", _menu_controller)
+	await _scenario_async("dungeon room monsters stay in their room", _room_leash)
 	await _scenario_async("dying sends the player back to town", _death_returns_to_town)
 	await _scenario_async("New Game erases the save and starts over", _new_game)
 
@@ -629,6 +633,21 @@ func _keeper_and_pet() -> void:
 	var loot := _main.get_node("Loot") as LootSystem
 	_check(loot.collect_radius > 3.0, "a hatched pet collects loot around the player (%.1f m)" %
 			loot.collect_radius)
+	# A pile past the player's own magnet but in the pet's range: the pet
+	# flies over and brings it in.
+	var inventory_now := _main_var("inventory") as Inventory
+	var geon_before := inventory_now.stones
+	var away := _player.ground_position() + Vector2(-9.0, 0.0)
+	loot.place_geon(5, away)
+	var closest := INF
+	for n in 90:
+		await _frames(1)
+		closest = minf(closest, Vector2(pets.position.x, pets.position.z).distance_to(away))
+		if inventory_now.stones > geon_before:
+			break
+	_check(closest < 1.5, "the pet flew to the drop (got within %.1f m)" % closest)
+	_check(inventory_now.stones >= geon_before + 5, "and picked it up (%d -> %d)" % [geon_before,
+			inventory_now.stones])
 
 
 func _double_click() -> void:
@@ -694,12 +713,20 @@ func _camp_drops_loot() -> void:
 			at = _swarm.state.positions[i]
 	var before := loot.ground_count()
 	var geon_before := inventory.stones
+	# Gear and talisman drops are chance; switch them off to check the Geon.
+	var loot_config := _main_var("loot_config") as LootConfig
+	var item_chance := loot_config.item_drop_chance
+	var talisman_chance := loot_config.talisman_drop_chance
+	loot_config.item_drop_chance = 0.0
+	loot_config.talisman_drop_chance = 0.0
 	await _frames(2)
+	loot_config.item_drop_chance = item_chance
+	loot_config.talisman_drop_chance = talisman_chance
 	_check(_camps.sites.alive[camp] == 0, "camp %d cleared" % camp)
 	var dropped := loot.ground_count() - before
 	_check(dropped >= 1, "camp dropped %d things" % dropped)
 	var piles := loot.ground_geon()
-	_check(piles > 0 or dropped == 0, "mostly Geon (%d on the ground)" % piles)
+	_check(piles > 0, "Geon piles (%d on the ground)" % piles)
 	_teleport(at)
 	await _frames(40)
 	_check(inventory.stones >= geon_before + piles,
@@ -1063,3 +1090,146 @@ func _inventory_tab() -> void:
 	inventory.backpack.assign(saved_backpack)
 	inventory.equipped.assign(saved_equipped)
 	inventory.notify_changed()
+
+
+func _dungeon_set_drop() -> void:
+	var map := _world.map
+	var sets := _main_var("set_list") as SetList
+	var loot := _main.get_node("Loot") as LootSystem
+	var chance := sets.boss_drop_chance
+	sets.boss_drop_chance = 1.0
+	_world.enter(0, map.arrival_point(0))
+	await _frames(3)
+	loot.clear()
+	var bosses := _bosses()
+	var slot := _lone_boss(Vector2(0.0, -4.0))
+	_swarm.state.health[bosses.index_of(slot)] = 0.0
+	await _frames(3)
+	sets.boss_drop_chance = chance
+	# On the ground, or already collected (a hatched pet picks drops up).
+	var found: ItemData = null
+	var inventory := _main_var("inventory") as Inventory
+	var candidates: Array[ItemData] = []
+	for i in loot.ground_count():
+		candidates.append(loot.item_at(i))
+	candidates.append_array(inventory.backpack)
+	candidates.append_array(inventory.equipped)
+	for item in candidates:
+		if item != null and item.is_set():
+			found = item
+	_check(found != null, "the boss dropped a set piece")
+	if found != null:
+		var dungeon_set := (_main_var("world_config") as WorldConfig).dungeons[0].set_index
+		_check(found.set_id == dungeon_set, "from this dungeon's set (%s)" % found.item_name)
+	_world.return_to_town()
+	await _frames(2)
+
+
+func _talisman_menu() -> void:
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	var inventory := _main_var("inventory") as Inventory
+	var stats := _main_var("stats") as PlayerStats
+	var loot_config := _main_var("loot_config") as LootConfig
+	var saved_backpack := inventory.backpack.duplicate()
+	var saved_equipped := inventory.equipped.duplicate()
+	inventory.backpack.clear()
+	var gear := ItemData.new()
+	gear.slot = AffixDef.Slot.HELM
+	gear.rarity = 4
+	gear.item_name = "Test Helm"
+	inventory.equipped[Inventory.Equip.HELM] = gear
+	inventory.notify_changed()
+	menu.open(CharacterMenu.Tab.INVENTORY)
+	await _frames(1)
+	var stat := PlayerStat.Id.MAX_HEALTH
+	var before := stats.value(stat)
+	var applied := false
+	for n in 30:
+		var talisman := ItemData.new()
+		talisman.is_talisman = true
+		talisman.rarity = 1
+		talisman.item_name = "Talisman of Max Health"
+		talisman.stats = PackedInt32Array([stat])
+		talisman.values = PackedFloat32Array([7.0])
+		inventory.backpack.append(talisman)
+		menu.select_item(talisman)
+		var result := menu.apply_talisman(talisman, gear)
+		_check(not inventory.backpack.has(talisman), "the talisman is used up")
+		if result == TalismanRules.Result.SUCCESS:
+			applied = true
+			break
+	_check(applied, "a talisman took")
+	_check(inventory.equipped[Inventory.Equip.HELM] == gear, "the helm is still worn")
+	_check(is_equal_approx(stats.value(stat), minf(before + 7.0, PlayerStat.CAPS[stat])),
+			"its stat counts (%.1f -> %.1f)" % [before, stats.value(stat)])
+	_check(gear.talisman_sockets_used == 1, "one socket used of %d" %
+			loot_config.talisman_sockets[gear.rarity])
+	menu.close()
+	inventory.backpack.assign(saved_backpack)
+	inventory.equipped.assign(saved_equipped)
+	inventory.notify_changed()
+	await _frames(1)
+
+
+func _menu_controller() -> void:
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	# The inventory opens with focus on its own tab button: pressing it is harmless.
+	menu.open(CharacterMenu.Tab.INVENTORY)
+	await _frames(3)
+	var focused := menu.get_viewport().gui_get_focus_owner() as BaseButton
+	_check(focused != null, "a button has focus when the menu opens")
+	if focused != null:
+		var pressed := [false]
+		focused.pressed.connect(func() -> void: pressed[0] = true)
+		_joy_button(JOY_BUTTON_A)
+		await _frames(2)
+		_check(pressed[0], "A presses the focused button")
+	if menu.is_open():
+		_joy_button(JOY_BUTTON_B)
+		await _frames(2)
+	_check(not menu.is_open(), "B closes the menu")
+	if menu.is_open():
+		menu.close()
+
+
+func _joy_button(button: JoyButton) -> void:
+	for down in [true, false]:
+		var event := InputEventJoypadButton.new()
+		event.button_index = button
+		event.pressed = down
+		Input.parse_input_event(event)
+
+
+func _room_leash() -> void:
+	var map := _world.map
+	_world.enter(0, map.arrival_point(0))
+	await _frames(5)
+	var layout := map.layouts[0]
+	var sites := _camps.sites
+	var camp := -1
+	for s in sites.size():
+		if layout.room_at(sites.centers[s]) == 1 and sites.is_spawner[s] == 0:
+			camp = s
+			break
+	_check(camp >= 0, "room 0 has a camp")
+	if camp < 0:
+		return
+	# Wake it from the hallway, right outside its door, and wait.
+	_teleport(Vector2(0.0, layout.doors[0].y))
+	_camps.lure(sites.centers[camp], 4.0)
+	await _frames(240)
+	var outside := 0
+	var members := 0
+	for i in _swarm.state.count:
+		if _swarm.state.camp_ids[i] == camp:
+			members += 1
+			# Judged by the 2 m steering cell it stands in (grid corner at -72).
+			var p: Vector2 = _swarm.state.positions[i]
+			var cell := Vector2(-72.0, -72.0) + (((p + Vector2(72.0, 72.0)) / 2.0).floor()
+					+ Vector2(0.5, 0.5)) * 2.0
+			if layout.room_at(cell) != 1:
+				outside += 1
+	_check(members > 0, "the camp is there (%d)" % members)
+	_check(outside == 0, "none of it left its room (%d outside)" % outside)
+	_world.return_to_town()
+	await _frames(2)

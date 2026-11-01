@@ -7,6 +7,9 @@ extends RefCounted
 ## a sleeping camp costs almost nothing.
 ## Pass 2 integrates positions, keeps enemies out of the player's body and
 ## inside the arena, and totals the damage from enemies touching the player.
+## In a dungeon, wall cells stop movement, and an enemy whose camp has a home
+## room (set_homes) is also stopped at that room's edge, so each room fights
+## on its own.
 ##
 ## Packed arrays and members are pulled into locals because local access is
 ## far cheaper than member access in GDScript. A local packed array aliases the
@@ -32,6 +35,8 @@ var _direct_chase_distance: float
 var _half_extent: float
 var _max_neighbours: int
 var _max_attackers: int
+## Home room id per camp id (0 or missing: free to roam).
+var _homes := PackedInt32Array()
 
 
 func _init(state: SwarmState, grid: SpatialHash, flow: FlowField, types: SwarmTypeTable,
@@ -51,6 +56,12 @@ func _init(state: SwarmState, grid: SpatialHash, flow: FlowField, types: SwarmTy
 ## field (kept short in dungeons, so they don't press into walls).
 func set_direct_chase(distance: float) -> void:
 	_direct_chase_distance = distance
+
+
+## Each camp's home room (FlowField room id), indexed by camp id; empty
+## lets every enemy roam.
+func set_homes(homes: PackedInt32Array) -> void:
+	_homes = homes
 
 
 ## Enemies stay inside -half_extent..half_extent on X and Z.
@@ -174,19 +185,31 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 	# Dungeon walls: a move into a wall cell keeps whichever axis is free.
 	var walls := _flow.blocked
 	var has_walls := _flow.has_rooms()
+	# Leashed enemies treat every cell outside their home room as wall.
+	var rooms := _flow.room_ids()
+	var homes := _homes
+	var home_count := homes.size()
+	var camps := _state.camp_ids
 	for i in count:
 		var t: int = type_ids[i]
 		var p: Vector2 = positions[i] + velocities[i] * delta
 		if has_walls:
+			var home := 0
+			var camp: int = camps[i]
+			if camp >= 0 and camp < home_count:
+				home = homes[camp]
 			var old: Vector2 = positions[i]
 			var wx: int = clampi(int((p.x - f_origin.x) * f_inv), 0, f_cols - 1)
 			var wz: int = clampi(int((p.y - f_origin.y) * f_inv), 0, f_rows - 1)
-			if walls[wz * f_cols + wx] != 0:
+			var cell: int = wz * f_cols + wx
+			if walls[cell] != 0 or (home > 0 and rooms[cell] != home):
 				var oz: int = clampi(int((old.y - f_origin.y) * f_inv), 0, f_rows - 1)
 				var ox: int = clampi(int((old.x - f_origin.x) * f_inv), 0, f_cols - 1)
-				if walls[oz * f_cols + wx] == 0:
+				var keep_z: int = oz * f_cols + wx
+				var keep_x: int = wz * f_cols + ox
+				if walls[keep_z] == 0 and (home <= 0 or rooms[keep_z] == home):
 					p = Vector2(p.x, old.y)
-				elif walls[wz * f_cols + ox] == 0:
+				elif walls[keep_x] == 0 and (home <= 0 or rooms[keep_x] == home):
 					p = Vector2(old.x, p.y)
 				else:
 					p = old

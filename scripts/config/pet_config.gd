@@ -19,13 +19,19 @@ extends Resource
 ## per stage); the player's own XP is never reduced.
 @export var xp_share_base: float = 0.08
 @export var xp_share_per_stage: float = 0.04
-## Loot within this distance of the player is collected, per stage (0 = egg).
-@export var pickup_radius_per_stage: PackedFloat32Array = [0.0, 7.0, 9.0, 11.0, 13.0]
+## Once hatched, loot within this distance of the player is collected:
+## pickup_radius_base plus pickup_radius_per_level for every pet level.
+@export var pickup_radius_base: float = 2.0
+@export var pickup_radius_per_level: float = 1.0
 ## Model height per stage.
 @export var height_per_stage: PackedFloat32Array = [0.45, 0.55, 0.8, 1.05, 1.35]
 ## Where the pet floats or walks: behind and beside the player.
 @export var follow_offset: Vector2 = Vector2(0.9, 1.4)
 @export var follow_sharpness: float = 6.0
+## A hatched pet flies to drops in its range at this speed (m/s) and picks
+## one up within fetch_reach of it.
+@export var fetch_speed: float = 18.0
+@export var fetch_reach: float = 1.0
 ## Rarity color an egg item shows in (LootConfig.rarity_colors).
 @export var egg_rarity: int = 2
 

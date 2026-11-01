@@ -12,6 +12,7 @@ signal opened
 signal closed
 signal job_chosen(job: int)
 signal refined(result: Refinery.Result, item: ItemData)
+signal talisman_applied(success: bool, gear: ItemData)
 signal egg_taken(egg: ItemData)
 ## The player confirmed erasing their save and starting over.
 signal new_game_requested
@@ -33,6 +34,8 @@ var _stats: PlayerStats
 var _loot: LootConfig
 var _jobs: JobTree
 var _refinery: Refinery
+## Applies talismans (set by setup_talismans(); null hides them).
+var talismans: TalismanRules
 var _character_page: CharacterPage
 var _inventory_page: InventoryPage
 ## Null until setup_pets(); the PET tab shows only then.
@@ -88,6 +91,11 @@ func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stat
 
 
 ## Adds the PET tab: the pet, the quest and egg choices.
+func setup_talismans(rules: TalismanRules) -> void:
+	talismans = rules
+	_inventory_page.talismans = rules
+
+
 func setup_pets(pets: PetConfig, quests: QuestLog) -> void:
 	_pets = pets
 	_quests = quests
@@ -213,7 +221,7 @@ func select_item(item: ItemData) -> void:
 	var again := item == _last_pick and now - _last_pick_msec <= DOUBLE_PICK_MSEC
 	_last_pick = item
 	_last_pick_msec = now
-	if again:
+	if again and not item.is_talisman:
 		_last_pick = null
 		toggle_equip(item)
 		return
@@ -223,6 +231,8 @@ func select_item(item: ItemData) -> void:
 
 ## Takes the item off if it's worn, otherwise wears it where it goes.
 func toggle_equip(item: ItemData) -> void:
+	if item.is_talisman:
+		return
 	var position := _inventory.position_of(item)
 	if position >= 0:
 		unequip(position)
@@ -343,6 +353,30 @@ func refine(item: ItemData, blessed: bool = false) -> Refinery.Result:
 			page.result_text = "Already at the maximum"
 			page.result_color = Color(1.0, 0.85, 0.3)
 	refined.emit(result, item)
+	_rebuild()
+	return result
+
+
+## Applies a backpack talisman to gear. The talisman is used up either way;
+## the gear only ever gains.
+func apply_talisman(talisman: ItemData, gear: ItemData) -> TalismanRules.Result:
+	var result := talismans.apply(talisman, gear, _inventory)
+	var page := _inventory_page
+	match result:
+		TalismanRules.Result.SUCCESS:
+			page.result_text = "The talisman took! %s gained its power." % gear.display_name()
+			page.result_color = MenuWidgets.GOOD_COLOR
+			page.selected = gear
+			page.focus_item = gear
+		TalismanRules.Result.FAILED:
+			page.result_text = "The talisman crumbled. %s is unharmed." % gear.display_name()
+			page.result_color = MenuWidgets.BAD_COLOR
+			page.selected = null
+		TalismanRules.Result.NO_SOCKET:
+			page.result_text = "No free socket on %s" % gear.display_name()
+			page.result_color = Color(1.0, 0.7, 0.3)
+	if result == TalismanRules.Result.SUCCESS or result == TalismanRules.Result.FAILED:
+		talisman_applied.emit(result == TalismanRules.Result.SUCCESS, gear)
 	_rebuild()
 	return result
 

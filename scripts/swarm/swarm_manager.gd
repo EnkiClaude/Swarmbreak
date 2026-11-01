@@ -148,17 +148,22 @@ func set_bounds(half_extent: float) -> void:
 ## Lays a dungeon's rooms onto the flow field: monsters route through its
 ## doors and stop at its walls. Also shortens the straight chase, so they
 ## don't press into walls near the player.
-func set_layout(layout: DungeonLayout, direct_chase: float) -> void:
+## homes: each camp's home room id (camp id = site index); its members never
+## leave that room.
+func set_layout(layout: DungeonLayout, direct_chase: float,
+		homes: PackedInt32Array = PackedInt32Array()) -> void:
 	_flow.set_origin(Vector2(-_flow_half, -_flow_half))
 	_flow.set_rooms(layout.rasterize(_flow.origin, _flow.cols, _flow.rows, _flow.cell_size),
 			layout.door_points())
 	_steering.set_direct_chase(direct_chase)
+	_steering.set_homes(homes)
 
 
 ## Open ground again: no walls, the usual straight chase.
 func clear_layout() -> void:
 	_flow.clear_rooms()
 	_steering.set_direct_chase(config.direct_chase_distance)
+	_steering.set_homes(PackedInt32Array())
 
 
 ## True inside a dungeon wall.

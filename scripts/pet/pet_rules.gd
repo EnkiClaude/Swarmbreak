@@ -14,6 +14,14 @@ static func is_hatched(config: PetConfig, level: int) -> bool:
 	return stage(config, level) >= 1
 
 
+## How far around the player the pet collects loot: nothing as an egg, then
+## a metre more every level.
+static func pickup_radius(config: PetConfig, level: int) -> float:
+	if not is_hatched(config, level):
+		return 0.0
+	return config.pickup_radius_base + config.pickup_radius_per_level * level
+
+
 static func xp_to_next(config: PetConfig, level: int) -> float:
 	return config.xp_first_level * pow(config.xp_growth, level - 1) \
 			* pow(config.stage_xp_multiplier, stage(config, level))

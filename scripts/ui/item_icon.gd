@@ -24,6 +24,8 @@ var faded := false
 
 ## The icon an item shows.
 static func glyph_for(item: ItemData, loot: LootConfig) -> int:
+	if item.is_talisman:
+		return ItemKindDef.Icon.TALISMAN
 	if item.kind >= 0 and item.kind < loot.item_kinds.size():
 		return loot.item_kinds[item.kind].icon
 	return SLOT_DEFAULTS[clampi(item.slot, 0, SLOT_DEFAULTS.size() - 1)]
@@ -128,6 +130,18 @@ func _draw() -> void:
 			draw_circle(Vector2(s * 0.1, s * 0.06), s * 0.05, accent * tint)
 			draw_circle(Vector2(-s * 0.04, s * 0.14), s * 0.04, accent * tint)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		ItemKindDef.Icon.TALISMAN:
+			# A six-sided charm on a cord with a rune cut in it.
+			_line(p.call(0.5, 0.1), p.call(0.5, 0.24), LEATHER * tint, s * 0.04)
+			var charm: Array = []
+			for k in 6:
+				var a := PI / 6.0 + k * TAU / 6.0
+				charm.append(p.call(0.5 + cos(a) * 0.3, 0.55 + sin(a) * 0.3))
+			_poly(charm, GOLD * tint)
+			_outline(charm, DARK * tint, s * 0.03)
+			_line(p.call(0.5, 0.38), p.call(0.5, 0.72), accent * tint, s * 0.06)
+			_line(p.call(0.38, 0.48), p.call(0.62, 0.62), accent * tint, s * 0.05)
+			_line(p.call(0.62, 0.48), p.call(0.38, 0.62), accent * tint, s * 0.05)
 		ItemKindDef.Icon.RING:
 			draw_arc(p.call(0.5, 0.58), s * 0.24, 0.0, TAU, 28, GOLD * tint, s * 0.08, true)
 			_poly([p.call(0.5, 0.18), p.call(0.62, 0.3), p.call(0.5, 0.42), p.call(0.38, 0.3)],

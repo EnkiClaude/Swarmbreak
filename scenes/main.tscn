@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3]
+[gd_scene load_steps=39 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="4_player"]
@@ -26,6 +26,7 @@
 [ext_resource type="Resource" path="res://data/rpg/attributes.tres" id="34_attributes"]
 [ext_resource type="Resource" path="res://data/rpg/pets.tres" id="35_pets"]
 [ext_resource type="Resource" path="res://data/rpg/quests.tres" id="36_quests"]
+[ext_resource type="Resource" path="res://data/rpg/sets.tres" id="37_sets"]
 [ext_resource type="Resource" path="res://data/rpg/loot.tres" id="26_loot"]
 [ext_resource type="Script" path="res://scripts/loot/loot_system.gd" id="27_loot_system"]
 [ext_resource type="Script" path="res://scripts/ui/character_menu.gd" id="28_menu"]
@@ -61,6 +62,7 @@ skill_tree = ExtResource("25_skills")
 attribute_table = ExtResource("34_attributes")
 pet_config = ExtResource("35_pets")
 quest_list = ExtResource("36_quests")
+set_list = ExtResource("37_sets")
 loot_config = ExtResource("26_loot")
 job_tree = ExtResource("29_jobs")
 boss_config = ExtResource("30_boss")

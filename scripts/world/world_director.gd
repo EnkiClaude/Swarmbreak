@@ -83,7 +83,9 @@ func enter(new_space: int, at: Vector2) -> void:
 	if space == WorldMap.OVERWORLD:
 		_swarm.clear_layout()
 	else:
-		_swarm.set_layout(map.layouts[space], _config.dungeon_chase_distance)
+		var layout: DungeonLayout = map.layouts[space]
+		_swarm.set_layout(layout, _config.dungeon_chase_distance,
+				layout.homes_for(map.sites(space).centers))
 	_loot.clear()
 	_overworld.visible = space == WorldMap.OVERWORLD
 	for d in _dungeons.size():

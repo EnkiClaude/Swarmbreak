@@ -19,6 +19,17 @@ and its frame rate says little about the Deck.
 
 ## Milestones
 
+- **M12:** loot tiers, sets, talismans and six dungeons. Epic and Legendary
+  gear (more affixes, bigger rolls). Each dungeon boss drops pieces of its
+  own set, with bonuses for wearing several. Talismans drop with their own
+  stats and can be applied to your gear's sockets; a failed attempt only
+  loses the talisman. Dungeon rooms are bigger, hold several camps each and
+  are separate fights (monsters never leave their room); every room is
+  harder than the last, and the boss room is one big room with the boss,
+  camps and spawners. Four new dungeons at higher level tiers. In menus the
+  controller's A selects and presses, B closes. Pets collect drops from
+  farther away: 1 m more every pet level.
+
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
   MultiMesh rendering) with a debug overlay.

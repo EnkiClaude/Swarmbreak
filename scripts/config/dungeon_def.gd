@@ -48,6 +48,12 @@ extends Resource
 ## A boss camp in the room across the hallway's far end.
 @export var has_boss: bool = true
 @export var boss_camp_size: int = 24
+## Camps in each side room, spread over it.
+@export var camps_per_room: int = 4
+## Camps around the boss in its room, plus spawners there that keep adding
+## awake monsters (boss_room_spawners, spawner_population each).
+@export var boss_room_camps: int = 4
+@export var boss_room_spawners: int = 2
 
 @export_group("Spawners")
 ## Spawners keep `spawner_population` monsters alive near them, one more every
@@ -72,5 +78,7 @@ extends Resource
 @export var geon_multiplier: float = 2.0
 ## Each room deeper adds this to the Geon multiplier.
 @export var depth_geon_step: float = 0.5
-## Rooms at least this deep raise the minimum item rarity by one.
-@export var deep_rarity_depth: int = 2
+## Every this many rooms deeper raises the minimum item rarity by one.
+@export var deep_rarity_depth: int = 3
+## The item set (index into SetList.sets) this dungeon's boss drops, or -1.
+@export var set_index: int = -1

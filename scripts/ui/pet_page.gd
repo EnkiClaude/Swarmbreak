@@ -68,9 +68,9 @@ func _build_pet(parent: VBoxContainer) -> void:
 			parent.add_child(MenuWidgets.label("%s at level %d" % ["Hatches" if stage == 0
 					else "Evolves", next], MenuWidgets.SMALL_FONT, Color(1.0, 0.85, 0.4)))
 		if stage >= 1:
-			parent.add_child(MenuWidgets.label("Collects drops within %d m of you" %
-					roundi(_pets.pickup_radius_per_stage[mini(stage,
-					_pets.pickup_radius_per_stage.size() - 1)]), MenuWidgets.SMALL_FONT,
+			parent.add_child(MenuWidgets.label("Collects drops within %d m of you (+%s m every level)" %
+					[roundi(PetRules.pickup_radius(_pets, item.pet_level)),
+					String.num(_pets.pickup_radius_per_level, 1)], MenuWidgets.SMALL_FONT,
 					MenuWidgets.GOOD_COLOR))
 		parent.add_child(MenuWidgets.label("  " + "\n  ".join(item.describe_lines())))
 	var q := _quests.current()

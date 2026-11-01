@@ -4,6 +4,8 @@ extends RefCounted
 ## inventory: icon and name in rarity color, kind, hands, slot and level, its
 ## stats, and (for an item not worn) how it compares with everything wearing
 ## it would take off. The comparison is shared with the details column.
+## Set items list their set's bonuses (lit when worn enough); gear shows its
+## talisman sockets; a talisman says what applying it does.
 
 const WIDTH := 330.0
 const ICON_SIZE := 52.0
@@ -41,7 +43,13 @@ static func build(item: ItemData, inventory: Inventory, loot: LootConfig) -> Pan
 			MenuWidgets.DIM_COLOR))
 	for line in item.describe_lines():
 		box.add_child(_label(line, MenuWidgets.SMALL_FONT - 1, MenuWidgets.TEXT_COLOR))
-	if inventory.is_equipped(item):
+	add_set_lines(box, item, inventory, MenuWidgets.SMALL_FONT - 2)
+	add_socket_line(box, item, loot, MenuWidgets.SMALL_FONT - 2)
+	if item.is_talisman:
+		box.add_child(_label("Select it, then apply it to worn gear. If it fails, the " +
+				"talisman crumbles; the gear is never harmed.", MenuWidgets.SMALL_FONT - 3,
+				MenuWidgets.DIM_COLOR))
+	elif inventory.is_equipped(item):
 		box.add_child(_label("Equipped: %s" % Inventory.EQUIP_NAMES[inventory.position_of(item)],
 				MenuWidgets.SMALL_FONT - 2, MenuWidgets.TITLE_COLOR))
 	else:
@@ -66,6 +74,9 @@ static func _unwrap(node: Node) -> void:
 ## "Rare Staff - two-handed - item lv 4".
 static func describe_kind(item: ItemData, loot: LootConfig) -> String:
 	var kind := loot.slot_names[item.slot]
+	if item.is_talisman:
+		return "%s %s   -   item lv %d" % [loot.rarity_names[item.rarity], loot.talisman_name,
+				item.item_level]
 	if item.kind >= 0 and item.kind < loot.item_kinds.size():
 		kind = loot.item_kinds[item.kind].display_name
 	var parts := PackedStringArray([loot.rarity_names[item.rarity] + " " + kind])
@@ -75,6 +86,32 @@ static func describe_kind(item: ItemData, loot: LootConfig) -> String:
 		parts.append("one-handed")
 	parts.append("item lv %d" % item.item_level)
 	return "   -   ".join(parts)
+
+
+## A set item's set: its name, pieces worn, and each bonus (lit once worn).
+static func add_set_lines(parent: Container, item: ItemData, inventory: Inventory,
+		font_size: int) -> void:
+	if not item.is_set() or inventory.sets == null or item.set_id >= inventory.sets.sets.size():
+		return
+	var def := inventory.sets.sets[item.set_id]
+	var worn := inventory.set_count(item.set_id)
+	var green := Color(0.35, 0.95, 0.4)
+	parent.add_child(_label("%s  (%d/%d worn)" % [def.set_name, worn, def.pieces.size()],
+			font_size + 1, green))
+	for k in def.bonus_stats.size():
+		var active := worn >= def.bonus_pieces[k]
+		parent.add_child(_label("  (%d) %s" % [def.bonus_pieces[k],
+				PlayerStat.describe(def.bonus_stats[k], def.bonus_values[k])], font_size,
+				green if active else MenuWidgets.DIM_COLOR))
+
+
+## "Talisman sockets: 1 / 2 used" for gear that has sockets.
+static func add_socket_line(parent: Container, item: ItemData, loot: LootConfig,
+		font_size: int) -> void:
+	var sockets := TalismanRules.sockets_of(loot, item)
+	if sockets > 0:
+		parent.add_child(_label("%s sockets: %d / %d used" % [loot.talisman_name,
+				item.talisman_sockets_used, sockets], font_size, Color(0.95, 0.8, 0.5)))
 
 
 ## Lines comparing item with what wearing it (at its default position) would
