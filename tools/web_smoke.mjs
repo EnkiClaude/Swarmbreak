@@ -101,6 +101,9 @@ await shot("menu");
 await page.keyboard.press("KeyE"); // switch to the inventory tab
 await page.waitForTimeout(500);
 await shot("inventory");
+await page.keyboard.press("KeyE"); // and on to the pet tab
+await page.waitForTimeout(500);
+await shot("pet");
 await page.keyboard.press("Tab");
 await page.waitForTimeout(500);
 
