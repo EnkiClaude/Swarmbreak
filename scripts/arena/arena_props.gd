@@ -7,6 +7,7 @@ extends RefCounted
 ## collide with them, which is why none stand inside a hall. The house, tree
 ## and batch helpers are shared with the open world's scenery.
 
+const PROP_SHADER := preload("res://shaders/prop.gdshader")
 const PILLAR_SEGMENTS := 12
 const LANTERN_SEGMENTS := 8
 const CANOPY_SEGMENTS := 8
@@ -190,11 +191,10 @@ static func add_batch(parent: Node3D, batch_name: String, mesh: Mesh,
 	parent.add_child(instance)
 
 
-static func lit_material() -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.vertex_color_is_srgb = true
-	material.roughness = 0.75
+## Lit and weathered (prop.gdshader): instance colors with grain and grime.
+static func lit_material() -> Material:
+	var material := ShaderMaterial.new()
+	material.shader = PROP_SHADER
 	return material
 
 

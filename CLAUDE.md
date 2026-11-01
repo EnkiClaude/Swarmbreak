@@ -301,6 +301,16 @@ If profiling on Deck shows the GDScript hot loop is the bottleneck, port
 `SwarmSteering.step` and `SpatialHash.build` to a GDExtension. Keep their
 packed-array interfaces so nothing else has to change.
 
+## Look
+
+The art direction is dark and grim, not toy-like. Every lit surface gets
+procedural detail from `shaders/grime.gdshaderinc` (grain, blotches, grime
+toward the ground): characters in `enemy.gdshader` and `hero.gdshader`,
+props, walls and pillars in `prop.gdshader` (`ArenaProps.lit_material()`),
+floors in `zone_floor.gdshader` and `world_floor.gdshader` (cracks, stains).
+Parts painted with vertex alpha below 1 glow (monster eyes and gems, the
+hero's weapon). Keep palettes dark and desaturated, fog thin and dark.
+
 ## Game feel
 
 Every attack must read as powerful: a blow that kills more must freeze, shake,

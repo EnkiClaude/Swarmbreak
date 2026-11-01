@@ -13,6 +13,8 @@ uniform float tile_size = 2.0;
 uniform float grout_width = 0.06;
 uniform float noise_amount = 0.15;
 uniform float roughness_value = 0.6;
+// Overall multiplier on the floor's colors (below 1 for a grimmer look).
+uniform float darkness = 0.9;
 
 varying vec3 world_pos;
 
@@ -87,7 +89,12 @@ void fragment() {
 		float grout = 1.0 - smoothstep(g - aa, g + aa, edge);
 		col = mix(col, grout_color, grout);
 	}
-	ALBEDO = col;
+	// Age: hairline cracks across tiles, dark stains and soot.
+	float crack = 1.0 - smoothstep(0.0, 0.02, abs(fbm(p * 0.6 + 4.1) - 0.5));
+	col *= 1.0 - crack * 0.5 * smoothstep(0.45, 0.6, fbm(p * 0.09 + 2.0));
+	float stain = smoothstep(0.5, 0.78, fbm(p * 0.05 + 17.0));
+	col *= 1.0 - stain * 0.4;
+	ALBEDO = col * darkness;
 	ROUGHNESS = roughness_value;
 	SPECULAR = specular;
 }

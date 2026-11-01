@@ -11,6 +11,8 @@ uniform float region_size = 128.0;
 // Fraction of a region on each side of a border where colors blend.
 uniform float blend = 0.12;
 uniform float noise_amount = 0.25;
+// Overall multiplier on the ground's colors (below 1 for a grimmer world).
+uniform float darkness = 0.9;
 
 varying vec3 world_pos;
 
@@ -72,7 +74,15 @@ void fragment() {
 	col *= 1.0 + (fbm(p * 1.7) - 0.5) * noise_amount * 2.0;
 	float bare = smoothstep(0.6, 0.72, fbm(p * 0.22 + 7.0));
 	col = mix(col, worn, bare * 0.7);
-	ALBEDO = col;
+	// Cracked, dirty ground: thin dark veins, scattered dark specks of
+	// stone and rot, and wide dark stains.
+	float vein = 1.0 - smoothstep(0.0, 0.03, abs(fbm(p * 0.45 + 1.3) - 0.5));
+	col *= 1.0 - vein * 0.45 * smoothstep(0.4, 0.6, fbm(p * 0.05 + 9.0));
+	float speck = step(0.93, hash(floor(p * 3.0)));
+	col *= 1.0 - speck * 0.35;
+	float stain = smoothstep(0.55, 0.8, fbm(p * 0.03 + 21.0));
+	col *= 1.0 - stain * 0.35;
+	ALBEDO = col * darkness;
 	ROUGHNESS = 0.95;
 	SPECULAR = 0.25;
 }

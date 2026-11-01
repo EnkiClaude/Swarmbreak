@@ -17,7 +17,8 @@ static func enemy(t: EnemyType, material: Material = null) -> ArrayMesh:
 	var b := ModelBuilder.new()
 	var main := t.color
 	var second := t.secondary_color
-	var accent := t.accent_color
+	# Accent parts (eyes, gems, cores) glow (enemy.gdshader).
+	var accent := _glowing(t.accent_color, 0.9)
 	var h := t.body_height
 	match t.model:
 		EnemyType.Model.GOBLIN:

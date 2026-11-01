@@ -6,12 +6,12 @@
 [resource]
 script = ExtResource("1_enemy_type")
 model = 1
-secondary_color = Color(0.35, 0.25, 0.18, 1)
-accent_color = Color(1, 0.35, 0.2, 1)
+secondary_color = Color(0.2, 0.14, 0.1, 1)
+accent_color = Color(1, 0.22, 0.08, 1)
 walk_cycle_speed = 7.0
 walk_swing = 0.5
 display_name = "Ogre"
-color = Color(0.55, 0.45, 0.62, 1)
+color = Color(0.3, 0.24, 0.28, 1)
 max_health = 70.0
 knockback_resist = 0.4
 xp = 6.0
