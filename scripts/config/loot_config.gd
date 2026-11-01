@@ -2,7 +2,16 @@ class_name LootConfig
 extends Resource
 ## Item drops, rarities, pickup and the backpack.
 
-## Items dropped when a camp's last member dies.
+## The currency (refining, salvage), as shown to the player.
+@export var currency_name: String = "Geon"
+## Each drop is an item with this chance; otherwise it's a pile of Geon.
+@export var item_drop_chance: float = 0.05
+## Geon in one pile at level 1; piles grow by geon_growth_per_level per level.
+@export var geon_pile_min: int = 2
+@export var geon_pile_max: int = 5
+@export var geon_growth_per_level: float = 0.25
+@export var geon_color: Color = Color(1.0, 0.8, 0.3)
+## Drops when a camp's last member dies (items or Geon piles).
 @export var camp_drop_min: int = 1
 @export var camp_drop_max: int = 2
 ## Rarity weights for common, magic, rare.
@@ -44,11 +53,9 @@ extends Resource
 ]
 ## Each failure in a row on an item adds this to its next chance.
 @export var upgrade_pity_per_fail: float = 0.04
-## Stones to attempt +1 is cost_base; each level adds cost_per_level.
+## Geon to attempt +1 is cost_base; each level adds cost_per_level.
 @export var upgrade_cost_base: int = 1
 @export var upgrade_cost_per_level: int = 1
-@export var camp_stones_min: int = 1
-@export var camp_stones_max: int = 3
-## Stones from salvaging a common, magic, rare item.
+## Geon from salvaging a common, magic, rare item.
 @export var salvage_stones: PackedInt32Array = [1, 3, 6]
 @export var beam_height: float = 3.5

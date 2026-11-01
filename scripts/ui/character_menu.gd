@@ -228,13 +228,13 @@ func _clear_tooltip() -> void:
 func salvage_item(item: ItemData) -> void:
 	var gained := _inventory.salvage_item(item, _loot.salvage_stones)
 	_inventory_page.select(null)
-	_inventory_page.result_text = "Salvaged for %d stones" % gained
+	_inventory_page.result_text = "Salvaged for %d %s" % [gained, _loot.currency_name]
 	_inventory_page.result_color = Color(0.8, 0.85, 1.0)
 	_rebuild()
 
 
 ## Salvage All for a rarity, or -1 for everything (all but commons need a
-## second press). Returns stones gained.
+## second press). Returns the Geon gained.
 func salvage_all(rarity: int) -> int:
 	var gained := _inventory_page.press_salvage_all(rarity)
 	_rebuild()
@@ -257,7 +257,7 @@ func refine(item: ItemData) -> Refinery.Result:
 			page.result_text = "Failed - still +0. Try again!"
 			page.result_color = MenuWidgets.BAD_COLOR
 		Refinery.Result.NOT_ENOUGH_STONES:
-			page.result_text = "Not enough stones"
+			page.result_text = "Not enough %s" % _loot.currency_name
 			page.result_color = Color(1.0, 0.7, 0.3)
 		Refinery.Result.MAXED:
 			page.result_text = "Already at the maximum"
@@ -317,8 +317,8 @@ func _build_header() -> Control:
 		job = "%s   " % _progress.job_title(_jobs)
 	var xp := "MAX" if _progress.is_max_level() else "%d / %d" % [
 			floori(_progress.xp), ceili(_progress.xp_to_next())]
-	var summary := MenuWidgets.label("   %sLEVEL %d   XP %s   Stones %d" % [job, _progress.level,
-			xp, _inventory.stones], MenuWidgets.SMALL_FONT + 1)
+	var summary := MenuWidgets.label("   %sLEVEL %d   XP %s   %s %d" % [job, _progress.level,
+			xp, _loot.currency_name, _inventory.stones], MenuWidgets.SMALL_FONT + 1)
 	summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	summary.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(summary)

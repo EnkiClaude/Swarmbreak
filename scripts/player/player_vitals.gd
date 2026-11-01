@@ -1,8 +1,12 @@
 class_name PlayerVitals
 extends RefCounted
 ## The player's health and mana. Both regenerate; damage is ignored while
-## invulnerable (during and just after a dodge) and reduced by armor.
-## Maxima and regen come from the base config plus PlayerStats.
+## invulnerable (during and just after a dodge), may be evaded outright (the
+## evasion stat, rolled per hit: per frame of contact, per boss slam), and is
+## reduced by armor. Maxima and regen come from the base config plus PlayerStats.
+
+## A hit was evaded.
+signal evaded
 
 var health: float
 var mana: float
@@ -16,6 +20,7 @@ var bonus_armor_until := 0.0
 
 var _config: PlayerConfig
 var _stats: PlayerStats
+var _rng := RandomNumberGenerator.new()
 
 
 func _init(config: PlayerConfig, stats: PlayerStats = null) -> void:
@@ -61,6 +66,9 @@ func tick(delta: float) -> void:
 func take_damage(amount: float, now: float) -> float:
 	if amount <= 0.0 or is_dead() or is_invulnerable(now):
 		return 0.0
+	if _rng.randf() < minf(_stat(PlayerStat.Id.EVASION), PlayerStat.CAPS[PlayerStat.Id.EVASION]):
+		evaded.emit()
+		return 0.0
 	var armor := _stat(PlayerStat.Id.ARMOR)
 	if now < bonus_armor_until:
 		armor += bonus_armor
@@ -68,6 +76,11 @@ func take_damage(amount: float, now: float) -> float:
 	var taken := minf(amount * (1.0 - armor), health)
 	health -= taken
 	return taken
+
+
+## For tests: makes evasion rolls repeatable.
+func seed_rolls(seed_value: int) -> void:
+	_rng.seed = seed_value
 
 
 func grant_armor(amount: float, until: float) -> void:

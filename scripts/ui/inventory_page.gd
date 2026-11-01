@@ -69,7 +69,7 @@ func is_equipped(item: ItemData) -> bool:
 
 
 ## Salvage All for a rarity (-1: everything in the backpack). Commons go at
-## once; the rest ask twice. Returns the stones gained (0 if only asking).
+## once; the rest ask twice. Returns the Geon gained (0 if only asking).
 func press_salvage_all(rarity: int) -> int:
 	if rarity != 0 and _confirm_rarity != rarity:
 		_confirm_rarity = rarity
@@ -79,9 +79,9 @@ func press_salvage_all(rarity: int) -> int:
 		selected = null
 	var preview: Array = _inventory.salvage_all_preview(rarity, _loot.salvage_stones)
 	var gained := _inventory.salvage_all(rarity, _loot.salvage_stones)
-	result_text = "Salvaged %d %sitem%s for %d stones" % [preview[0],
+	result_text = "Salvaged %d %sitem%s for %d %s" % [preview[0],
 			_salvage_name(rarity).to_lower() + " " if rarity >= 0 else "",
-			"" if preview[0] == 1 else "s", gained]
+			"" if preview[0] == 1 else "s", gained, _loot.currency_name]
 	result_color = Color(0.8, 0.85, 1.0)
 	return gained
 
@@ -169,7 +169,7 @@ func _build_salvage_all(parent: VBoxContainer) -> void:
 	for rarity in SALVAGE_ALL_CHOICES:
 		var preview: Array = _inventory.salvage_all_preview(rarity, _loot.salvage_stones)
 		var label := _salvage_name(rarity).to_upper()
-		var text := "%s\n%d items -> %d stones" % [label, preview[0], preview[1]]
+		var text := "%s\n%d items -> %d %s" % [label, preview[0], preview[1], _loot.currency_name]
 		if _confirm_rarity == rarity:
 			text = "TAP AGAIN\nsalvage %d items" % preview[0]
 		var b := MenuWidgets.button(text, MenuWidgets.SMALL_FONT - 3)
@@ -184,7 +184,8 @@ func _build_salvage_all(parent: VBoxContainer) -> void:
 
 
 func _build_details(parent: VBoxContainer) -> Control:
-	parent.add_child(MenuWidgets.title("DETAILS   (stones: %d)" % _inventory.stones))
+	parent.add_child(MenuWidgets.title("DETAILS   (%s: %d)" % [_loot.currency_name,
+			_inventory.stones]))
 	if selected == null:
 		parent.add_child(MenuWidgets.label("Tap an item to see it here and compare it with " +
 				"what you're wearing.", MenuWidgets.SMALL_FONT, MenuWidgets.DIM_COLOR))

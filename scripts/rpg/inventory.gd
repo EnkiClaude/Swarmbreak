@@ -1,6 +1,6 @@
 class_name Inventory
 extends RefCounted
-## Equipped items, the backpack and Refining Stones. Equipment positions
+## Equipped items, the backpack and Geon (the currency, kept in `stones`). Equipment positions
 ## (Equip) match AffixDef.Slot for every slot but rings, which have two. A
 ## two-handed weapon and an off-hand item can't be worn together: equipping
 ## one moves the other to the backpack, so that needs room there.

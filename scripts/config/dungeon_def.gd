@@ -41,14 +41,15 @@ extends Resource
 @export var spawner_count: int = 2
 @export var spawner_population: int = 30
 @export var spawner_interval: float = 0.0
-## Per spawner kill: chance of an item, and of a refining stone.
-@export var spawner_item_chance: float = 0.03
-@export var spawner_stone_chance: float = 0.08
+## Per spawner kill: chance of a drop (an item at LootConfig.item_drop_chance,
+## otherwise Geon), and of an extra small pile of Geon.
+@export var spawner_drop_chance: float = 0.03
+@export var spawner_geon_chance: float = 0.08
 
 @export_group("Rewards")
 ## Camp drops roll at least this rarity (0 common, 1 magic, 2 rare).
 @export var min_drop_rarity: int = 1
-## Extra items per cleared camp.
+## Extra drops per cleared camp.
 @export var extra_drops: int = 1
-## Refining stones from camps multiply by this.
-@export var stones_multiplier: float = 2.0
+## Geon piles from camps and spawners multiply by this.
+@export var geon_multiplier: float = 2.0

@@ -17,5 +17,5 @@ slam_damage = 32.0
 telegraph_effect = ExtResource("2_telegraph")
 extra_drops = 2
 min_drop_rarity = 2
-stones = 6
+geon = 12
 hud_range = 30.0

@@ -134,7 +134,7 @@ skeleton, treant, wisp).
 
 Levels: monster health, contact damage and XP grow with the level where the
 player is (`WorldDirector.level()`); items roll at the camp's level, and
-dungeons add drops, a minimum rarity and more stones. Props never collide,
+dungeons add drops, a minimum rarity and more Geon. Props never collide,
 so they stand clear of camps, gates and the town square. The art is original
 and generated in code. In the web build, `index.html?region=N` (row by row
 from the north-west) or `?dungeon=N` (from 1) starts there.
@@ -149,7 +149,12 @@ Agility), each feeding stats per point. Both are spent on the character
 screen, which pauses the game. Saves from before attributes get their
 level's points to spend.
 
-Clearing a camp drops items where its last member died: a base kind
+The currency is Geon (`LootConfig.currency_name`; kept as `Inventory.stones`
+in code and saves). Clearing a camp drops loot where its last member died
+(`LootSystem.drop_rewards`): each drop is an item at `item_drop_chance`
+(1 in 20), otherwise a pile of Geon that grows with the camp's level and
+is picked up on touch. Bosses also drop a big pile; dungeons add drops and
+bigger piles. An item is a base kind
 (`ItemKindDef` in `data/rpg/loot.tres`: wand, blade, staff, greatblade,
 tome, shield, robe, plate, pendant, belt, ring) that sets the slot, whether
 it takes both hands, its icon and an implicit stat; then a rarity and that
@@ -170,7 +175,11 @@ the character screen (permanent); at `rank2_level` it promotes. A rank's
 and armor, Arcanist piercing bolts) and add stats. Read perks only through
 `PlayerStats.perks`.
 
-Refining (`Refinery`): stones (from camps, bosses and salvaging) buy an
+Evasion (`PlayerStat.Id.EVASION`, mostly from Agility, capped at 85%) is
+rolled in `PlayerVitals.take_damage()` for every hit (each frame of contact,
+each boss slam); an evaded hit does nothing and pops up EVADE.
+
+Refining (`Refinery`): Geon (from drops and salvaging) buys an
 attempt to raise an item one level, +0 to +10, each level adding
 `upgrade_bonus_per_level` to all its stats. Odds fall per level; a failure
 drops it one level, never below +0 and never destroying it, and adds pity
@@ -182,7 +191,7 @@ happen per camp, not per frame; ground loot itself is a fixed pool.
 ## Saving
 
 `SaveManager` autosaves the character (level, XP, skills, job, items,
-stones) to `user://` (the browser's storage on web); the game always
+Geon) to `user://` (the browser's storage on web); the game always
 resumes in town.
 Anything worth keeping calls `mark_dirty()`, and the write happens
 `autosave_delay` later. The menu, tab switches and closing save immediately.
@@ -199,7 +208,7 @@ slot: `SwarmState.boss_index[slot]` tracks its current index through
 compaction, so never cache a boss's enemy index across frames. Slots are
 reused once a boss dies or streams out. `BossSystem` runs the slam: stun,
 telegraph ring for `slam_windup`, then damage inside `slam_radius`. Killing
-one drops rare loot and stones.
+one drops rare loot and a pile of Geon.
 
 ## Frame order
 
