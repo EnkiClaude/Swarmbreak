@@ -115,3 +115,12 @@ func test_blessed_stone_always_succeeds() -> void:
 	check_eq(refinery.attempt_blessed(item, inventory), Refinery.Result.SUCCESS, "certain success")
 	check_eq(item.upgrade_level, 10, "+9 to +10")
 	check_eq(inventory.blessed_stones, 0, "the stone was used")
+
+
+func test_pickup_range_grows_a_metre_every_level() -> void:
+	var config := _pets()
+	check_eq(PetRules.pickup_radius(config, 9), 0.0, "an egg collects nothing")
+	var hatched := PetRules.pickup_radius(config, 10)
+	check(hatched > 0.0, "a hatched pet collects (%.1f m)" % hatched)
+	check_near(PetRules.pickup_radius(config, 11) - hatched, 1.0, 0.001, "+1 m at the next level")
+	check_near(PetRules.pickup_radius(config, 30) - hatched, 20.0, 0.001, "+20 m twenty levels on")

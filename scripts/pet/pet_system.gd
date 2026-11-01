@@ -69,8 +69,7 @@ func tick(delta: float) -> void:
 	if item.pet_type != _shown_type or stage != _shown_stage:
 		_rebuild(item, stage)
 	visible = true
-	_loot.collect_radius = config.pickup_radius_per_stage[mini(stage,
-			config.pickup_radius_per_stage.size() - 1)]
+	_loot.collect_radius = PetRules.pickup_radius(config, item.pet_level)
 	# Behind the player and off to its right, turning with it.
 	var facing := _player.facing
 	var right := Vector3(-facing.z, 0.0, facing.x)

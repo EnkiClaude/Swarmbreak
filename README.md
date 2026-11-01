@@ -28,7 +28,7 @@ and its frame rate says little about the Deck.
   harder than the last, and the boss room is one big room with the boss,
   camps and spawners. Four new dungeons at higher level tiers. In menus the
   controller's A selects and presses, B closes. Pets collect drops from
-  farther away.
+  farther away: 1 m more every pet level.
 
 - **M0:** flat arena, angled orthographic camera, twin-stick player, and a
   1,000-enemy swarm (packed arrays, flow field, spatial-hash separation,
