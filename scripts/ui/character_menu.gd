@@ -257,8 +257,12 @@ func unequip(position: int) -> void:
 
 
 ## Floats an item's tooltip beside the control that shows it.
+## Focus the menu gives a control by itself (on opening or rebuilding)
+## shows no tooltip; only the player's own hovering or navigating does.
 func show_tooltip(item: ItemData, owner: Control) -> void:
 	_clear_tooltip()
+	if _auto_focusing:
+		return
 	if not is_instance_valid(owner) or not owner.is_inside_tree():
 		return
 	_tooltip = ItemTooltip.build(item, _inventory, _loot)
@@ -359,6 +363,10 @@ func _tab_count() -> int:
 	return TAB_NAMES.size() if _pet_page != null else TAB_NAMES.size() - 1
 
 
+## True while _grab_focus_later() moves focus, so no tooltip pops up.
+var _auto_focusing := false
+
+
 func _rebuild() -> void:
 	_clear_tooltip()
 	for child in _content.get_children():
@@ -379,13 +387,16 @@ func _rebuild() -> void:
 ## may already have replaced the control, so check it's still on screen.
 func _grab_focus_later(target: Control) -> void:
 	if is_instance_valid(target) and target.is_inside_tree():
+		_auto_focusing = true
 		target.grab_focus()
+		_auto_focusing = false
 
 
 func _build_header() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	_content.add_child(row)
+	var current: Control = null
 	for index in _tab_count():
 		var b := MenuWidgets.button(TAB_NAMES[index], MenuWidgets.FONT_SIZE - 2)
 		b.custom_minimum_size.x = 190.0
@@ -393,6 +404,8 @@ func _build_header() -> Control:
 		b.button_pressed = index == tab
 		b.pressed.connect(show_tab.bind(index))
 		row.add_child(b)
+		if index == tab:
+			current = b
 	var job := ""
 	if _jobs != null and _progress.job >= 0:
 		job = "%s   " % _progress.job_title(_jobs)
@@ -408,4 +421,5 @@ func _build_header() -> Control:
 	close_button.pressed.connect(close)
 	row.add_child(close_button)
 	_content.add_child(HSeparator.new())
-	return close_button
+	# The open tab's own button: safe to land on (A doesn't close the menu).
+	return current if current != null else close_button

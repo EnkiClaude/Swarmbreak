@@ -100,12 +100,12 @@ func build(parent: Container) -> Control:
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 22)
 	parent.add_child(columns)
-	var focus := _build_equipped(MenuWidgets.column(columns, EQUIPPED_WIDTH))
-	var grid_focus := _build_backpack(MenuWidgets.column(columns))
+	_build_equipped(MenuWidgets.column(columns, EQUIPPED_WIDTH))
+	_build_backpack(MenuWidgets.column(columns))
 	var detail_focus := _build_details(MenuWidgets.column(columns, DETAILS_WIDTH))
-	if detail_focus != null:
-		return detail_focus
-	return grid_focus if grid_focus != null else focus
+	# Nothing selected: focus stays on the tab header, so no item looks picked
+	# (and no tooltip covers the screen) until the player moves to one.
+	return detail_focus
 
 
 func _build_equipped(parent: VBoxContainer) -> Control:

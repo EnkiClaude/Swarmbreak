@@ -1022,6 +1022,9 @@ func _inventory_tab() -> void:
 	Input.parse_input_event(press)
 	await _frames(2)
 	_check(menu.is_open() and menu.tab == CharacterMenu.Tab.INVENTORY, "opened on the inventory tab")
+	await _frames(2)
+	_check(not menu.tooltip_showing() and menu.selected_item() == null,
+			"opening shows no tooltip and selects nothing")
 	var stones := inventory.stones
 	var gained := menu.salvage_all(0)
 	_check(gained == loot_config.salvage_stones[0] * 3, "salvaged the 3 commons (%d)" % gained)
