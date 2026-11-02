@@ -1292,18 +1292,15 @@ func _active_skills() -> void:
 		var ahead := _player.ground_position() + Vector2(aim.x, aim.z) * def.reach
 		for n in 12:
 			_swarm.spawn_at(ahead + Vector2.from_angle(n * 0.6) * 1.2, 0, -1, true)
-		var health_before := 0.0
-		for i in _swarm.state.count:
-			health_before += _swarm.state.health[i]
+		# Only the test's pack (no camp): nearby camps may stream in meanwhile.
+		var health_before := _pack_health()
 		var mana_before := _player.vitals.mana
 		_check(actives.try_cast(k), "%s casts" % def.display_name)
 		_check(_player.vitals.mana < mana_before, "%s costs mana" % def.display_name)
 		await _frames(70)
-		var health_after := 0.0
-		for i in _swarm.state.count:
-			health_after += _swarm.state.health[i]
-		_check(_swarm.state.count < 12 or health_after < health_before,
-				"%s hurt the pack (%d left)" % [def.display_name, _swarm.state.count])
+		var health_after := _pack_health()
+		_check(health_after < health_before - 1.0,
+				"%s hurt the pack (%.0f -> %.0f)" % [def.display_name, health_before, health_after])
 		_check(not actives.is_ready(k), "%s is on cooldown" % def.display_name)
 	await _frames(200)
 	_check(actives.active_zones() == 0, "burning ground, whirls and meteors end")
@@ -1364,3 +1361,12 @@ func _summon_boss() -> void:
 	summons.reset()
 	_go_to_town()
 	await _frames(2)
+
+
+## Health left in enemies without a camp (spawned by a test), dead ones gone.
+func _pack_health() -> float:
+	var total := 0.0
+	for i in _swarm.state.count:
+		if _swarm.state.camp_ids[i] < 0 and _swarm.state.boss_ids[i] < 0:
+			total += maxf(_swarm.state.health[i], 0.0)
+	return total
