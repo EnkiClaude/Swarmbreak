@@ -77,17 +77,18 @@ extends Resource
 @export var beam_height: float = 3.5
 
 @export_group("Talismans")
-## Talismans drop with rolled stats and can be applied to worn gear, one
-## per free socket. A failed attempt destroys the talisman, never the gear.
+## Talismans drop as one of these kinds at a tier (rarity, up to
+## talisman_max_rarity). Talismans of a kind and tier are identical and
+## stack; applying one to worn gear fills a socket. A failed attempt only
+## loses the talisman, never the gear.
 @export var talisman_name: String = "Talisman"
+@export var talismans: Array[TalismanDef] = []
 ## Chance a camp drop that isn't an item is a talisman instead of Geon.
 @export var talisman_drop_chance: float = 0.06
-## Highest talisman rarity that can roll (they don't come in set rarity).
+## Highest tier (rarity) a talisman can be.
 @export var talisman_max_rarity: int = 4
-## Stats a talisman carries, per rarity.
-@export var talisman_stat_counts: PackedInt32Array = [1, 1, 1, 2, 2, 2]
-## A talisman's stats are this fraction of an affix's roll.
-@export var talisman_power: float = 0.6
+## A kind's stats are multiplied by this per tier (common .. legendary).
+@export var talisman_tier_power: PackedFloat32Array = [1.0, 1.6, 2.4, 3.5, 5.0]
 ## Sockets an item has for talismans, per rarity.
 @export var talisman_sockets: PackedInt32Array = [1, 1, 2, 2, 3, 3]
 ## Success chance for the first, second, third talisman on an item.

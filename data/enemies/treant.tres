@@ -7,9 +7,9 @@
 script = ExtResource("1_enemy_type")
 display_name = "Treant"
 model = 4
-color = Color(0.36, 0.26, 0.18, 1)
-secondary_color = Color(0.3, 0.45, 0.2, 1)
-accent_color = Color(1, 0.8, 0.3, 1)
+color = Color(0.2, 0.14, 0.1, 1)
+secondary_color = Color(0.16, 0.22, 0.1, 1)
+accent_color = Color(1, 0.45, 0.1, 1)
 walk_cycle_speed = 5.0
 walk_swing = 0.4
 max_health = 95.0

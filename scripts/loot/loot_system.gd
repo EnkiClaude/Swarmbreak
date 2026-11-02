@@ -12,6 +12,7 @@ extends Node3D
 signal picked_up(item: ItemData)
 signal picked_up_geon(amount: int)
 signal picked_up_blessed
+signal picked_up_talisman(id: int)
 ## Within this distance of the player, a hatched pet fetches loot: it flies
 ## to the nearest drop (nearest_to_fetch()) and the drop is collected once
 ## the pet (collector_position) is within collector_reach of it.
@@ -39,6 +40,10 @@ var _items: Array[ItemData] = []
 var _geon := PackedInt32Array()
 ## 1 for a Blessed Stone (no item, no Geon).
 var _blessed := PackedByteArray()
+## Talisman id + 1 lying in each slot, or 0.
+var _talisman := PackedInt32Array()
+## Rolls dropped talismans (set by main; null: none drop).
+var talismans: TalismanRules
 var _count := 0
 var _time := 0.0
 var _full_warning_in := 0.0
@@ -60,6 +65,8 @@ func setup(config: LootConfig, inventory: Inventory, generator: ItemGenerator) -
 	_geon.fill(0)
 	_blessed.resize(config.ground_capacity)
 	_blessed.fill(0)
+	_talisman.resize(config.ground_capacity)
+	_talisman.fill(0)
 	_gems = InstanceBatch.new()
 	_gems.name = "Gems"
 	_gems.setup(_make_gem_mesh(), config.ground_capacity)
@@ -91,8 +98,8 @@ func drop_rewards(at: Vector2, amount: int, level: int, min_rarity: int = 0,
 		if _rng.randf() < _config.item_drop_chance:
 			place(_generator.roll(level, min_rarity), _scatter(at))
 			items += 1
-		elif _rng.randf() < _config.talisman_drop_chance:
-			place(_generator.roll_talisman(level, min_rarity), _scatter(at))
+		elif talismans != null and _rng.randf() < _config.talisman_drop_chance:
+			place_talisman(talismans.roll(min_rarity), _scatter(at))
 		else:
 			place_geon(geon_pile(level, geon_multiplier), _scatter(at))
 	return items
@@ -119,6 +126,19 @@ func place_geon(amount: int, at: Vector2) -> bool:
 
 
 ## Puts a Blessed Stone on the ground. False if the ground pool is full.
+## Puts a talisman on the ground. False if the ground pool is full.
+func place_talisman(id: int, at: Vector2) -> bool:
+	if not place(null, at):
+		return false
+	_talisman[_count - 1] = id + 1
+	return true
+
+
+## The talisman id lying in slot i, or -1.
+func talisman_at(i: int) -> int:
+	return _talisman[i] - 1
+
+
 func place_blessed(at: Vector2) -> bool:
 	if not place(null, at):
 		return false
@@ -146,6 +166,7 @@ func place(item: ItemData, at: Vector2) -> bool:
 	_items[_count] = item
 	_geon[_count] = 0
 	_blessed[_count] = 0
+	_talisman[_count] = 0
 	_count += 1
 	return true
 
@@ -230,6 +251,10 @@ func _collect(i: int, item: ItemData) -> void:
 	if item != null:
 		_inventory.add(item)
 		picked_up.emit(item)
+	elif _talisman[i] != 0:
+		var id := _talisman[i] - 1
+		_inventory.add_talisman(id)
+		picked_up_talisman.emit(id)
 	elif _blessed[i] != 0:
 		_inventory.add_blessed_stones(1)
 		picked_up_blessed.emit()
@@ -246,9 +271,11 @@ func _remove(i: int) -> void:
 	_items[i] = _items[last]
 	_geon[i] = _geon[last]
 	_blessed[i] = _blessed[last]
+	_talisman[i] = _talisman[last]
 	_items[last] = null
 	_geon[last] = 0
 	_blessed[last] = 0
+	_talisman[last] = 0
 	_count = last
 
 
@@ -261,6 +288,18 @@ func _draw() -> void:
 		var p: Vector3 = _positions[i]
 		var item := _items[i]
 		var bob := sin(_time * BOB_SPEED + i) * BOB_HEIGHT
+		if item == null and _talisman[i] != 0:
+			# A flat charm in its tier's color, spinning, with a thin beam.
+			var tier := TalismanRules.tier_of(_talisman[i] - 1)
+			var tint := _config.rarity_colors[clampi(tier, 0, _config.rarity_colors.size() - 1)]
+			var charm := Basis(Vector3.UP, _time * SPIN_SPEED * 1.5 + i).scaled(Vector3(s * 1.1,
+					s * 1.1, s * 0.35))
+			_gems.add_basis(Vector3(p.x, 0.7 + bob, p.z), charm, tint)
+			var glow := tint
+			glow.a = BEAM_ALPHA
+			_beams.add(Vector3(p.x, _config.beam_height * 0.4, p.z),
+					Vector3(0.1, _config.beam_height * 0.8, 0.1), glow)
+			continue
 		if item == null and _blessed[i] != 0:
 			var stone := Basis(Vector3.UP, _time * SPIN_SPEED + i).scaled(Vector3(s, s * 1.4, s))
 			_gems.add_basis(Vector3(p.x, 0.6 + bob, p.z), stone, _config.blessed_color)

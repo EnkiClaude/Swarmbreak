@@ -123,7 +123,10 @@ func _ready() -> void:
 	_menu.setup_pets(pet_config, quests)
 	_menu.egg_taken.connect(_on_egg_taken)
 	_menu.refined.connect(_on_refined)
-	_menu.setup_talismans(TalismanRules.new(loot_config))
+	var talisman_rules := TalismanRules.new(loot_config)
+	_menu.setup_talismans(talisman_rules)
+	_loot.talismans = talisman_rules
+	_loot.picked_up_talisman.connect(_on_talisman_picked_up)
 	_menu.talisman_applied.connect(_on_talisman_applied)
 	_menu.opened.connect(_touch.release_all)
 	_menu.opened.connect(_camera_rig.release_mouse)
@@ -409,6 +412,13 @@ func _on_job_chosen(job: int) -> void:
 ## The hero wears what's equipped (rebuilt only when the look changes).
 func _dress_hero() -> void:
 	_player.set_look(HeroLook.from_inventory(inventory, loot_config))
+
+
+func _on_talisman_picked_up(id: int) -> void:
+	var tier := TalismanRules.tier_of(id)
+	_hud.toast("Picked up %s (%d)" % [TalismanRules.display_name(loot_config, id),
+			inventory.talisman_count(id)], loot_config.rarity_colors[tier])
+	_feedback.item_picked_up()
 
 
 func _on_talisman_applied(success: bool, _gear: ItemData) -> void:

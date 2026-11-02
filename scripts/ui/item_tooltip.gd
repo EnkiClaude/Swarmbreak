@@ -5,7 +5,7 @@ extends RefCounted
 ## stats, and (for an item not worn) how it compares with everything wearing
 ## it would take off. The comparison is shared with the details column.
 ## Set items list their set's bonuses (lit when worn enough); gear shows its
-## talisman sockets; a talisman says what applying it does.
+## talisman sockets.
 
 const WIDTH := 330.0
 const ICON_SIZE := 52.0
@@ -45,11 +45,7 @@ static func build(item: ItemData, inventory: Inventory, loot: LootConfig) -> Pan
 		box.add_child(_label(line, MenuWidgets.SMALL_FONT - 1, MenuWidgets.TEXT_COLOR))
 	add_set_lines(box, item, inventory, MenuWidgets.SMALL_FONT - 2)
 	add_socket_line(box, item, loot, MenuWidgets.SMALL_FONT - 2)
-	if item.is_talisman:
-		box.add_child(_label("Select it, then apply it to worn gear. If it fails, the " +
-				"talisman crumbles; the gear is never harmed.", MenuWidgets.SMALL_FONT - 3,
-				MenuWidgets.DIM_COLOR))
-	elif inventory.is_equipped(item):
+	if inventory.is_equipped(item):
 		box.add_child(_label("Equipped: %s" % Inventory.EQUIP_NAMES[inventory.position_of(item)],
 				MenuWidgets.SMALL_FONT - 2, MenuWidgets.TITLE_COLOR))
 	else:
@@ -74,9 +70,6 @@ static func _unwrap(node: Node) -> void:
 ## "Rare Staff - two-handed - item lv 4".
 static func describe_kind(item: ItemData, loot: LootConfig) -> String:
 	var kind := loot.slot_names[item.slot]
-	if item.is_talisman:
-		return "%s %s   -   item lv %d" % [loot.rarity_names[item.rarity], loot.talisman_name,
-				item.item_level]
 	if item.kind >= 0 and item.kind < loot.item_kinds.size():
 		kind = loot.item_kinds[item.kind].display_name
 	var parts := PackedStringArray([loot.rarity_names[item.rarity] + " " + kind])

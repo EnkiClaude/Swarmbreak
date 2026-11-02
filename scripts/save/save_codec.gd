@@ -34,6 +34,7 @@ static func encode(progress: PlayerProgress, inventory: Inventory, zone_level: i
 			"blessed_stones": inventory.blessed_stones,
 			"sort_mode": inventory.sort_mode,
 			"next_acquired": inventory.next_acquired,
+			"talismans": _talisman_pairs(inventory),
 			"equipped": equipped,
 			"backpack": backpack,
 		},
@@ -62,6 +63,11 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 	inventory.sort_mode = clampi(_int(inv.get("sort_mode"), 0), 0,
 			Inventory.SORT_NAMES.size() - 1) as Inventory.SortMode
 	inventory.next_acquired = maxi(_int(inv.get("next_acquired"), 1), 1)
+	inventory.talismans.clear()
+	for pair in _array(inv.get("talismans")):
+		var entry := _array(pair)
+		if entry.size() == 2 and _int(entry[0], -1) >= 0 and _int(entry[1], 0) > 0:
+			inventory.talismans[_int(entry[0], -1)] = _int(entry[1], 0)
 	# Equipment is saved by position. Saves from before the extra slots had
 	# three (weapon, charm, armor), which are still positions 0-2.
 	var equipped := _array(inv.get("equipped"))
@@ -72,7 +78,7 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 		if position >= equipped.size() or not equipped[position] is Dictionary:
 			continue
 		var item := item_from_dict(equipped[position], upgrade_max)
-		if not item.is_talisman and Inventory.positions_for(item.slot).has(position):
+		if Inventory.positions_for(item.slot).has(position):
 			inventory.equipped[position] = item
 		else:
 			unfit.append(item)
@@ -83,7 +89,8 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 		inventory.equipped[Inventory.Equip.OFF_HAND] = null
 		unfit.append(off)
 	for entry in _array(inv.get("backpack")):
-		if entry is Dictionary:
+		# Talismans used to be backpack items; they are stacks now (below).
+		if entry is Dictionary and entry.get("talisman", false) != true:
 			unfit.append(item_from_dict(entry, upgrade_max))
 	for item in unfit:
 		if inventory.backpack.size() >= inventory.backpack_size:
@@ -123,6 +130,14 @@ static func _decode_attributes(p: Dictionary, progress: PlayerProgress) -> void:
 	progress.attribute_points = maxi(_int(p.get("attribute_points"), 0), 0)
 
 
+## Talisman stacks as [id, count] pairs (JSON keys can't be numbers).
+static func _talisman_pairs(inventory: Inventory) -> Array:
+	var pairs := []
+	for id in inventory.talisman_ids():
+		pairs.append([id, inventory.talisman_count(id)])
+	return pairs
+
+
 static func item_to_dict(item: ItemData) -> Dictionary:
 	return {
 		"slot": item.slot,
@@ -141,7 +156,6 @@ static func item_to_dict(item: ItemData) -> Dictionary:
 		"pet_xp": item.pet_xp,
 		"set_id": item.set_id,
 		"acquired": item.acquired,
-		"talisman": item.is_talisman,
 		"talisman_stats": Array(item.talisman_stats),
 		"talisman_values": Array(item.talisman_values),
 		"talisman_sockets_used": item.talisman_sockets_used,
@@ -171,7 +185,6 @@ static func item_from_dict(d: Dictionary, upgrade_max: int) -> ItemData:
 	item.pet_xp = maxf(_float(d.get("pet_xp"), 0.0), 0.0)
 	item.set_id = maxi(_int(d.get("set_id"), -1), -1)
 	item.acquired = maxi(_int(d.get("acquired"), 0), 0)
-	item.is_talisman = d.get("talisman", false) == true
 	var t_stats := _array(d.get("talisman_stats"))
 	var t_values := _array(d.get("talisman_values"))
 	for k in mini(t_stats.size(), t_values.size()):

@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="LootConfig" load_steps=33 format=3]
+[gd_resource type="Resource" script_class="LootConfig" load_steps=46 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/affix_def.gd" id="1_affix"]
 [ext_resource type="Script" path="res://scripts/config/loot_config.gd" id="2_loot"]
 [ext_resource type="Script" path="res://scripts/config/item_kind_def.gd" id="3_kind"]
+[ext_resource type="Script" path="res://scripts/config/talisman_def.gd" id="4_talisman"]
 
 [sub_resource type="Resource" id="Affix_0"]
 script = ExtResource("1_affix")
@@ -296,6 +297,90 @@ implicit_stat = 4
 implicit_min = 0.03
 implicit_max = 0.07
 
+[sub_resource type="Resource" id="Talisman_0"]
+script = ExtResource("4_talisman")
+talisman_name = "Fury"
+build_hint = "Bolt builds"
+stats = PackedInt32Array(5)
+values = PackedFloat32Array(0.04)
+
+[sub_resource type="Resource" id="Talisman_1"]
+script = ExtResource("4_talisman")
+talisman_name = "Haste"
+build_hint = "Bolt builds"
+stats = PackedInt32Array(6)
+values = PackedFloat32Array(0.03)
+
+[sub_resource type="Resource" id="Talisman_2"]
+script = ExtResource("4_talisman")
+talisman_name = "Tempest"
+build_hint = "Nova builds"
+stats = PackedInt32Array(7)
+values = PackedFloat32Array(0.04)
+
+[sub_resource type="Resource" id="Talisman_3"]
+script = ExtResource("4_talisman")
+talisman_name = "Expanse"
+build_hint = "Nova and lure builds"
+stats = PackedInt32Array(8, 9)
+values = PackedFloat32Array(0.02, 0.03)
+
+[sub_resource type="Resource" id="Talisman_4"]
+script = ExtResource("4_talisman")
+talisman_name = "Bulwark"
+build_hint = "Tank builds"
+stats = PackedInt32Array(12)
+values = PackedFloat32Array(0.02)
+
+[sub_resource type="Resource" id="Talisman_5"]
+script = ExtResource("4_talisman")
+talisman_name = "Vigor"
+build_hint = "Tank builds"
+stats = PackedInt32Array(0)
+values = PackedFloat32Array(15)
+
+[sub_resource type="Resource" id="Talisman_6"]
+script = ExtResource("4_talisman")
+talisman_name = "Renewal"
+build_hint = "Sustain builds"
+stats = PackedInt32Array(2)
+values = PackedFloat32Array(1)
+
+[sub_resource type="Resource" id="Talisman_7"]
+script = ExtResource("4_talisman")
+talisman_name = "Shadow"
+build_hint = "Evasion builds"
+stats = PackedInt32Array(13)
+values = PackedFloat32Array(0.015)
+
+[sub_resource type="Resource" id="Talisman_8"]
+script = ExtResource("4_talisman")
+talisman_name = "Swiftness"
+build_hint = "Evasion builds"
+stats = PackedInt32Array(4)
+values = PackedFloat32Array(0.02)
+
+[sub_resource type="Resource" id="Talisman_9"]
+script = ExtResource("4_talisman")
+talisman_name = "Reflex"
+build_hint = "Evasion builds"
+stats = PackedInt32Array(11)
+values = PackedFloat32Array(0.03)
+
+[sub_resource type="Resource" id="Talisman_10"]
+script = ExtResource("4_talisman")
+talisman_name = "Insight"
+build_hint = "Caster builds"
+stats = PackedInt32Array(1, 3)
+values = PackedFloat32Array(10, 0.05)
+
+[sub_resource type="Resource" id="Talisman_11"]
+script = ExtResource("4_talisman")
+talisman_name = "Siphon"
+build_hint = "Farming builds"
+stats = PackedInt32Array(10)
+values = PackedFloat32Array(0.5)
+
 [resource]
 script = ExtResource("2_loot")
 currency_name = "Geon"
@@ -335,10 +420,10 @@ upgrade_cost_base = 1
 upgrade_cost_per_level = 1
 salvage_stones = PackedInt32Array(1, 3, 6, 15, 40, 30)
 talisman_name = "Talisman"
+talismans = Array[ExtResource("4_talisman")]([SubResource("Talisman_0"), SubResource("Talisman_1"), SubResource("Talisman_2"), SubResource("Talisman_3"), SubResource("Talisman_4"), SubResource("Talisman_5"), SubResource("Talisman_6"), SubResource("Talisman_7"), SubResource("Talisman_8"), SubResource("Talisman_9"), SubResource("Talisman_10"), SubResource("Talisman_11")])
+talisman_tier_power = PackedFloat32Array(1, 1.6, 2.4, 3.5, 5)
 talisman_drop_chance = 0.06
 talisman_max_rarity = 4
-talisman_stat_counts = PackedInt32Array(1, 1, 1, 2, 2, 2)
-talisman_power = 0.6
 talisman_sockets = PackedInt32Array(1, 1, 2, 2, 3, 3)
 talisman_chances = PackedFloat32Array(0.75, 0.55, 0.4)
 beam_height = 3.5

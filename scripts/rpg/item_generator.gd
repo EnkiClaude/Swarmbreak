@@ -3,7 +3,7 @@ extends RefCounted
 ## Rolls random items: a kind (which sets the slot, hands and implicit stat),
 ## a rarity, then distinct affixes allowed in that slot, with values growing
 ## with the level of the camp that dropped it and with the rarity's power.
-## Also makes set pieces (fixed stats, from SetList) and talismans.
+## Also makes set pieces (fixed stats, from SetList).
 
 var _config: LootConfig
 var _rng := RandomNumberGenerator.new()
@@ -75,37 +75,6 @@ func roll_set_piece(sets: SetList, set_index: int, zone_level: int) -> ItemData:
 	for k in mini(piece.stats.size(), piece.values.size()):
 		item.stats.append(piece.stats[k])
 		item.values.append(_round_value(piece.stats[k], piece.values[k] * growth))
-	return item
-
-
-## A talisman: a rarity, then that many distinct stats from any slot's
-## affixes, at talisman_power of an affix roll.
-func roll_talisman(zone_level: int, min_rarity: int = 0) -> ItemData:
-	var item := ItemData.new()
-	item.is_talisman = true
-	item.rarity = mini(maxi(_pick_weighted(_config.rarity_weights), min_rarity),
-			_config.talisman_max_rarity)
-	item.item_level = zone_level
-	var growth := _growth(zone_level) * _power(item.rarity) * _config.talisman_power
-	var allowed: Array[AffixDef] = []
-	for affix in _config.affixes:
-		var seen := false
-		for other in allowed:
-			seen = seen or other.stat == affix.stat
-		if not seen:
-			allowed.append(affix)
-	var wanted := mini(_config.talisman_stat_counts[mini(item.rarity,
-			_config.talisman_stat_counts.size() - 1)], allowed.size())
-	for _n in wanted:
-		var picked := allowed[_rng.randi() % allowed.size()]
-		allowed.erase(picked)
-		item.stats.append(picked.stat)
-		item.values.append(_round_value(picked.stat,
-				_rng.randf_range(picked.min_value, picked.max_value) * growth))
-	var first := PlayerStat.NAMES[item.stats[0]].capitalize() if not item.stats.is_empty() else ""
-	item.item_name = "%s of %s" % [_config.talisman_name, first]
-	if item.rarity >= 2:
-		item.item_name = "%s %s" % [_config.rarity_names[item.rarity], item.item_name]
 	return item
 
 
