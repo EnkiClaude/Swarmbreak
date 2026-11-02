@@ -27,6 +27,8 @@ const BOSS_BAR_WIDTH := 460.0
 const BOSS_BAR_HEIGHT := 14.0
 const BOSS_BAR_COLOR := Color(0.95, 0.45, 0.15)
 const SKILL_ROWS := 4
+## Controller buttons of the active skills (skill_1 .. skill_4).
+const ACTIVE_BUTTONS: PackedStringArray = ["A", "B", "D<", "D>"]
 
 @export var config: HudConfig
 
@@ -48,6 +50,8 @@ var _jobs: JobTree
 var _camera: CameraRig
 var _quests: QuestLog
 var _combat: PlayerCombat
+var _actives: ActiveSkills
+var _progress_for_actives: PlayerProgress
 ## The skill column hides while the touch buttons are on screen.
 var show_skills := true
 
@@ -69,6 +73,11 @@ func flash_hurt(amount: float) -> void:
 
 func setup_quests(quests: QuestLog) -> void:
 	_quests = quests
+
+
+func setup_actives(actives: ActiveSkills, progress: PlayerProgress) -> void:
+	_actives = actives
+	_progress_for_actives = progress
 
 
 func setup_camera_and_skills(camera: CameraRig, combat: PlayerCombat) -> void:
@@ -249,6 +258,16 @@ func _draw_skills() -> void:
 			HudSkills.Glyph.LURE, "LB", lure_ready, lure_usable)
 	HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, 3, SKILL_ROWS),
 			HudSkills.Glyph.DODGE, "LT", _player.dash_cooldown.progress(), true)
+	if _actives == null:
+		return
+	for k in mini(_actives.list.skills.size(), ACTIVE_BUTTONS.size()):
+		var def := _actives.list.skills[k]
+		var grade := _actives.grade(k)
+		var locked := grade <= 0
+		var corner := ("Lv%d" % def.unlock_level) if locked else ("G%d" % grade)
+		HudSkills.draw_slot(self, config, HudSkills.slot_position(config, size, k, SKILL_ROWS, 1),
+				(HudSkills.Glyph.CHAIN + def.kind) as HudSkills.Glyph, ACTIVE_BUTTONS[k],
+				_actives.cooldowns[k].progress(), locked or mana >= def.mana_cost, corner, locked)
 
 
 func _draw_boss_bar() -> void:

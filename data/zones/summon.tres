@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SummonConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/summon_config.gd" id="1_summon"]
+
+[resource]
+script = ExtResource("1_summon")
+boss_name = "Dread Lord"
+shard_name = "Sigil Shard"
+shards_needed = 10
+shard_drop_chance = 0.004
+shard_color = Color(0.85, 0.15, 0.9, 1)
+boss_type = 2
+escort_type = 1
+escort_count = 40
+health_multiplier = 10.0
+spawn_distance = 9.0
+escort_spread = 7.0
+reward_drops = 8
+min_rarity = 3
+item_chance = 0.6
+geon_multiplier = 6.0
+legendary_chance = 0.5
+color = Color(0.85, 0.2, 0.9, 1)

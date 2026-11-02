@@ -88,6 +88,27 @@ func aftershock() -> void:
 	_sfx.play(_bank.bolt_burst, _audio.nova_db)
 
 
+## An active skill landed: a meteor hits like a slam, smaller blows like a burst.
+func skill_impact(big: bool) -> void:
+	if big:
+		_camera.add_trauma(_config.shake_nova * 1.3)
+		_sfx.play(_bank.nova, _audio.nova_db)
+		_vibrate(_config.vibration_nova)
+	else:
+		_camera.add_trauma(_config.shake_bolt_burst)
+		_sfx.play(_bank.bolt_burst, _audio.bolt_burst_db - 4.0)
+
+
+## An active skill went off.
+func skill_cast() -> void:
+	_sfx.play(_bank.lure, _audio.lure_db - 4.0)
+
+
+## Pressed a skill that isn't learned yet.
+func skill_locked() -> void:
+	_sfx.play(_bank.denied, _audio.denied_db)
+
+
 func refined(success: bool) -> void:
 	_sfx.play(_bank.level_up if success else _bank.denied,
 			_audio.level_up_db if success else _audio.denied_db)

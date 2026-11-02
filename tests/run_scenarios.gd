@@ -89,6 +89,8 @@ func _run() -> void:
 	await _scenario_async("in menus the controller's A presses and B closes", _menu_controller)
 	await _scenario_async("dungeon room monsters stay in their room", _room_leash)
 	await _scenario_async("the hero wears the gear it equips", _visible_gear)
+	await _scenario_async("active skills cast, hit and grow with grades", _active_skills)
+	await _scenario_async("shards summon the Dread Lord, who drops great loot", _summon_boss)
 	await _scenario_async("dying sends the player back to town", _death_returns_to_town)
 	await _scenario_async("New Game erases the save and starts over", _new_game)
 
@@ -1263,3 +1265,116 @@ func _visible_gear() -> void:
 	inventory.equipped[Inventory.Equip.HELM] = saved
 	inventory.notify_changed()
 	await _frames(1)
+
+
+func _active_skills() -> void:
+	var progress := _main_var("progress") as PlayerProgress
+	var actives := _main_var("actives") as ActiveSkills
+	_go_to_town()
+	await _frames(2)
+	progress.active_grades.fill(0)
+	_check(not actives.try_cast(0), "an unlearned skill doesn't cast")
+	var grade_one := 0.0
+	progress.active_grades.fill(1)
+	grade_one = actives.damage_for(0)
+	progress.active_grades[0] = 3
+	_check(actives.damage_for(0) > grade_one, "a higher grade hits harder")
+	_check(actives.count_for(0) > actives.list.skills[0].count, "and strikes more")
+	progress.active_grades.fill(1)
+	for k in actives.list.skills.size():
+		# A pack straight ahead, where the skill lands.
+		_swarm.state.clear()
+		actives.clear()
+		actives.cooldowns[k].remaining = 0.0
+		_player.vitals.mana = _player.vitals.max_mana
+		var def := actives.list.skills[k]
+		var aim := _player.aim_direction
+		var ahead := _player.ground_position() + Vector2(aim.x, aim.z) * def.reach
+		for n in 12:
+			_swarm.spawn_at(ahead + Vector2.from_angle(n * 0.6) * 1.2, 0, -1, true)
+		# Only the test's pack (no camp): nearby camps may stream in meanwhile.
+		var health_before := _pack_health()
+		var mana_before := _player.vitals.mana
+		# Pressed like a player would: the cast lands inside the frame's damage window.
+		var press := InputEventAction.new()
+		press.action = ActiveSkills.ACTIONS[k]
+		press.pressed = true
+		Input.parse_input_event(press)
+		await _frames(2)
+		var release := InputEventAction.new()
+		release.action = ActiveSkills.ACTIONS[k]
+		Input.parse_input_event(release)
+		_check(_player.vitals.mana < mana_before, "%s casts and costs mana" % def.display_name)
+		await _frames(70)
+		var health_after := _pack_health()
+		_check(health_after < health_before - 1.0,
+				"%s hurt the pack (%.0f -> %.0f)" % [def.display_name, health_before, health_after])
+		_check(not actives.is_ready(k), "%s is on cooldown" % def.display_name)
+	await _frames(200)
+	_check(actives.active_zones() == 0, "burning ground, whirls and meteors end")
+	progress.active_grades.fill(0)
+	_swarm.state.clear()
+
+
+func _summon_boss() -> void:
+	var inventory := _main_var("inventory") as Inventory
+	var config := _main_var("summon_config") as SummonConfig
+	var summons := _main_var("summons") as SummonSystem
+	var loot := _main.get_node("Loot") as LootSystem
+	var bosses := _bosses()
+	_go_to_town()
+	await _frames(3)
+	inventory.summon_shards = 0
+	loot.place_shard(_player.ground_position() + Vector2(0.5, 0.0))
+	await _frames(5)
+	_check(inventory.summon_shards == 1, "walking over a shard picks it up")
+	inventory.summon_shards = config.shards_needed
+	_check(not _main.summon_boss(), "no summoning in town")
+	_check(inventory.summon_shards == config.shards_needed, "and the shards are kept")
+	_teleport(_world.map.region_center(_easy_region()))
+	await _frames(20)
+	_swarm.state.clear()
+	bosses.reset()
+	await _frames(2)
+	_check(_main.summon_boss(), "summoned out in the wilds")
+	_check(inventory.summon_shards == 0, "the shards are spent")
+	_check(summons.is_active() and bosses.alive_count() == 1, "the boss is here")
+	_check(_swarm.state.count > config.escort_count / 2, "with its escort (%d)" %
+			_swarm.state.count)
+	_check(not _main.summon_boss(), "only one at a time")
+	var backpack_before := inventory.backpack.size()
+	loot.clear()
+	var slot := -1
+	for k in bosses.count():
+		if summons.is_summoned(k):
+			slot = k
+	_swarm.state.health[bosses.index_of(slot)] = 0.0
+	await _frames(3)
+	_check(not summons.is_active(), "the Dread Lord is slain")
+	var great := false
+	for i in loot.ground_count():
+		var item := loot.item_at(i)
+		if item != null and item.rarity >= config.min_rarity:
+			great = true
+	for k in range(backpack_before, inventory.backpack.size()):
+		if inventory.backpack[k].rarity >= config.min_rarity:
+			great = true
+	for item in inventory.equipped:
+		if item != null and item.rarity >= config.min_rarity and item.acquired >= inventory.next_acquired - 12:
+			great = true
+	_check(great, "it dropped epic or better gear")
+	_check(loot.ground_geon() > 0 or inventory.stones > 0, "and a pile of Geon")
+	_swarm.state.clear()
+	bosses.reset()
+	summons.reset()
+	_go_to_town()
+	await _frames(2)
+
+
+## Health left in enemies without a camp (spawned by a test), dead ones gone.
+func _pack_health() -> float:
+	var total := 0.0
+	for i in _swarm.state.count:
+		if _swarm.state.camp_ids[i] < 0 and _swarm.state.boss_ids[i] < 0:
+			total += maxf(_swarm.state.health[i], 0.0)
+	return total

@@ -1,7 +1,8 @@
 class_name CharacterPage
 extends RefCounted
-## The CHARACTER tab: job path and skills on the left; attributes (spend
-## points with + and +5), stat totals and New Game on the right.
+## The CHARACTER tab: job path, passive skills and active skills (learn and
+## raise grades with skill points) on the left; attributes (spend points
+## with + and +5), stat totals and New Game on the right.
 
 const PLUS_WIDTH := 64.0
 
@@ -30,6 +31,9 @@ func build(parent: Container, confirm_new_game: bool) -> Control:
 	var right := MenuWidgets.column(columns)
 	var focus := _build_job(left)
 	var plus := _build_skills(left)
+	var learn := _build_actives(left)
+	if plus == null:
+		plus = learn
 	var raise := _build_attributes(right)
 	_build_totals(right)
 	_build_new_game(right, confirm_new_game)
@@ -89,6 +93,43 @@ func _build_skills(parent: VBoxContainer) -> Control:
 		plus.disabled = not _progress.can_rank_up(skill)
 		_style_plus(plus)
 		plus.pressed.connect(_menu.rank_up.bind(skill))
+		row.add_child(plus)
+		if first == null and not plus.disabled:
+			first = plus
+	return first
+
+
+## Active skills: grade (or when it unlocks), what the next grade needs,
+## and + to learn or raise it.
+func _build_actives(parent: VBoxContainer) -> Control:
+	var list := _progress.actives
+	if list == null or list.skills.is_empty():
+		return null
+	parent.add_child(MenuWidgets.title("ACTIVE SKILLS   (buttons A, B, D-pad < >; keys 1-4)"))
+	var first: Control = null
+	for k in list.skills.size():
+		var def := list.skills[k]
+		var grade := _progress.active_grade(k)
+		var row := HBoxContainer.new()
+		parent.add_child(row)
+		var status := ""
+		if grade >= def.max_grade:
+			status = "grade %d/%d (max)" % [grade, def.max_grade]
+		elif grade == 0:
+			status = "learn at level %d" % _progress.level_for_grade(k, 1)
+		else:
+			status = "grade %d/%d - next at level %d" % [grade, def.max_grade,
+					_progress.level_for_grade(k, grade + 1)]
+		var l := MenuWidgets.label("%s   %s\n%s" % [def.display_name, status, def.description],
+				MenuWidgets.SMALL_FONT - 1, def.color.lightened(0.3) if grade > 0
+				else MenuWidgets.DIM_COLOR)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(l)
+		var plus := MenuWidgets.button("+")
+		plus.custom_minimum_size.x = PLUS_WIDTH
+		plus.disabled = not _progress.can_raise_grade(k)
+		_style_plus(plus)
+		plus.pressed.connect(_menu.raise_grade.bind(k))
 		row.add_child(plus)
 		if first == null and not plus.disabled:
 			first = plus

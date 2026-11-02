@@ -34,6 +34,8 @@ var backpack_size: int
 var stones: int = 0
 ## Rare stones that make one refine attempt certain to succeed.
 var blessed_stones: int = 0
+## Shards that, enough of them, summon the Dread Lord (SummonConfig).
+var summon_shards: int = 0
 ## Item sets, for set bonuses (null: no sets).
 var sets: SetList
 var sort_mode: SortMode = SortMode.SLOT
@@ -295,6 +297,11 @@ func talisman_ids() -> Array:
 	return ids
 
 
+func add_summon_shards(amount: int) -> void:
+	summon_shards = maxi(summon_shards + amount, 0)
+	changed.emit()
+
+
 func add_blessed_stones(amount: int) -> void:
 	blessed_stones += amount
 	changed.emit()
@@ -306,6 +313,7 @@ func reset() -> void:
 	backpack.clear()
 	stones = 0
 	blessed_stones = 0
+	summon_shards = 0
 	talismans.clear()
 	changed.emit()
 

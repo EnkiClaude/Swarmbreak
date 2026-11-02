@@ -13,6 +13,8 @@ signal closed
 signal job_chosen(job: int)
 signal refined(result: Refinery.Result, item: ItemData)
 signal talisman_applied(success: bool, gear: ItemData)
+## The player pressed SUMMON (the menu closes first).
+signal summon_requested
 signal egg_taken(egg: ItemData)
 ## The player confirmed erasing their save and starting over.
 signal new_game_requested
@@ -73,12 +75,9 @@ func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stat
 	_panel.offset_top = PANEL_MARGIN * 0.6
 	_panel.offset_right = -PANEL_MARGIN
 	_panel.offset_bottom = -PANEL_MARGIN * 0.6
-	var style := StyleBoxFlat.new()
 	# Fully opaque: HUD text bleeding through reads as clutter on the cards.
-	style.bg_color = Color(0.06, 0.07, 0.09, 1.0)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(18)
-	_panel.add_theme_stylebox_override("panel", style)
+	_panel.add_theme_stylebox_override("panel", MenuTheme.panel_style())
+	_panel.theme = MenuTheme.build()
 	add_child(_panel)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -90,12 +89,23 @@ func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stat
 	visible = false
 
 
-## Adds the PET tab: the pet, the quest and egg choices.
+## Shows shards and SUMMON on the inventory tab.
+func setup_summons(config: SummonConfig) -> void:
+	_inventory_page.summon_config = config
+
+
+## Closes the menu and asks for the summon (main checks whether it can).
+func request_summon() -> void:
+	close()
+	summon_requested.emit()
+
+
 func setup_talismans(rules: TalismanRules) -> void:
 	talismans = rules
 	_inventory_page.talismans = rules
 
 
+## Adds the PET tab: the pet, the quest and egg choices.
 func setup_pets(pets: PetConfig, quests: QuestLog) -> void:
 	_pets = pets
 	_quests = quests
@@ -198,6 +208,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func rank_up(skill: int) -> void:
 	if _progress.rank_up(skill):
 		_stats.recompute()
+	_rebuild()
+
+
+## Learns an active skill or raises its grade.
+func raise_grade(skill: int) -> void:
+	_progress.raise_grade(skill)
 	_rebuild()
 
 
@@ -428,7 +444,19 @@ func _rebuild() -> void:
 		focus = _pet_page.build(_content)
 	else:
 		focus = _inventory_page.build(_content)
+	_build_hints()
 	_grab_focus_later.call_deferred(focus if focus != null else header_focus)
+
+
+## The controls, along the bottom: what each button does here.
+func _build_hints() -> void:
+	_content.add_child(HSeparator.new())
+	var text := "A / Enter  select      B / Esc  close      LB RB / Q E  switch tab"
+	if tab == Tab.INVENTORY:
+		text += "      A twice / double-click  wear or take off"
+	var hints := MenuWidgets.label(text, MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR)
+	hints.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_content.add_child(hints)
 
 
 ## Deferred so the new controls are laid out first. A quick second rebuild
