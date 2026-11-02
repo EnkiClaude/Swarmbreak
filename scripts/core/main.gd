@@ -31,8 +31,10 @@ const LOCATION_MESSAGE_TIME := 2.0
 @export var pet_config: PetConfig
 @export var quest_list: QuestList
 @export var set_list: SetList
+@export var active_list: ActiveSkillList
 
 var combat: PlayerCombat
+var actives: ActiveSkills
 var world: WorldDirector
 var camps: CampDirector
 var progress: PlayerProgress
@@ -76,6 +78,7 @@ var _keeper_engaged := false
 func _ready() -> void:
 	var flow_half := _swarm.config.flow_half_extent
 	progress = PlayerProgress.new(progression_config, skill_tree, attribute_table)
+	progress.set_actives(active_list)
 	inventory = Inventory.new(loot_config.backpack_size)
 	inventory.sets = set_list
 	stats = PlayerStats.new(progress, skill_tree, inventory, progression_config, job_tree)
@@ -99,6 +102,7 @@ func _ready() -> void:
 			_environment.environment, _sun)
 	camps = world.camps
 	combat = PlayerCombat.new(_player, _swarm, _projectiles, _effects, camps, stats)
+	actives = ActiveSkills.new(active_list, _player, _swarm, _effects, progress, stats)
 	camps.camp_cleared.connect(_on_camp_cleared)
 	camps.spawner_kill.connect(_on_spawner_kill)
 	world.location_entered.connect(_on_location_entered)
@@ -110,6 +114,7 @@ func _ready() -> void:
 	pets.setup(pet_config, inventory, _loot, _player)
 	pets.evolved.connect(_on_pet_evolved)
 	world.space_entered.connect(pets.snap_to_player.unbind(1))
+	world.space_entered.connect(actives.clear.unbind(1))
 	_loot_rng.randomize()
 	_loot.setup(loot_config, inventory, ItemGenerator.new(loot_config))
 	world.setup_actors(_player, _camera_rig, _projectiles, _loot)
@@ -137,6 +142,11 @@ func _ready() -> void:
 	_hud.setup(_player.vitals, world, _player, progress)
 	_hud.setup_bosses_and_jobs(bosses, boss_config.display_name, job_tree)
 	_hud.setup_camera_and_skills(_camera_rig, combat)
+	_hud.setup_actives(actives, progress)
+	actives.cast.connect(func(_skill: int, _center: Vector2) -> void: _feedback.skill_cast())
+	actives.impact.connect(func(_skill: int, _center: Vector2, big: bool) -> void:
+			_feedback.skill_impact(big))
+	actives.locked.connect(_on_skill_locked)
 	_hud.setup_quests(quests)
 	_overlay.swarm = _swarm
 	_overlay.combat = combat
@@ -276,6 +286,7 @@ func _process(delta: float) -> void:
 	_swarm.simulate(dt, player_pos, _player.config.radius, _player.config.lure.speed_multiplier)
 	if alive:
 		combat.tick(dt)
+		actives.tick(dt)
 	_projectiles.tick(dt, _swarm)
 	var dead := _swarm.resolve_deaths()
 	camps.record_deaths(dead)
@@ -412,6 +423,13 @@ func _on_job_chosen(job: int) -> void:
 ## The hero wears what's equipped (rebuilt only when the look changes).
 func _dress_hero() -> void:
 	_player.set_look(HeroLook.from_inventory(inventory, loot_config))
+
+
+func _on_skill_locked(skill: int) -> void:
+	var def := active_list.skills[skill]
+	_feedback.skill_locked()
+	_hud.toast("%s: learn it on CHAR from level %d" % [def.display_name, def.unlock_level],
+			Color(1.0, 0.7, 0.4))
 
 
 func _on_talisman_picked_up(id: int) -> void:

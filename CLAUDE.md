@@ -202,6 +202,16 @@ code (`ItemIcon`); hovering or focusing an item shows `ItemTooltip`.
 through it (`value()`, `multiplier()`), and must call `recompute()` after
 changing any of them. Every stat is a `PlayerStat.Id` with a cap.
 
+Active skills (`data/rpg/actives.tres`, `ActiveSkillList`/`ActiveSkillDef`,
+run by `ActiveSkills`): Chain Lightning, Inferno, Meteor and Blade Whirl on
+the skill buttons (`skill_1`..`skill_4`: A, B, D-pad left/right; keys 1-4).
+Each unlocks at a level and is learned and raised through grades with skill
+points on the character screen (`PlayerProgress.active_grades`); grades add
+damage, radius and counts (chain strikes, meteors) or duration. Burning
+ground, whirls and meteors are zones in fixed arrays, damaging through
+`damage_circle()` between `simulate()` and `resolve_deaths()`. `class_tag`
+is reserved for a class system to come.
+
 Jobs (`data/rpg/jobs.tres`): at `unlock_level` the player picks a path on
 the character screen (permanent); at `rank2_level` it promotes. A rank's
 `JobPerks` change abilities (Stormcaller nova aftershocks, Warlord lure marks
@@ -274,7 +284,8 @@ one drops rare loot and a pile of Geon.
      separation from up to `max_separation_neighbours` neighbours (sleeping
      enemies skip all of this), then integration, player push-out, arena
      clamp, and contact damage from up to `max_attackers` touching enemies.
-3. Damage: `PlayerCombat.tick()` (nova) and `ProjectileSystem.tick()` (bolts)
+3. Damage: `PlayerCombat.tick()` (nova), `ActiveSkills.tick()` and
+   `ProjectileSystem.tick()` (bolts)
    call `SwarmManager.damage_circle()` / `first_hit()`. Killed enemies stay in
    place at health <= 0.
 4. `SwarmManager.resolve_deaths()` compacts dead enemies out and spawns their
@@ -353,6 +364,7 @@ run, except errors from the headless dummy renderer.
 | Nova            | RB                  | Q / right mouse   |
 | Lure            | LB                  | E                 |
 | Dodge           | LT                  | Space / Shift     |
+| Active skills 1-4 | A, B, D-pad left / right | 1, 2, 3, 4   |
 | Character       | Start               | Tab / C           |
 | Inventory       | Y                   | I                 |
 | Switch menu tab | LB / RB             | Q / E             |
@@ -366,7 +378,8 @@ run, except errors from the headless dummy renderer.
 
 On touchscreens: the left half of the screen is a floating move stick; FIRE
 (bottom right) is held to fire and dragged sideways to turn the camera; NOVA,
-LURE and DODGE sit around it; ZOOM, HUD, CHAR, +100 and BAG at the top.
+LURE and DODGE sit around it, with SK1-SK4 for the active skills; ZOOM,
+HUD, CHAR, +100 and BAG at the top.
 
 ## Git
 

@@ -24,6 +24,7 @@ static func encode(progress: PlayerProgress, inventory: Inventory, zone_level: i
 			"xp": progress.xp,
 			"skill_points": progress.skill_points,
 			"ranks": Array(progress.ranks),
+			"active_grades": Array(progress.active_grades),
 			"job": progress.job,
 			"job_rank": progress.job_rank,
 			"attribute_points": progress.attribute_points,
@@ -49,6 +50,13 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 	progress.level = clampi(_int(p.get("level"), 1), 1, max_level)
 	progress.xp = maxf(_float(p.get("xp"), 0.0), 0.0)
 	progress.skill_points = maxi(_int(p.get("skill_points"), 0), 0)
+	var grades := _array(p.get("active_grades"))
+	for k in progress.active_grades.size():
+		progress.active_grades[k] = maxi(_int(grades[k], 0), 0) if k < grades.size() else 0
+	if progress.actives != null:
+		for k in progress.active_grades.size():
+			progress.active_grades[k] = mini(progress.active_grades[k],
+					progress.actives.skills[k].max_grade)
 	var ranks := _array(p.get("ranks"))
 	for k in progress.ranks.size():
 		progress.ranks[k] = maxi(_int(ranks[k], 0), 0) if k < ranks.size() else 0

@@ -201,6 +201,12 @@ func rank_up(skill: int) -> void:
 	_rebuild()
 
 
+## Learns an active skill or raises its grade.
+func raise_grade(skill: int) -> void:
+	_progress.raise_grade(skill)
+	_rebuild()
+
+
 ## Puts up to amount points into an attribute.
 func raise_attribute(attribute: int, amount: int = 1) -> void:
 	_progress.raise_attribute(attribute, amount)

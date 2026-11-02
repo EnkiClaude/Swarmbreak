@@ -11,6 +11,8 @@ extends Control
 
 const MOVE_ACTIONS: PackedStringArray = ["move_left", "move_right", "move_up", "move_down"]
 const AIM_ACTIONS: PackedStringArray = ["aim_left", "aim_right", "aim_up", "aim_down"]
+## The active skill buttons press these, in order.
+const SKILL_ACTIONS: PackedStringArray = ["skill_1", "skill_2", "skill_3", "skill_4"]
 const RING_WIDTH := 3.0
 const LABEL_SIZE := 22
 
@@ -161,6 +163,9 @@ func _button_at(at: Vector2) -> String:
 	for button in buttons:
 		if at.distance_to(_screen(button[0])) <= float(button[1]):
 			return button[2]
+	for k in mini(config.skill_button_positions.size(), SKILL_ACTIONS.size()):
+		if at.distance_to(_screen(config.skill_button_positions[k])) <= config.skill_button_radius:
+			return SKILL_ACTIONS[k]
 	return ""
 
 
@@ -187,6 +192,9 @@ func _draw() -> void:
 			"menu_inventory", config.lure_color)
 	_draw_button(config.zoom_button_position, config.small_button_radius, "ZOOM",
 			"camera_zoom_cycle", config.color)
+	for k in mini(config.skill_button_positions.size(), SKILL_ACTIONS.size()):
+		_draw_button(config.skill_button_positions[k], config.skill_button_radius,
+				"SK%d" % (k + 1), SKILL_ACTIONS[k], config.skill_color)
 
 
 func _draw_stick(stick: VirtualStick, hint: Vector2, label: String) -> void:

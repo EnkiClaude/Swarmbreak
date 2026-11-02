@@ -26,6 +26,12 @@ extends Resource
 @export var bag_button_position: Vector2 = Vector2(0.7, 0.07)
 @export var zoom_button_position: Vector2 = Vector2(0.3, 0.07)
 @export var small_button_radius: float = 38.0
+## Active skill buttons (skill_1 .. skill_4), as screen fractions.
+@export var skill_button_positions: PackedVector2Array = [
+	Vector2(0.6, 0.86), Vector2(0.62, 0.71), Vector2(0.66, 0.5), Vector2(0.78, 0.36),
+]
+@export var skill_button_radius: float = 34.0
+@export var skill_color: Color = Color(1, 0.55, 0.25, 0.5)
 @export var color: Color = Color(1, 1, 1, 0.35)
 @export var active_color: Color = Color(1, 1, 1, 0.7)
 @export var nova_color: Color = Color(0.5, 0.85, 1, 0.55)

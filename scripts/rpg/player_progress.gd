@@ -2,7 +2,9 @@ class_name PlayerProgress
 extends RefCounted
 ## Level, XP and skill points, how many points sit in each skill, attribute
 ## points and how many sit in each attribute (AttributeTable), and the chosen
-## job and its rank. Survives death and travel.
+## job and its rank, and the grade of each active skill (ActiveSkillList; 0
+## = not learned). Skill points buy passive ranks and active grades alike.
+## Survives death and travel.
 
 signal leveled_up(level: int)
 signal job_changed(job: int, rank: int)
@@ -12,6 +14,10 @@ signal attributes_changed
 var level := 1
 var xp := 0.0
 var skill_points := 0
+## Grade per active skill, indexed like ActiveSkillList.skills (0: unlearned).
+var active_grades: PackedInt32Array = []
+## Set by set_actives(); null when the game has no active skills.
+var actives: ActiveSkillList
 ## Rank per skill, indexed like SkillTree.skills.
 var ranks: PackedInt32Array = []
 ## Index into JobTree.jobs, or -1 before choosing.
@@ -58,6 +64,39 @@ func add_xp(amount: float) -> void:
 		if attribute_table != null:
 			attribute_points += attribute_table.points_per_level
 		leveled_up.emit(level)
+
+
+func set_actives(list: ActiveSkillList) -> void:
+	actives = list
+	active_grades.resize(list.skills.size() if list != null else 0)
+
+
+func active_grade(skill: int) -> int:
+	return active_grades[skill] if skill >= 0 and skill < active_grades.size() else 0
+
+
+## The level a skill's next grade needs (its unlock level for grade 1).
+func level_for_grade(skill: int, grade: int) -> int:
+	var def := actives.skills[skill]
+	return def.unlock_level + def.grade_level_step * (grade - 1)
+
+
+func can_raise_grade(skill: int) -> bool:
+	if actives == null or skill < 0 or skill >= active_grades.size():
+		return false
+	var next := active_grades[skill] + 1
+	return next <= actives.skills[skill].max_grade and skill_points >= actives.grade_cost \
+			and level >= level_for_grade(skill, next)
+
+
+## Learns an active skill or raises its grade, for skill points.
+func raise_grade(skill: int) -> bool:
+	if not can_raise_grade(skill):
+		return false
+	active_grades[skill] += 1
+	skill_points -= actives.grade_cost
+	skills_changed.emit()
+	return true
 
 
 func can_rank_up(skill: int) -> bool:
@@ -139,6 +178,7 @@ func reset() -> void:
 	xp = 0.0
 	skill_points = 0
 	ranks.fill(0)
+	active_grades.fill(0)
 	attributes.fill(0)
 	attribute_points = attribute_table.starting_points if attribute_table != null else 0
 	job = -1

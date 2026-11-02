@@ -1,0 +1,94 @@
+[gd_resource type="Resource" script_class="ActiveSkillList" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/config/active_skill_def.gd" id="1_active"]
+[ext_resource type="Script" path="res://scripts/config/active_skill_list.gd" id="2_list"]
+[ext_resource type="Resource" path="res://data/effects/lightning.tres" id="3_lightning"]
+[ext_resource type="Resource" path="res://data/effects/bolt_burst.tres" id="4_burst"]
+[ext_resource type="Resource" path="res://data/effects/fire_ring.tres" id="5_fire"]
+[ext_resource type="Resource" path="res://data/effects/meteor_warning.tres" id="6_warning"]
+[ext_resource type="Resource" path="res://data/effects/meteor_blast.tres" id="7_blast"]
+[ext_resource type="Resource" path="res://data/effects/blade_ring.tres" id="8_blade"]
+
+[sub_resource type="Resource" id="Active_0"]
+script = ExtResource("1_active")
+display_name = "Chain Lightning"
+description = "Lightning leaps between the enemies ahead. More strikes every two grades."
+kind = 0
+unlock_level = 5
+mana_cost = 22.0
+cooldown = 2.5
+damage = 34.0
+radius = 4.5
+reach = 9.0
+count = 4
+grades_per_count = 1
+knockback = 2.0
+scaling_stat = 5
+effect = ExtResource("4_burst")
+hit_effect = ExtResource("3_lightning")
+color = Color(0.55, 0.8, 1, 1)
+
+[sub_resource type="Resource" id="Active_1"]
+script = ExtResource("1_active")
+display_name = "Inferno"
+description = "Sets the ground ahead ablaze; everything standing in it burns. Burns longer with grades."
+kind = 1
+unlock_level = 12
+mana_cost = 40.0
+cooldown = 7.0
+damage = 14.0
+radius = 5.0
+reach = 7.0
+count = 1
+duration = 4.0
+tick_interval = 0.5
+knockback = 0.5
+scaling_stat = 7
+effect = ExtResource("5_fire")
+hit_effect = ExtResource("4_burst")
+color = Color(1, 0.4, 0.1, 1)
+
+[sub_resource type="Resource" id="Active_2"]
+script = ExtResource("1_active")
+display_name = "Meteor"
+description = "Calls meteors down on the spot ahead after a moment's warning. More meteors every two grades."
+kind = 2
+unlock_level = 20
+mana_cost = 60.0
+cooldown = 10.0
+damage = 140.0
+radius = 6.5
+reach = 10.0
+count = 1
+grades_per_count = 2
+delay = 0.9
+knockback = 9.0
+scaling_stat = 7
+effect = ExtResource("6_warning")
+hit_effect = ExtResource("7_blast")
+color = Color(1, 0.3, 0.05, 1)
+
+[sub_resource type="Resource" id="Active_3"]
+script = ExtResource("1_active")
+display_name = "Blade Whirl"
+description = "A storm of blades spins around you, cutting everything close. Lasts longer with grades."
+class_tag = "any"
+kind = 3
+unlock_level = 30
+mana_cost = 50.0
+cooldown = 9.0
+damage = 22.0
+radius = 4.0
+reach = 0.0
+duration = 3.0
+tick_interval = 0.25
+knockback = 3.0
+scaling_stat = 7
+effect = ExtResource("8_blade")
+hit_effect = ExtResource("4_burst")
+color = Color(0.9, 0.2, 0.15, 1)
+
+[resource]
+script = ExtResource("2_list")
+skills = Array[ExtResource("1_active")]([SubResource("Active_0"), SubResource("Active_1"), SubResource("Active_2"), SubResource("Active_3")])
+grade_cost = 1

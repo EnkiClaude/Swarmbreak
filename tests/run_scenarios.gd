@@ -89,6 +89,7 @@ func _run() -> void:
 	await _scenario_async("in menus the controller's A presses and B closes", _menu_controller)
 	await _scenario_async("dungeon room monsters stay in their room", _room_leash)
 	await _scenario_async("the hero wears the gear it equips", _visible_gear)
+	await _scenario_async("active skills cast, hit and grow with grades", _active_skills)
 	await _scenario_async("dying sends the player back to town", _death_returns_to_town)
 	await _scenario_async("New Game erases the save and starts over", _new_game)
 
@@ -1263,3 +1264,47 @@ func _visible_gear() -> void:
 	inventory.equipped[Inventory.Equip.HELM] = saved
 	inventory.notify_changed()
 	await _frames(1)
+
+
+func _active_skills() -> void:
+	var progress := _main_var("progress") as PlayerProgress
+	var actives := _main_var("actives") as ActiveSkills
+	_go_to_town()
+	await _frames(2)
+	progress.active_grades.fill(0)
+	_check(not actives.try_cast(0), "an unlearned skill doesn't cast")
+	var grade_one := 0.0
+	progress.active_grades.fill(1)
+	grade_one = actives.damage_for(0)
+	progress.active_grades[0] = 3
+	_check(actives.damage_for(0) > grade_one, "a higher grade hits harder")
+	_check(actives.count_for(0) > actives.list.skills[0].count, "and strikes more")
+	progress.active_grades.fill(1)
+	for k in actives.list.skills.size():
+		# A pack straight ahead, where the skill lands.
+		_swarm.state.clear()
+		actives.clear()
+		actives.cooldowns[k].remaining = 0.0
+		_player.vitals.mana = _player.vitals.max_mana
+		var def := actives.list.skills[k]
+		var aim := _player.aim_direction
+		var ahead := _player.ground_position() + Vector2(aim.x, aim.z) * def.reach
+		for n in 12:
+			_swarm.spawn_at(ahead + Vector2.from_angle(n * 0.6) * 1.2, 0, -1, true)
+		var health_before := 0.0
+		for i in _swarm.state.count:
+			health_before += _swarm.state.health[i]
+		var mana_before := _player.vitals.mana
+		_check(actives.try_cast(k), "%s casts" % def.display_name)
+		_check(_player.vitals.mana < mana_before, "%s costs mana" % def.display_name)
+		await _frames(70)
+		var health_after := 0.0
+		for i in _swarm.state.count:
+			health_after += _swarm.state.health[i]
+		_check(_swarm.state.count < 12 or health_after < health_before,
+				"%s hurt the pack (%d left)" % [def.display_name, _swarm.state.count])
+		_check(not actives.is_ready(k), "%s is on cooldown" % def.display_name)
+	await _frames(200)
+	_check(actives.active_zones() == 0, "burning ground, whirls and meteors end")
+	progress.active_grades.fill(0)
+	_swarm.state.clear()
