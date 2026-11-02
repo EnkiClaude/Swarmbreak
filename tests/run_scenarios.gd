@@ -1295,8 +1295,16 @@ func _active_skills() -> void:
 		# Only the test's pack (no camp): nearby camps may stream in meanwhile.
 		var health_before := _pack_health()
 		var mana_before := _player.vitals.mana
-		_check(actives.try_cast(k), "%s casts" % def.display_name)
-		_check(_player.vitals.mana < mana_before, "%s costs mana" % def.display_name)
+		# Pressed like a player would: the cast lands inside the frame's damage window.
+		var press := InputEventAction.new()
+		press.action = ActiveSkills.ACTIONS[k]
+		press.pressed = true
+		Input.parse_input_event(press)
+		await _frames(2)
+		var release := InputEventAction.new()
+		release.action = ActiveSkills.ACTIONS[k]
+		Input.parse_input_event(release)
+		_check(_player.vitals.mana < mana_before, "%s casts and costs mana" % def.display_name)
 		await _frames(70)
 		var health_after := _pack_health()
 		_check(health_after < health_before - 1.0,
