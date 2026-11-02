@@ -267,6 +267,14 @@ reused once a boss dies or streams out. `BossSystem` runs the slam: stun,
 telegraph ring for `slam_windup`, then damage inside `slam_radius`. Killing
 one drops rare loot and a pile of Geon.
 
+The summonable boss (`data/zones/summon.tres`, `SummonConfig`, run by
+`SummonSystem`): any monster may drop a Sigil Shard
+(`Inventory.summon_shards`); with `shards_needed` the INVENTORY tab's
+SUMMON button calls the Dread Lord and an awake escort ahead of the player
+(not in town, one at a time), at the higher of the place's and the
+player's level, far tougher than a camp boss. Its kill pays out epic-or-
+better drops, a big pile of Geon and a chance at a legendary.
+
 ## Frame order
 
 `main.gd` ticks everything in this order:

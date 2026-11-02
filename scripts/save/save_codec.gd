@@ -33,6 +33,7 @@ static func encode(progress: PlayerProgress, inventory: Inventory, zone_level: i
 		"inventory": {
 			"stones": inventory.stones,
 			"blessed_stones": inventory.blessed_stones,
+			"summon_shards": inventory.summon_shards,
 			"sort_mode": inventory.sort_mode,
 			"next_acquired": inventory.next_acquired,
 			"talismans": _talisman_pairs(inventory),
@@ -68,6 +69,7 @@ static func decode(data: Dictionary, progress: PlayerProgress, inventory: Invent
 	var inv := _dict(data.get("inventory"))
 	inventory.stones = maxi(_int(inv.get("stones"), 0), 0)
 	inventory.blessed_stones = maxi(_int(inv.get("blessed_stones"), 0), 0)
+	inventory.summon_shards = maxi(_int(inv.get("summon_shards"), 0), 0)
 	inventory.sort_mode = clampi(_int(inv.get("sort_mode"), 0), 0,
 			Inventory.SORT_NAMES.size() - 1) as Inventory.SortMode
 	inventory.next_acquired = maxi(_int(inv.get("next_acquired"), 1), 1)

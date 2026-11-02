@@ -13,6 +13,7 @@ signal picked_up(item: ItemData)
 signal picked_up_geon(amount: int)
 signal picked_up_blessed
 signal picked_up_talisman(id: int)
+signal picked_up_shard
 ## Within this distance of the player, a hatched pet fetches loot: it flies
 ## to the nearest drop (nearest_to_fetch()) and the drop is collected once
 ## the pet (collector_position) is within collector_reach of it.
@@ -23,6 +24,8 @@ var collector_reach := 0.0
 ## Walked over an item with a full backpack.
 signal backpack_full
 
+## _blessed value marking a summoning shard (1 is a Blessed Stone).
+const SHARD := 2
 const GEM_SEGMENTS := 4
 const BOB_HEIGHT := 0.15
 const BOB_SPEED := 3.0
@@ -42,6 +45,8 @@ var _geon := PackedInt32Array()
 var _blessed := PackedByteArray()
 ## Talisman id + 1 lying in each slot, or 0.
 var _talisman := PackedInt32Array()
+## Color summoning shards are drawn in (set by main).
+var shard_color := Color(0.85, 0.15, 0.9)
 ## Rolls dropped talismans (set by main; null: none drop).
 var talismans: TalismanRules
 var _count := 0
@@ -92,10 +97,11 @@ func drop(at: Vector2, amount: int, zone_level: int, min_rarity: int = 0) -> voi
 ## a pile of Geon for the level, times geon_multiplier. Returns how many
 ## were gear items (talismans not counted).
 func drop_rewards(at: Vector2, amount: int, level: int, min_rarity: int = 0,
-		geon_multiplier: float = 1.0) -> int:
+		geon_multiplier: float = 1.0, item_chance: float = -1.0) -> int:
 	var items := 0
+	var chance := item_chance if item_chance >= 0.0 else _config.item_drop_chance
 	for _n in amount:
-		if _rng.randf() < _config.item_drop_chance:
+		if _rng.randf() < chance:
 			place(_generator.roll(level, min_rarity), _scatter(at))
 			items += 1
 		elif talismans != null and _rng.randf() < _config.talisman_drop_chance:
@@ -137,6 +143,14 @@ func place_talisman(id: int, at: Vector2) -> bool:
 ## The talisman id lying in slot i, or -1.
 func talisman_at(i: int) -> int:
 	return _talisman[i] - 1
+
+
+## Puts a summoning shard on the ground. False if the ground pool is full.
+func place_shard(at: Vector2) -> bool:
+	if not place(null, at):
+		return false
+	_blessed[_count - 1] = SHARD
+	return true
 
 
 func place_blessed(at: Vector2) -> bool:
@@ -255,6 +269,9 @@ func _collect(i: int, item: ItemData) -> void:
 		var id := _talisman[i] - 1
 		_inventory.add_talisman(id)
 		picked_up_talisman.emit(id)
+	elif _blessed[i] == SHARD:
+		_inventory.add_summon_shards(1)
+		picked_up_shard.emit()
 	elif _blessed[i] != 0:
 		_inventory.add_blessed_stones(1)
 		picked_up_blessed.emit()
@@ -299,6 +316,15 @@ func _draw() -> void:
 			glow.a = BEAM_ALPHA
 			_beams.add(Vector3(p.x, _config.beam_height * 0.4, p.z),
 					Vector3(0.1, _config.beam_height * 0.8, 0.1), glow)
+			continue
+		if item == null and _blessed[i] == SHARD:
+			var shard := Basis(Vector3.UP, _time * SPIN_SPEED * 2.0 + i).scaled(Vector3(s * 0.6,
+					s * 1.6, s * 0.6))
+			_gems.add_basis(Vector3(p.x, 0.75 + bob, p.z), shard, shard_color)
+			var aura := shard_color
+			aura.a = BEAM_ALPHA
+			_beams.add(Vector3(p.x, _config.beam_height * 0.5, p.z),
+					Vector3(0.14, _config.beam_height, 0.14), aura)
 			continue
 		if item == null and _blessed[i] != 0:
 			var stone := Basis(Vector3.UP, _time * SPIN_SPEED + i).scaled(Vector3(s, s * 1.4, s))

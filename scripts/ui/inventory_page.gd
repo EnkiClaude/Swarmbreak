@@ -44,6 +44,8 @@ var selected: ItemData
 var focus_item: ItemData
 ## Applies talismans (null hides them).
 var talismans: TalismanRules
+## The summonable boss, for the shard count and SUMMON (null hides them).
+var summon_config: SummonConfig
 ## The talisman stack (id) shown in the details, or -1.
 var selected_talisman := -1
 ## Result line under the details, e.g. after refining.
@@ -200,8 +202,29 @@ func _build_backpack(parent: VBoxContainer) -> Control:
 		if first == null:
 			first = tile
 	_build_talisman_list(parent)
+	_build_summon(parent)
 	_build_salvage_all(parent)
 	return first
+
+
+## Shards toward the summonable boss, and SUMMON once there are enough.
+func _build_summon(parent: VBoxContainer) -> void:
+	if summon_config == null:
+		return
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	parent.add_child(row)
+	var have := _inventory.summon_shards
+	var l := MenuWidgets.label("%sS  %d/%d" % [summon_config.shard_name.to_upper(), have,
+			summon_config.shards_needed], MenuWidgets.SMALL_FONT, summon_config.shard_color)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(l)
+	var b := MenuWidgets.button("SUMMON THE %s" % summon_config.boss_name.to_upper(),
+			MenuWidgets.SMALL_FONT - 2)
+	b.disabled = have < summon_config.shards_needed
+	b.add_theme_color_override("font_color", summon_config.color.lightened(0.3))
+	b.pressed.connect(_menu.request_summon)
+	row.add_child(b)
 
 
 ## One row per talisman stack: count, name and what it gives.

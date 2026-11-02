@@ -13,6 +13,8 @@ signal closed
 signal job_chosen(job: int)
 signal refined(result: Refinery.Result, item: ItemData)
 signal talisman_applied(success: bool, gear: ItemData)
+## The player pressed SUMMON (the menu closes first).
+signal summon_requested
 signal egg_taken(egg: ItemData)
 ## The player confirmed erasing their save and starting over.
 signal new_game_requested
@@ -91,6 +93,16 @@ func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stat
 
 
 ## Adds the PET tab: the pet, the quest and egg choices.
+func setup_summons(config: SummonConfig) -> void:
+	_inventory_page.summon_config = config
+
+
+## Closes the menu and asks for the summon (main checks whether it can).
+func request_summon() -> void:
+	close()
+	summon_requested.emit()
+
+
 func setup_talismans(rules: TalismanRules) -> void:
 	talismans = rules
 	_inventory_page.talismans = rules

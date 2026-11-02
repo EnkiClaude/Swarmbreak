@@ -32,9 +32,11 @@ const LOCATION_MESSAGE_TIME := 2.0
 @export var quest_list: QuestList
 @export var set_list: SetList
 @export var active_list: ActiveSkillList
+@export var summon_config: SummonConfig
 
 var combat: PlayerCombat
 var actives: ActiveSkills
+var summons: SummonSystem
 var world: WorldDirector
 var camps: CampDirector
 var progress: PlayerProgress
@@ -115,6 +117,10 @@ func _ready() -> void:
 	pets.evolved.connect(_on_pet_evolved)
 	world.space_entered.connect(pets.snap_to_player.unbind(1))
 	world.space_entered.connect(actives.clear.unbind(1))
+	summons = SummonSystem.new(summon_config, _swarm, bosses, boss_config, inventory, world,
+			_player, progress)
+	world.space_entered.connect(summons.reset.unbind(1))
+	summons.summoned.connect(_on_boss_summoned)
 	_loot_rng.randomize()
 	_loot.setup(loot_config, inventory, ItemGenerator.new(loot_config))
 	world.setup_actors(_player, _camera_rig, _projectiles, _loot)
@@ -128,10 +134,14 @@ func _ready() -> void:
 	_menu.setup_pets(pet_config, quests)
 	_menu.egg_taken.connect(_on_egg_taken)
 	_menu.refined.connect(_on_refined)
+	_menu.setup_summons(summon_config)
+	_menu.summon_requested.connect(func() -> void: summon_boss())
 	var talisman_rules := TalismanRules.new(loot_config)
 	_menu.setup_talismans(talisman_rules)
 	_loot.talismans = talisman_rules
 	_loot.picked_up_talisman.connect(_on_talisman_picked_up)
+	_loot.picked_up_shard.connect(_on_shard_picked_up)
+	_loot.shard_color = summon_config.shard_color
 	_menu.talisman_applied.connect(_on_talisman_applied)
 	_menu.opened.connect(_touch.release_all)
 	_menu.opened.connect(_camera_rig.release_mouse)
@@ -291,6 +301,7 @@ func _process(delta: float) -> void:
 	var dead := _swarm.resolve_deaths()
 	camps.record_deaths(dead)
 	_roll_blessed_stones(dead)
+	_roll_summon_shards(dead)
 	var xp := _swarm.last_xp * world.xp_multiplier()
 	progress.add_xp(xp)
 	pets.gain_kill_xp(xp)
@@ -392,8 +403,12 @@ func _on_location_entered(title: String, level: int, is_town: bool) -> void:
 			LOCATION_MESSAGE_TIME)
 
 
-func _on_boss_killed(_slot: int, at: Vector2) -> void:
+func _on_boss_killed(slot: int, at: Vector2) -> void:
 	_effects.spawn(_pillar_effect, Vector3(at.x, 0.0, at.y), 2.0)
+	if summons.is_summoned(slot):
+		summons.on_killed(slot)
+		_summoned_boss_rewards(at)
+		return
 	var level := world.level()
 	_loot.drop_rewards(at, boss_config.extra_drops, level, boss_config.min_drop_rarity)
 	var growth := 1.0 + loot_config.geon_growth_per_level * (level - 1)
@@ -451,6 +466,52 @@ func _on_refined(result: Refinery.Result, _item: ItemData) -> void:
 
 
 ## Any monster, whatever its level, may drop a Blessed Stone where it fell.
+## Any monster may drop a summoning shard where it fell.
+func _roll_summon_shards(dead: int) -> void:
+	var positions := _swarm.state.dead_positions
+	for k in dead:
+		if _loot_rng.randf() < summon_config.shard_drop_chance:
+			_loot.place_shard(positions[k])
+
+
+## Summons the boss if the player can (menu button). Shows why not otherwise.
+func summon_boss() -> bool:
+	var why := summons.blocker()
+	if why != "":
+		_hud.toast(why, Color(1.0, 0.6, 0.4))
+		_feedback.skill_locked()
+		return false
+	return summons.summon()
+
+
+func _on_boss_summoned(at: Vector2) -> void:
+	_effects.spawn(_pillar_effect, Vector3(at.x, 0.0, at.y), 3.0)
+	_feedback.boss_slam(false)
+	_hud.banner("THE %s RISES  -  LEVEL %d" % [summon_config.boss_name.to_upper(),
+			summons.level()], summon_config.color, 3.0)
+
+
+## The summoned boss pays out far more than a camp boss.
+func _summoned_boss_rewards(at: Vector2) -> void:
+	var level := summons.level()
+	_loot.drop_rewards(at, summon_config.reward_drops, level, summon_config.min_rarity, 2.0,
+			summon_config.item_chance)
+	if _loot_rng.randf() < summon_config.legendary_chance:
+		_loot.drop(at, 1, level, mini(4, loot_config.talisman_max_rarity))
+	var growth := 1.0 + loot_config.geon_growth_per_level * (level - 1)
+	_loot.place_geon(roundi(boss_config.geon * growth * summon_config.geon_multiplier), at)
+	_hud.banner("%s SLAIN" % summon_config.boss_name.to_upper(), summon_config.color, 3.0)
+
+
+func _on_shard_picked_up() -> void:
+	_hud.toast("+1 %s (%d/%d)" % [summon_config.shard_name, inventory.summon_shards,
+			summon_config.shards_needed], summon_config.shard_color)
+	if inventory.summon_shards == summon_config.shards_needed:
+		_hud.banner("ENOUGH %sS TO SUMMON THE %s" % [summon_config.shard_name.to_upper(),
+				summon_config.boss_name.to_upper()], summon_config.color, 2.5)
+	_feedback.item_picked_up()
+
+
 func _roll_blessed_stones(dead: int) -> void:
 	var positions := _swarm.state.dead_positions
 	for k in dead:
