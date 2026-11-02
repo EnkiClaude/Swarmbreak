@@ -7,12 +7,12 @@ extends RefCounted
 const FONT_SIZE := 22
 const SMALL_FONT := 17
 const BUTTON_HEIGHT := 46.0
-const TITLE_COLOR := Color(0.7, 0.8, 1.0)
+const TITLE_COLOR := Color(0.92, 0.76, 0.45)
 const TEXT_COLOR := Color(1, 1, 1, 0.92)
 const DIM_COLOR := Color(1, 1, 1, 0.5)
 const GOOD_COLOR := Color(0.55, 1.0, 0.5)
 const BAD_COLOR := Color(1.0, 0.5, 0.42)
-const CARD_COLOR := Color(0.12, 0.13, 0.16)
+const CARD_COLOR := Color(0.085, 0.08, 0.08)
 
 
 static func label(text: String, font_size: int = SMALL_FONT, color: Color = TEXT_COLOR) -> Label:
@@ -61,8 +61,9 @@ static func style_item(button: Button, rarity_color: Color, selected: bool,
 	hover.bg_color = normal.bg_color.lightened(0.08)
 	for state in ["normal", "pressed", "disabled"]:
 		button.add_theme_stylebox_override(state, normal)
-	for state in ["hover", "focus"]:
-		button.add_theme_stylebox_override(state, hover)
+	button.add_theme_stylebox_override("hover", hover)
+	# The gold ring shows where the controller is, over the rarity border.
+	button.add_theme_stylebox_override("focus", MenuTheme.focus_ring())
 	button.add_theme_color_override("font_color", rarity_color)
 	button.add_theme_color_override("font_hover_color", rarity_color.lightened(0.2))
 	button.add_theme_color_override("font_focus_color", rarity_color.lightened(0.2))
