@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="WorldConfig" load_steps=42 format=3]
+[gd_resource type="Resource" script_class="WorldConfig" load_steps=62 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/world_config.gd" id="1_world"]
 [ext_resource type="Script" path="res://scripts/config/region_def.gd" id="2_region"]
@@ -22,22 +22,124 @@
 [ext_resource type="Resource" path="res://data/zones/themes/hollow_necropolis.tres" id="t_hollow_necropolis"]
 [ext_resource type="Resource" path="res://data/zones/themes/shadowfell_citadel.tres" id="t_shadowfell_citadel"]
 [ext_resource type="Resource" path="res://data/zones/themes/infernal_sanctum.tres" id="t_infernal_sanctum"]
+[ext_resource type="Resource" path="res://data/zones/themes/blightmoor.tres" id="n_blightmoor"]
+[ext_resource type="Resource" path="res://data/zones/themes/bone_fields.tres" id="n_bone_fields"]
+[ext_resource type="Resource" path="res://data/zones/themes/gloomspire.tres" id="n_gloomspire"]
+[ext_resource type="Resource" path="res://data/zones/themes/charnel_waste.tres" id="n_charnel"]
 
 [sub_resource type="Resource" id="Region_0"]
 script = ExtResource("2_region")
-display_name = "Ashen Wastes"
-enemy_type = 3
-heavy_type = 4
-theme = ExtResource("10_ashen_wastes")
-level = 26
+display_name = "Withered Banks"
+enemy_type = 0
+heavy_type = 1
+theme = ExtResource("20_willow_banks")
+level = 50
 is_town = false
 camp_count = 8
-camp_size_min = 18
-camp_size_max = 36
-heavy_chance = 0.2
+camp_size_min = 20
+camp_size_max = 39
+heavy_chance = 0.23
 boss_camps = 2
 
 [sub_resource type="Resource" id="Region_1"]
+script = ExtResource("2_region")
+display_name = "Bone Fields"
+enemy_type = 3
+heavy_type = 1
+theme = ExtResource("n_bone_fields")
+level = 53
+is_town = false
+camp_count = 9
+camp_size_min = 21
+camp_size_max = 40
+heavy_chance = 0.24
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_2"]
+script = ExtResource("2_region")
+display_name = "Scorched Terraces"
+enemy_type = 3
+heavy_type = 4
+theme = ExtResource("18_sunscorched_temple")
+level = 56
+is_town = false
+camp_count = 9
+camp_size_min = 21
+camp_size_max = 41
+heavy_chance = 0.25
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_3"]
+script = ExtResource("2_region")
+display_name = "Gloomspire Crags"
+enemy_type = 5
+heavy_type = 1
+theme = ExtResource("n_gloomspire")
+level = 59
+is_town = false
+camp_count = 9
+camp_size_min = 22
+camp_size_max = 42
+heavy_chance = 0.26
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_4"]
+script = ExtResource("2_region")
+display_name = "Rust Wastes"
+enemy_type = 0
+heavy_type = 1
+theme = ExtResource("17_red_dust_flats")
+level = 62
+is_town = false
+camp_count = 9
+camp_size_min = 22
+camp_size_max = 43
+heavy_chance = 0.27
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_5"]
+script = ExtResource("2_region")
+display_name = "Blightmoor"
+enemy_type = 5
+heavy_type = 4
+theme = ExtResource("n_blightmoor")
+level = 47
+is_town = false
+camp_count = 8
+camp_size_min = 20
+camp_size_max = 38
+heavy_chance = 0.22
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_6"]
+script = ExtResource("2_region")
+display_name = "Willow Banks"
+enemy_type = 0
+heavy_type = 1
+theme = ExtResource("20_willow_banks")
+level = 5
+is_town = false
+camp_count = 6
+camp_size_min = 12
+camp_size_max = 24
+heavy_chance = 0.07
+boss_camps = 1
+
+[sub_resource type="Resource" id="Region_7"]
+script = ExtResource("2_region")
+display_name = "Cedar Hollow"
+enemy_type = 4
+heavy_type = 1
+theme = ExtResource("12_cedar_hollow")
+level = 8
+is_town = false
+camp_count = 6
+camp_size_min = 14
+camp_size_max = 26
+heavy_chance = 0.09
+boss_camps = 1
+
+[sub_resource type="Resource" id="Region_8"]
 script = ExtResource("2_region")
 display_name = "Sunscorched Steps"
 enemy_type = 3
@@ -46,26 +148,40 @@ theme = ExtResource("18_sunscorched_temple")
 level = 12
 is_town = false
 camp_count = 7
-camp_size_min = 14
-camp_size_max = 30
-heavy_chance = 0.12
+camp_size_min = 16
+camp_size_max = 28
+heavy_chance = 0.11
 boss_camps = 1
 
-[sub_resource type="Resource" id="Region_2"]
+[sub_resource type="Resource" id="Region_9"]
 script = ExtResource("2_region")
-display_name = "Red Dust Flats"
-enemy_type = 0
+display_name = "Hollow Marsh"
+enemy_type = 4
 heavy_type = 1
-theme = ExtResource("17_red_dust_flats")
-level = 16
+theme = ExtResource("15_mistfen")
+level = 65
+is_town = false
+camp_count = 9
+camp_size_min = 23
+camp_size_max = 44
+heavy_chance = 0.28
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_10"]
+script = ExtResource("2_region")
+display_name = "Bleached Expanse"
+enemy_type = 3
+heavy_type = 4
+theme = ExtResource("10_ashen_wastes")
+level = 44
 is_town = false
 camp_count = 8
-camp_size_min = 16
-camp_size_max = 32
-heavy_chance = 0.15
-boss_camps = 1
+camp_size_min = 19
+camp_size_max = 37
+heavy_chance = 0.21
+boss_camps = 2
 
-[sub_resource type="Resource" id="Region_3"]
+[sub_resource type="Resource" id="Region_11"]
 script = ExtResource("2_region")
 display_name = "Bamboo Meadow"
 enemy_type = 0
@@ -79,7 +195,7 @@ camp_size_max = 22
 heavy_chance = 0.05
 boss_camps = 0
 
-[sub_resource type="Resource" id="Region_4"]
+[sub_resource type="Resource" id="Region_12"]
 script = ExtResource("2_region")
 display_name = "Jade Village"
 enemy_type = 0
@@ -88,26 +204,82 @@ theme = ExtResource("14_jade_village")
 level = 1
 is_town = true
 camp_count = 0
-camp_size_min = 0
-camp_size_max = 0
-heavy_chance = 0.0
+camp_size_min = 14
+camp_size_max = 30
+heavy_chance = 0.00
 boss_camps = 0
 
-[sub_resource type="Resource" id="Region_5"]
+[sub_resource type="Resource" id="Region_13"]
 script = ExtResource("2_region")
-display_name = "Willow Banks"
+display_name = "Red Dust Flats"
 enemy_type = 0
 heavy_type = 1
-theme = ExtResource("20_willow_banks")
-level = 5
+theme = ExtResource("17_red_dust_flats")
+level = 16
 is_town = false
 camp_count = 7
-camp_size_min = 12
-camp_size_max = 26
-heavy_chance = 0.08
+camp_size_min = 18
+camp_size_max = 30
+heavy_chance = 0.13
 boss_camps = 1
 
-[sub_resource type="Resource" id="Region_6"]
+[sub_resource type="Resource" id="Region_14"]
+script = ExtResource("2_region")
+display_name = "Charnel Waste"
+enemy_type = 3
+heavy_type = 4
+theme = ExtResource("n_charnel")
+level = 68
+is_town = false
+camp_count = 9
+camp_size_min = 23
+camp_size_max = 45
+heavy_chance = 0.29
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_15"]
+script = ExtResource("2_region")
+display_name = "Gravewood"
+enemy_type = 4
+heavy_type = 1
+theme = ExtResource("12_cedar_hollow")
+level = 41
+is_town = false
+camp_count = 8
+camp_size_min = 19
+camp_size_max = 36
+heavy_chance = 0.20
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_16"]
+script = ExtResource("2_region")
+display_name = "Ember Ridge"
+enemy_type = 0
+heavy_type = 1
+theme = ExtResource("13_ember_ridge")
+level = 32
+is_town = false
+camp_count = 8
+camp_size_min = 24
+camp_size_max = 36
+heavy_chance = 0.19
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_17"]
+script = ExtResource("2_region")
+display_name = "Ashen Wastes"
+enemy_type = 3
+heavy_type = 4
+theme = ExtResource("10_ashen_wastes")
+level = 26
+is_town = false
+camp_count = 8
+camp_size_min = 22
+camp_size_max = 34
+heavy_chance = 0.17
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_18"]
 script = ExtResource("2_region")
 display_name = "Mistfen"
 enemy_type = 5
@@ -115,38 +287,94 @@ heavy_type = 4
 theme = ExtResource("15_mistfen")
 level = 20
 is_town = false
-camp_count = 8
-camp_size_min = 16
+camp_count = 7
+camp_size_min = 20
 camp_size_max = 32
 heavy_chance = 0.15
 boss_camps = 1
 
-[sub_resource type="Resource" id="Region_7"]
+[sub_resource type="Resource" id="Region_19"]
 script = ExtResource("2_region")
-display_name = "Cedar Hollow"
+display_name = "Ashfall Reach"
+enemy_type = 0
+heavy_type = 1
+theme = ExtResource("10_ashen_wastes")
+level = 71
+is_town = false
+camp_count = 10
+camp_size_min = 24
+camp_size_max = 46
+heavy_chance = 0.30
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_20"]
+script = ExtResource("2_region")
+display_name = "Rotmarsh"
 enemy_type = 5
 heavy_type = 4
-theme = ExtResource("12_cedar_hollow")
-level = 8
-is_town = false
-camp_count = 7
-camp_size_min = 12
-camp_size_max = 26
-heavy_chance = 0.08
-boss_camps = 1
-
-[sub_resource type="Resource" id="Region_8"]
-script = ExtResource("2_region")
-display_name = "Ember Ridge"
-enemy_type = 3
-heavy_type = 1
-theme = ExtResource("13_ember_ridge")
-level = 32
+theme = ExtResource("15_mistfen")
+level = 38
 is_town = false
 camp_count = 8
 camp_size_min = 18
-camp_size_max = 36
-heavy_chance = 0.2
+camp_size_max = 35
+heavy_chance = 0.19
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_21"]
+script = ExtResource("2_region")
+display_name = "Cinder Barrens"
+enemy_type = 0
+heavy_type = 1
+theme = ExtResource("13_ember_ridge")
+level = 35
+is_town = false
+camp_count = 8
+camp_size_min = 18
+camp_size_max = 34
+heavy_chance = 0.18
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_22"]
+script = ExtResource("2_region")
+display_name = "The Last Ruin"
+enemy_type = 3
+heavy_type = 1
+theme = ExtResource("n_charnel")
+level = 80
+is_town = false
+camp_count = 10
+camp_size_min = 25
+camp_size_max = 49
+heavy_chance = 0.33
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_23"]
+script = ExtResource("2_region")
+display_name = "Gloomspire Heights"
+enemy_type = 4
+heavy_type = 1
+theme = ExtResource("n_gloomspire")
+level = 77
+is_town = false
+camp_count = 10
+camp_size_min = 25
+camp_size_max = 48
+heavy_chance = 0.32
+boss_camps = 2
+
+[sub_resource type="Resource" id="Region_24"]
+script = ExtResource("2_region")
+display_name = "Blightmoor Depths"
+enemy_type = 5
+heavy_type = 4
+theme = ExtResource("n_blightmoor")
+level = 74
+is_town = false
+camp_count = 10
+camp_size_min = 24
+camp_size_max = 47
+heavy_chance = 0.31
 boss_camps = 2
 
 [sub_resource type="Resource" id="Dungeon_0"]
@@ -170,8 +398,8 @@ enemy_type = 0
 heavy_type = 1
 theme = ExtResource("19_vermilion_hall")
 level = 10
-region = 5
-gate_offset = Vector2(18, -14)
+region = 7
+gate_offset = Vector2(0, 0)
 gate_color = Color(1, 0.35, 0.2, 1)
 camp_size_min = 16
 camp_size_max = 30
@@ -211,8 +439,8 @@ enemy_type = 3
 heavy_type = 4
 theme = ExtResource("16_moonstone_crypt")
 level = 15
-region = 7
-gate_offset = Vector2(14, -14)
+region = 8
+gate_offset = Vector2(0, 0)
 gate_color = Color(0.35, 0.85, 1, 1)
 camp_size_min = 20
 camp_size_max = 36
@@ -252,8 +480,8 @@ enemy_type = 4
 heavy_type = 1
 theme = ExtResource("t_jade_vault")
 level = 20
-region = 2
-gate_offset = Vector2(-16, 12)
+region = 13
+gate_offset = Vector2(0, 0)
 gate_color = Color(0.3, 1, 0.6, 1)
 camp_size_min = 22
 camp_size_max = 36
@@ -293,8 +521,8 @@ enemy_type = 5
 heavy_type = 1
 theme = ExtResource("t_ashen_forge")
 level = 25
-region = 3
-gate_offset = Vector2(-14, 14)
+region = 18
+gate_offset = Vector2(0, 0)
 gate_color = Color(1, 0.5, 0.15, 1)
 camp_size_min = 24
 camp_size_max = 38
@@ -334,8 +562,8 @@ enemy_type = 3
 heavy_type = 1
 theme = ExtResource("t_frost_halls")
 level = 30
-region = 6
-gate_offset = Vector2(16, 10)
+region = 17
+gate_offset = Vector2(0, 0)
 gate_color = Color(0.6, 0.85, 1, 1)
 camp_size_min = 26
 camp_size_max = 40
@@ -375,8 +603,8 @@ enemy_type = 5
 heavy_type = 4
 theme = ExtResource("t_abyssal_throne")
 level = 35
-region = 1
-gate_offset = Vector2(12, 16)
+region = 16
+gate_offset = Vector2(0, 0)
 gate_color = Color(0.75, 0.4, 1, 1)
 camp_size_min = 28
 camp_size_max = 42
@@ -416,8 +644,8 @@ enemy_type = 1
 heavy_type = 4
 theme = ExtResource("t_bloodstone_abyss")
 level = 45
-region = 3
-gate_offset = Vector2(10, -12)
+region = 10
+gate_offset = Vector2(0, 0)
 gate_color = Color(0.9, 0.1, 0.08, 1)
 camp_size_min = 30
 camp_size_max = 44
@@ -457,8 +685,8 @@ enemy_type = 3
 heavy_type = 4
 theme = ExtResource("t_hollow_necropolis")
 level = 55
-region = 7
-gate_offset = Vector2(-12, 10)
+region = 1
+gate_offset = Vector2(0, 0)
 gate_color = Color(0.5, 1, 0.4, 1)
 camp_size_min = 32
 camp_size_max = 46
@@ -498,8 +726,8 @@ enemy_type = 5
 heavy_type = 3
 theme = ExtResource("t_shadowfell_citadel")
 level = 65
-region = 0
-gate_offset = Vector2(-30, -30)
+region = 4
+gate_offset = Vector2(0, 0)
 gate_color = Color(0.35, 0.5, 1, 1)
 camp_size_min = 34
 camp_size_max = 48
@@ -539,8 +767,8 @@ enemy_type = 0
 heavy_type = 1
 theme = ExtResource("t_infernal_sanctum")
 level = 80
-region = 8
-gate_offset = Vector2(30, 30)
+region = 23
+gate_offset = Vector2(0, 0)
 gate_color = Color(1, 0.45, 0.1, 1)
 camp_size_min = 36
 camp_size_max = 50
@@ -563,8 +791,8 @@ set_index = 9
 script = ExtResource("1_world")
 world_seed = 20261101
 region_size = 128.0
-grid_size = 3
-regions = Array[ExtResource("2_region")]([SubResource("Region_0"), SubResource("Region_1"), SubResource("Region_2"), SubResource("Region_3"), SubResource("Region_4"), SubResource("Region_5"), SubResource("Region_6"), SubResource("Region_7"), SubResource("Region_8")])
+grid_size = 5
+regions = Array[ExtResource("2_region")]([SubResource("Region_0"), SubResource("Region_1"), SubResource("Region_2"), SubResource("Region_3"), SubResource("Region_4"), SubResource("Region_5"), SubResource("Region_6"), SubResource("Region_7"), SubResource("Region_8"), SubResource("Region_9"), SubResource("Region_10"), SubResource("Region_11"), SubResource("Region_12"), SubResource("Region_13"), SubResource("Region_14"), SubResource("Region_15"), SubResource("Region_16"), SubResource("Region_17"), SubResource("Region_18"), SubResource("Region_19"), SubResource("Region_20"), SubResource("Region_21"), SubResource("Region_22"), SubResource("Region_23"), SubResource("Region_24")])
 dungeons = Array[ExtResource("3_dungeon")]([SubResource("Dungeon_0"), SubResource("Dungeon_1"), SubResource("Dungeon_2"), SubResource("Dungeon_3"), SubResource("Dungeon_4"), SubResource("Dungeon_5"), SubResource("Dungeon_6"), SubResource("Dungeon_7"), SubResource("Dungeon_8"), SubResource("Dungeon_9")])
 spawn_radius = 90.0
 despawn_radius = 115.0

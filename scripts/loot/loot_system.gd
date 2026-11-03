@@ -94,15 +94,18 @@ func drop(at: Vector2, amount: int, zone_level: int, min_rarity: int = 0) -> voi
 
 ## `amount` drops around a ground position: each an item at item_drop_chance
 ## (at least min_rarity), else a talisman at talisman_drop_chance, otherwise
-## a pile of Geon for the level, times geon_multiplier. Returns how many
-## were gear items (talismans not counted).
+## a pile of Geon for the level, times geon_multiplier. Gear rolls at
+## item_level (-1: the level), no better than max_rarity (-1: any). Returns
+## how many were gear items (talismans not counted).
 func drop_rewards(at: Vector2, amount: int, level: int, min_rarity: int = 0,
-		geon_multiplier: float = 1.0, item_chance: float = -1.0) -> int:
+		geon_multiplier: float = 1.0, item_chance: float = -1.0, item_level: int = -1,
+		max_rarity: int = -1) -> int:
 	var items := 0
 	var chance := item_chance if item_chance >= 0.0 else _config.item_drop_chance
 	for _n in amount:
 		if _rng.randf() < chance:
-			place(_generator.roll(level, min_rarity), _scatter(at))
+			place(_generator.roll(item_level if item_level > 0 else level, min_rarity, -1, -1,
+					max_rarity), _scatter(at))
 			items += 1
 		elif talismans != null and _rng.randf() < _config.talisman_drop_chance:
 			place_talisman(talismans.roll(min_rarity), _scatter(at))

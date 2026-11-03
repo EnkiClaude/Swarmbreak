@@ -157,6 +157,16 @@ Each region and dungeon names its monsters (`enemy_type`, `heavy_type`:
 indices into `SwarmConfig.enemy_types`: goblin, ogre, warlord boss,
 skeleton, treant, wisp).
 
+The open world is a 5 x 5 grid around the town: an inner ring of regions
+from level 2 to 32 and an outer ring from 35 to 80, each ring climbing
+clockwise so neighbours are close in level. Each dungeon's gate stands in
+the region just below its level. Open-world monsters are softer than
+dungeon ones (`overworld_toughness`, and only `overworld_gap_scale` of the
+level-gap toughness), and their gear rolls at a lower item level and no
+better than epic (`overworld_item_level_scale`, `overworld_max_rarity`,
+`WorldDirector.item_level()` / `max_rarity()`): the best gear comes from
+dungeons.
+
 Levels: monster health, contact damage and XP grow with the level where the
 player is (`WorldDirector.level()`), and monsters above the player's own
 level get more health and damage per level of the gap
@@ -357,7 +367,7 @@ The game is a Diablo-style action RPG, not a survivors game: attacks are
 triggered by the player (no auto-fire), enemies live in placed camps, the
 player has health, mana and a dodge, and the lure gathers packs for the
 nova (a Frost Nova: it damages and slows, `SwarmState.slow_until`, with no
-knockback). Kills give XP and levels, jobs change how abilities work, camps and
+knockback; the Deep Frost skill, `PlayerStat.Id.FROST_SLOW`, slows harder). Kills give XP and levels, jobs change how abilities work, camps and
 their bosses drop loot, and refining is a risky upgrade that never destroys.
 
 ## Testing

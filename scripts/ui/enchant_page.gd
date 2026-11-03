@@ -1,7 +1,8 @@
 class_name EnchantPage
 extends RefCounted
 ## The ENCHANT tab: talisman stacks on the left (one row per kind and tier,
-## with how many); on the right, the chosen stack and a button per worn
+## with how many); on the right, dissolving the chosen stack first, then
+## essence, then the chosen stack and a button per worn
 ## item with a free socket (with its chance), or, with none chosen, every
 ## worn item's sockets and the talisman stats it already carries. Talismans
 ## can also be dissolved into Arcane Essence, which binds Scrolls of Power
@@ -49,6 +50,9 @@ func build(parent: Container) -> Control:
 	parent.add_child(columns)
 	var focus := _build_list(MenuWidgets.column(columns, LIST_WIDTH))
 	var right := MenuWidgets.column(columns)
+	var dissolve: Control = null
+	if selected >= 0:
+		dissolve = _build_dissolve(right, selected)
 	_build_essence(right)
 	var apply: Control = null
 	if selected >= 0:
@@ -57,6 +61,8 @@ func build(parent: Container) -> Control:
 		_build_sockets(right)
 	if result_text != "":
 		right.add_child(MenuWidgets.label(result_text, MenuWidgets.SMALL_FONT + 1, result_color))
+	if apply == null:
+		apply = dissolve
 	return apply if apply != null else focus
 
 
@@ -177,19 +183,29 @@ func _build_talisman(parent: VBoxContainer, id: int) -> Control:
 	if not any:
 		parent.add_child(MenuWidgets.label("Wear some gear first.", MenuWidgets.SMALL_FONT,
 				MenuWidgets.DIM_COLOR))
-	# Or melt them down for essence.
+	return first
+
+
+## Dissolving the chosen stack (one, or all of it) for essence: first on the
+## right, so it's right there once a talisman is chosen.
+func _build_dissolve(parent: VBoxContainer, id: int) -> Control:
 	var each := TalismanRules.essence_of(_loot, id)
 	var have := _inventory.talisman_count(id)
+	parent.add_child(MenuWidgets.label("DISSOLVE %s  (%d essence each)" % [
+			TalismanRules.display_name(_loot, id).to_upper(), each], MenuWidgets.SMALL_FONT - 2,
+			_loot.essence_color))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	parent.add_child(row)
 	var one := MenuWidgets.button("DISSOLVE ONE  +%d" % each, MenuWidgets.SMALL_FONT - 2)
 	one.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	one.add_theme_color_override("font_color", _loot.essence_color)
 	one.pressed.connect(_menu.dissolve_talisman.bind(id, 1))
 	row.add_child(one)
 	var all := MenuWidgets.button("DISSOLVE ALL %d  +%d" % [have, each * have],
 			MenuWidgets.SMALL_FONT - 2)
 	all.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	all.add_theme_color_override("font_color", _loot.essence_color)
 	all.pressed.connect(_menu.dissolve_talisman.bind(id, have))
 	row.add_child(all)
-	return first
+	return one

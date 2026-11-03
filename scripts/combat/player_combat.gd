@@ -113,7 +113,7 @@ func _try_nova() -> void:
 	var radius := _nova.radius * _mult(PlayerStat.Id.NOVA_RADIUS)
 	var damage := _nova.damage * _mult(PlayerStat.Id.NOVA_DAMAGE)
 	_swarm.damage_circle(center, radius, damage, _nova.knockback)
-	_swarm.slow_within(center, radius, _nova.slow_factor, _nova.slow_duration)
+	_swarm.slow_within(center, radius, _slow_factor(), _nova.slow_duration)
 	_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), radius)
 	_strike(center, radius, _nova.strikes)
 	var perks := _perks()
@@ -156,6 +156,13 @@ func _on_enemies_killed(count: int, _center: Vector2) -> void:
 	_player.vitals.gain_mana(per_kill * count)
 
 
+## The nova's speed multiplier on what it hits: frost slow (Deep Frost)
+## takes a share off what the base slow leaves.
+func _slow_factor() -> float:
+	var extra := _stats.value(PlayerStat.Id.FROST_SLOW) if _stats != null else 0.0
+	return _nova.slow_factor * (1.0 - extra)
+
+
 func _perks() -> JobPerks:
 	return _stats.perks if _stats != null else null
 
@@ -178,7 +185,7 @@ func _run_aftershocks() -> void:
 		var center := _shock_center[k]
 		var radius := _shock_radius[k]
 		_swarm.damage_circle(center, radius, _shock_damage[k], _nova.knockback * 0.6)
-		_swarm.slow_within(center, radius, _nova.slow_factor, _nova.slow_duration)
+		_swarm.slow_within(center, radius, _slow_factor(), _nova.slow_duration)
 		_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), radius)
 		_strike(center, radius, _nova.strikes / 2)
 		aftershock.emit(center)

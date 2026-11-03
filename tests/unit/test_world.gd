@@ -123,7 +123,7 @@ func test_camps_stream_in_near_the_player_and_out_when_far() -> void:
 	var director := CampDirector.new(config, swarm)
 	director.use_sites(map.overworld_sites)
 	var sites := map.overworld_sites
-	var spot := map.region_center(3)  # a level-1 region
+	var spot := map.region_center(3)  # an outer region
 	_run(director, swarm, spot, 0.6)
 	var expected := 0
 	for s in sites.size():
@@ -426,6 +426,7 @@ func test_monsters_above_the_players_level_are_tougher() -> void:
 	var config := _config()
 	var swarm := _swarm()
 	var director := CampDirector.new(config, swarm)
+	director.speed_by_level = true  # a dungeon: the full gap applies
 	director.player_level = 34
 	var even := director.health_multiplier(34)
 	check_near(director.gap_multiplier(34, 0.5), 1.0, 0.0001, "no gap, no extra")
@@ -437,3 +438,30 @@ func test_monsters_above_the_players_level_are_tougher() -> void:
 	check_near(director.gap_multiplier(500, 0.1), 1.0 + 0.1 * config.gap_max_levels, 0.0001,
 			"capped")
 	swarm.free()
+
+
+func test_open_world_monsters_are_softer_than_dungeon_ones() -> void:
+	var config := _config()
+	var swarm := _swarm()
+	var director := CampDirector.new(config, swarm)
+	director.player_level = 34
+	var outdoors := director.health_multiplier(80)
+	var outdoors_gap := director.gap_multiplier(80, config.gap_health_per_level)
+	director.speed_by_level = true
+	var indoors := director.health_multiplier(80)
+	check(outdoors < indoors * 0.6, "open world %.1fx vs dungeon %.1fx" % [outdoors, indoors])
+	check(outdoors_gap < director.gap_multiplier(80, config.gap_health_per_level),
+			"less of the level gap counts outdoors")
+	swarm.free()
+
+
+func test_the_open_world_climbs_to_level_80_with_dungeons_beside_their_levels() -> void:
+	var config := _config()
+	var highest := 0
+	for region in config.regions:
+		highest = maxi(highest, region.level)
+	check_eq(highest, 80, "the hardest region")
+	for dungeon in config.dungeons:
+		var near := config.regions[dungeon.region].level
+		check(dungeon.level - near <= 10, "%s (Lv %d) sits in a Lv %d region" % [
+				dungeon.display_name, dungeon.level, near])

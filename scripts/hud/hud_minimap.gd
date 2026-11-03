@@ -71,11 +71,19 @@ static func _draw_view_cone(canvas: CanvasItem, center: Vector2, r: float, color
 
 static func _draw_walls(canvas: CanvasItem, center: Vector2, r: float, scale_factor: float,
 		player_pos: Vector2, yaw: float, half_extent: float, color: Color) -> void:
-	var steps := ceili(half_extent * 2.0 / WALL_DOT_SPACING)
+	# Only the stretch of wall the map can show: the world is big.
+	var reach := r / scale_factor
+	# Snapped to the dot spacing, so the dots stay put as the player moves.
+	var near_x := maxf(-half_extent + floorf((player_pos.x - reach + half_extent)
+			/ WALL_DOT_SPACING) * WALL_DOT_SPACING, -half_extent)
+	var near_y := maxf(-half_extent + floorf((player_pos.y - reach + half_extent)
+			/ WALL_DOT_SPACING) * WALL_DOT_SPACING, -half_extent)
+	var steps := ceili(reach * 2.0 / WALL_DOT_SPACING)
 	for k in steps + 1:
-		var along := -half_extent + k * WALL_DOT_SPACING
-		for wall: Vector2 in [Vector2(along, -half_extent), Vector2(along, half_extent),
-				Vector2(-half_extent, along), Vector2(half_extent, along)]:
+		var along_x := minf(near_x + k * WALL_DOT_SPACING, half_extent)
+		var along_y := minf(near_y + k * WALL_DOT_SPACING, half_extent)
+		for wall: Vector2 in [Vector2(along_x, -half_extent), Vector2(along_x, half_extent),
+				Vector2(-half_extent, along_y), Vector2(half_extent, along_y)]:
 			var at := to_map(wall, player_pos, yaw, scale_factor)
 			if at.length() < r - 3.0:
 				canvas.draw_circle(center + at, 1.2, color)

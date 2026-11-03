@@ -38,6 +38,17 @@ extends Resource
 @export var damage_growth: float = 0.12
 @export var xp_growth: float = 0.2
 
+@export_group("Open world")
+## Open-world monsters are easier than dungeon ones of the same level:
+## health and contact damage times this, and only this share of the
+## above-your-level toughness (gap_health_per_level...).
+@export var overworld_toughness: float = 0.7
+@export var overworld_gap_scale: float = 0.5
+## Open-world gear rolls at this share of the camp's level, and never
+## better than overworld_max_rarity (3 = epic): dungeons drop the best.
+@export var overworld_item_level_scale: float = 0.75
+@export var overworld_max_rarity: int = 3
+
 @export_group("Travel")
 ## In dungeons, enemies only chase straight at the player inside this
 ## distance; further out they follow the hallway and doors.
