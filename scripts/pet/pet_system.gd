@@ -6,10 +6,14 @@ extends Node3D
 ## PetRules), levels, hatches and evolves (rebuilding its
 ## model), and once hatched fetches drops around the player: it flies to
 ## the nearest one in range (LootSystem.nearest_to_fetch()) and LootSystem
-## collects it when the pet gets there.
+## collects it when the pet gets there. From PetConfig.attack_level it zaps
+## the enemies around it (fight(), in the damage window), and from
+## aggro_level it wakes camps around itself.
 
 signal leveled(item: ItemData)
 signal evolved(item: ItemData, stage: int)
+## The pet zapped enemies around a point.
+signal zapped(at: Vector2)
 
 const HERO_SHADER := preload("res://shaders/hero.gdshader")
 
@@ -23,6 +27,12 @@ var _material: ShaderMaterial
 var _shown_type := -1
 var _shown_stage := -1
 var _stride := 0.0
+var _swarm: SwarmManager
+var _camps: CampDirector
+var _effects: EffectSystem
+var _zap_effect := -1
+var _next_zap := 0.0
+var _next_aggro := 0.0
 
 
 func setup(p_config: PetConfig, inventory: Inventory, loot: LootSystem, player: Player) -> void:
@@ -36,6 +46,37 @@ func setup(p_config: PetConfig, inventory: Inventory, loot: LootSystem, player: 
 	_body.name = "Body"
 	add_child(_body)
 	visible = false
+
+
+## Lets the pet fight: zaps through the swarm, wakes camps, shows a strike.
+func setup_combat(swarm: SwarmManager, camps: CampDirector, effects: EffectSystem) -> void:
+	_swarm = swarm
+	_camps = camps
+	_effects = effects
+	if config.attack_effect != null:
+		_zap_effect = effects.register(config.attack_effect)
+
+
+## Call between SwarmManager.simulate() and resolve_deaths().
+func fight() -> void:
+	var item := pet()
+	if item == null or _swarm == null:
+		return
+	var now := _swarm.now()
+	var at := Vector2(position.x, position.z)
+	var damage := PetRules.attack_damage(config, item.pet_level)
+	if damage > 0.0 and now >= _next_zap:
+		_next_zap = now + config.attack_interval
+		if _swarm.damage_circle(at, config.attack_radius, damage, 0.0) > 0:
+			var hits := _swarm.hit_positions()
+			for k in mini(_swarm.hit_sample_count(), 3):
+				if _zap_effect >= 0:
+					_effects.spawn(_zap_effect, Vector3(hits[k].x, 0.0, hits[k].y), 0.6)
+			zapped.emit(at)
+	var reach := PetRules.aggro_range(config, item.pet_level)
+	if reach > 0.0 and now >= _next_aggro and _camps != null:
+		_next_aggro = now + config.aggro_interval
+		_camps.lure(at, reach)
 
 
 ## The equipped pet, or null.

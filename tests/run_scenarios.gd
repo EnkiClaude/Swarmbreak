@@ -91,6 +91,7 @@ func _run() -> void:
 	await _scenario_async("the hero wears the gear it equips", _visible_gear)
 	await _scenario_async("active skills cast, hit and grow with grades", _active_skills)
 	await _scenario_async("shards summon the Dread Lord, who drops great loot", _summon_boss)
+	await _scenario_async("the settings tab scales the HUD and lists the controls", _settings_tab)
 	await _scenario_async("dying sends the player back to town", _death_returns_to_town)
 	await _scenario_async("New Game erases the save and starts over", _new_game)
 
@@ -1378,3 +1379,22 @@ func _pack_health() -> float:
 		if _swarm.state.camp_ids[i] < 0 and _swarm.state.boss_ids[i] < 0:
 			total += maxf(_swarm.state.health[i], 0.0)
 	return total
+
+
+func _settings_tab() -> void:
+	var menu := _main.get_node("CharacterMenu") as CharacterMenu
+	var settings := _main_var("settings") as GameSettings
+	var hud := _main.get_node("HudLayer/Hud") as Control
+	menu.open(CharacterMenu.Tab.SETTINGS)
+	await _frames(2)
+	_check(menu.tab == CharacterMenu.Tab.SETTINGS, "the settings tab opens")
+	menu.set_hud_scale(1.3)
+	await _frames(2)
+	_check(is_equal_approx(hud.scale.x, 1.3), "the HUD is drawn bigger (%.2f)" % hud.scale.x)
+	var screen := hud.get_viewport_rect().size
+	_check(hud.size.x * hud.scale.x <= screen.x + 1.0, "and still fits the screen")
+	menu.set_hud_scale(1.0)
+	await _frames(1)
+	_check(is_equal_approx(settings.hud_scale, 1.0), "back to 100%")
+	menu.close()
+	await _frames(1)

@@ -19,12 +19,12 @@ signal egg_taken(egg: ItemData)
 ## The player confirmed erasing their save and starting over.
 signal new_game_requested
 
-enum Tab { CHARACTER, INVENTORY, ENCHANT, PET }
+enum Tab { CHARACTER, INVENTORY, ENCHANT, PET, SETTINGS }
 
 const PANEL_MARGIN := 40.0
 ## Two picks of the same item within this many milliseconds toggle wearing it.
 const DOUBLE_PICK_MSEC := 450
-const TAB_NAMES: PackedStringArray = ["CHARACTER", "INVENTORY", "ENCHANT", "PET"]
+const TAB_NAMES: PackedStringArray = ["CHARACTER", "INVENTORY", "ENCHANT", "PET", "SETTINGS"]
 
 ## The open tab, a Tab value.
 var tab: int = Tab.CHARACTER
@@ -41,6 +41,8 @@ var talismans: TalismanRules
 var _character_page: CharacterPage
 var _inventory_page: InventoryPage
 var _enchant_page: EnchantPage
+var _settings_page: SettingsPage
+var _settings: GameSettings
 ## Null until setup_pets(); the PET tab shows only then.
 var _pet_page: PetPage
 var _pets: PetConfig
@@ -88,6 +90,18 @@ func setup(progress: PlayerProgress, tree: SkillTree, inventory: Inventory, stat
 	_content.add_theme_constant_override("separation", 12)
 	scroll.add_child(_content)
 	visible = false
+
+
+## Adds the SETTINGS tab (HUD scale, controls).
+func setup_settings(settings: GameSettings) -> void:
+	_settings = settings
+	_settings_page = SettingsPage.new(self, settings)
+
+
+func set_hud_scale(value: float) -> void:
+	if _settings != null:
+		_settings.set_hud_scale(value)
+	_rebuild()
 
 
 ## Shows shards and SUMMON on the inventory tab.
@@ -413,6 +427,25 @@ func apply_talisman(id: int, gear: ItemData) -> TalismanRules.Result:
 	return result
 
 
+## Melts talismans of a stack down into essence.
+func dissolve_talisman(id: int, count: int) -> void:
+	var gained := talismans.dissolve(id, count, _inventory)
+	if _enchant_page != null:
+		_enchant_page.result_text = "+%d %s" % [gained, _loot.essence_name]
+		_enchant_page.result_color = _loot.essence_color
+	_rebuild()
+
+
+## Spends essence on a Scroll of Power: one more attribute point.
+func bind_scroll() -> void:
+	var ok := talismans.bind_scroll(_inventory, _progress)
+	if _enchant_page != null:
+		_enchant_page.result_text = ("+1 attribute point - spend it on CHARACTER" if ok
+				else "Not enough %s" % _loot.essence_name)
+		_enchant_page.result_color = MenuWidgets.GOOD_COLOR if ok else MenuWidgets.BAD_COLOR
+	_rebuild()
+
+
 ## First press asks for confirmation; the second erases and restarts.
 func press_new_game() -> void:
 	if not _confirm_new_game:
@@ -427,7 +460,7 @@ func press_new_game() -> void:
 # --- Building ---
 
 func _tab_count() -> int:
-	return TAB_NAMES.size() if _pet_page != null else TAB_NAMES.size() - 1
+	return TAB_NAMES.size()
 
 
 ## True while _grab_focus_later() moves focus, so no tooltip pops up.
@@ -447,6 +480,8 @@ func _rebuild() -> void:
 		focus = _pet_page.build(_content)
 	elif tab == Tab.ENCHANT and _enchant_page != null:
 		focus = _enchant_page.build(_content)
+	elif tab == Tab.SETTINGS and _settings_page != null:
+		focus = _settings_page.build(_content)
 	else:
 		focus = _inventory_page.build(_content)
 	_build_hints()
@@ -480,7 +515,7 @@ func _build_header() -> Control:
 	var current: Control = null
 	for index in _tab_count():
 		var b := MenuWidgets.button(TAB_NAMES[index], MenuWidgets.FONT_SIZE - 2)
-		b.custom_minimum_size.x = 150.0
+		b.custom_minimum_size.x = 128.0
 		b.toggle_mode = true
 		b.button_pressed = index == tab
 		b.pressed.connect(show_tab.bind(index))

@@ -72,6 +72,15 @@ func _build_pet(parent: VBoxContainer) -> void:
 					[roundi(PetRules.pickup_radius(_pets, item.pet_level)),
 					String.num(_pets.pickup_radius_per_level, 1)], MenuWidgets.SMALL_FONT,
 					MenuWidgets.GOOD_COLOR))
+		var zap := PetRules.attack_damage(_pets, item.pet_level)
+		parent.add_child(MenuWidgets.label(("Zaps nearby enemies for %.1f" % zap) if zap > 0.0
+				else "Starts fighting at level %d" % _pets.attack_level, MenuWidgets.SMALL_FONT,
+				Color(0.6, 0.85, 1.0) if zap > 0.0 else MenuWidgets.DIM_COLOR))
+		var reach := PetRules.aggro_range(_pets, item.pet_level)
+		parent.add_child(MenuWidgets.label(("Draws monsters within %d m" % roundi(reach))
+				if reach > 0.0 else "Draws monsters in from level %d" % _pets.aggro_level,
+				MenuWidgets.SMALL_FONT, Color(1.0, 0.6, 0.4) if reach > 0.0
+				else MenuWidgets.DIM_COLOR))
 		parent.add_child(MenuWidgets.label("  " + "\n  ".join(item.describe_lines())))
 	var q := _quests.current()
 	if q >= 0:

@@ -41,6 +41,9 @@ var sets: SetList
 var sort_mode: SortMode = SortMode.SLOT
 ## Talisman id -> how many are carried.
 var talismans: Dictionary = {}
+## Arcane Essence from dissolved talismans, and Scrolls of Power bound so far.
+var essence: int = 0
+var scrolls_bought: int = 0
 ## Stamp for the next item that arrives (ItemData.acquired).
 var next_acquired: int = 1
 
@@ -314,6 +317,8 @@ func reset() -> void:
 	stones = 0
 	blessed_stones = 0
 	summon_shards = 0
+	essence = 0
+	scrolls_bought = 0
 	talismans.clear()
 	changed.emit()
 

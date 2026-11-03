@@ -51,6 +51,7 @@ var _camera: CameraRig
 var _quests: QuestLog
 var _combat: PlayerCombat
 var _actives: ActiveSkills
+var _ui_scale := 1.0
 var _progress_for_actives: PlayerProgress
 ## The skill column hides while the touch buttons are on screen.
 var show_skills := true
@@ -73,6 +74,22 @@ func flash_hurt(amount: float) -> void:
 
 func setup_quests(quests: QuestLog) -> void:
 	_quests = quests
+
+
+## Draws the whole HUD at scale (settings): it lays out over the screen size
+## divided by scale, then is scaled up, so everything stays on screen.
+func set_ui_scale(value: float) -> void:
+	_ui_scale = maxf(value, 0.1)
+	if not get_viewport().size_changed.is_connected(_fit_to_screen):
+		get_viewport().size_changed.connect(_fit_to_screen)
+	_fit_to_screen()
+
+
+func _fit_to_screen() -> void:
+	set_anchors_preset(Control.PRESET_TOP_LEFT)
+	position = Vector2.ZERO
+	scale = Vector2(_ui_scale, _ui_scale)
+	size = get_viewport_rect().size / _ui_scale
 
 
 func setup_actives(actives: ActiveSkills, progress: PlayerProgress) -> void:

@@ -214,3 +214,30 @@ func test_dreadforged_armor_is_its_own_red_rarity() -> void:
 				pool += 1
 		check(item.stats.size() >= mini(config.rarity_affixes[dread], pool),
 				"%s carries a full set of stats (%d)" % [item.item_name, item.stats.size()])
+
+
+func test_talismans_dissolve_into_essence_that_buys_attribute_points() -> void:
+	var config := _loot()
+	var rules := TalismanRules.new(config, 3)
+	var inventory := Inventory.new(8)
+	var progress := PlayerProgress.new(load("res://data/rpg/progression.tres") as ProgressionConfig,
+			load("res://data/rpg/skills.tres") as SkillTree,
+			load("res://data/rpg/attributes.tres") as AttributeTable)
+	var id := TalismanRules.id_of(2, 4)
+	inventory.add_talisman(id, 10)
+	var each := TalismanRules.essence_of(config, id)
+	check(each > TalismanRules.essence_of(config, TalismanRules.id_of(2, 0)),
+			"rarer talismans give more essence")
+	check_eq(rules.dissolve(id, 3, inventory), each * 3, "three dissolved")
+	check_eq(inventory.talisman_count(id), 7, "three fewer")
+	rules.dissolve(id, 99, inventory)
+	check_eq(inventory.talisman_count(id), 0, "can't dissolve more than you have")
+	inventory.essence = 1000
+	var points := progress.attribute_points
+	var first := rules.scroll_cost(inventory)
+	check(rules.bind_scroll(inventory, progress), "a scroll binds")
+	check_eq(progress.attribute_points, points + 1, "for one attribute point")
+	check_eq(inventory.essence, 1000 - first, "costing essence")
+	check(rules.scroll_cost(inventory) > first, "the next costs more")
+	inventory.essence = 0
+	check(not rules.bind_scroll(inventory, progress), "no essence, no scroll")

@@ -3,7 +3,9 @@ extends RefCounted
 ## The ENCHANT tab: talisman stacks on the left (one row per kind and tier,
 ## with how many); on the right, the chosen stack and a button per worn
 ## item with a free socket (with its chance), or, with none chosen, every
-## worn item's sockets and the talisman stats it already carries.
+## worn item's sockets and the talisman stats it already carries. Talismans
+## can also be dissolved into Arcane Essence, which binds Scrolls of Power
+## (one attribute point each).
 
 const LIST_WIDTH := 520.0
 
@@ -47,6 +49,7 @@ func build(parent: Container) -> Control:
 	parent.add_child(columns)
 	var focus := _build_list(MenuWidgets.column(columns, LIST_WIDTH))
 	var right := MenuWidgets.column(columns)
+	_build_essence(right)
 	var apply: Control = null
 	if selected >= 0:
 		apply = _build_talisman(right, selected)
@@ -91,6 +94,25 @@ func _build_list(parent: VBoxContainer) -> Control:
 		if first == null or id == selected:
 			first = b
 	return first
+
+
+## Essence on hand, and binding the next Scroll of Power.
+func _build_essence(parent: VBoxContainer) -> void:
+	var cost := _rules.scroll_cost(_inventory)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	parent.add_child(row)
+	var l := MenuWidgets.label("%s: %d" % [_loot.essence_name.to_upper(), _inventory.essence],
+			MenuWidgets.SMALL_FONT + 1, _loot.essence_color)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(l)
+	var b := MenuWidgets.button("BIND %s (%d): +1 attribute point" % [
+			_loot.scroll_name.to_upper(), cost], MenuWidgets.SMALL_FONT - 2)
+	b.disabled = _inventory.essence < cost
+	b.add_theme_color_override("font_color", _loot.essence_color)
+	b.pressed.connect(_menu.bind_scroll)
+	row.add_child(b)
+	parent.add_child(HSeparator.new())
 
 
 ## Every worn item's sockets and what its talismans already give.
@@ -155,4 +177,19 @@ func _build_talisman(parent: VBoxContainer, id: int) -> Control:
 	if not any:
 		parent.add_child(MenuWidgets.label("Wear some gear first.", MenuWidgets.SMALL_FONT,
 				MenuWidgets.DIM_COLOR))
+	# Or melt them down for essence.
+	var each := TalismanRules.essence_of(_loot, id)
+	var have := _inventory.talisman_count(id)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	parent.add_child(row)
+	var one := MenuWidgets.button("DISSOLVE ONE  +%d" % each, MenuWidgets.SMALL_FONT - 2)
+	one.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	one.pressed.connect(_menu.dissolve_talisman.bind(id, 1))
+	row.add_child(one)
+	var all := MenuWidgets.button("DISSOLVE ALL %d  +%d" % [have, each * have],
+			MenuWidgets.SMALL_FONT - 2)
+	all.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	all.pressed.connect(_menu.dissolve_talisman.bind(id, have))
+	row.add_child(all)
 	return first

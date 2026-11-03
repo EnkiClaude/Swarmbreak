@@ -37,6 +37,7 @@ const LOCATION_MESSAGE_TIME := 2.0
 var combat: PlayerCombat
 var actives: ActiveSkills
 var summons: SummonSystem
+var settings := GameSettings.new()
 var world: WorldDirector
 var camps: CampDirector
 var progress: PlayerProgress
@@ -114,6 +115,7 @@ func _ready() -> void:
 	pets.name = "Pet"
 	add_child(pets)
 	pets.setup(pet_config, inventory, _loot, _player)
+	pets.setup_combat(_swarm, camps, _effects)
 	pets.evolved.connect(_on_pet_evolved)
 	world.space_entered.connect(pets.snap_to_player.unbind(1))
 	world.space_entered.connect(actives.clear.unbind(1))
@@ -164,8 +166,14 @@ func _ready() -> void:
 			progression_config.max_level, loot_config.upgrade_max)
 	_check_data()
 	save.set_quests(quests)
+	save.set_settings(settings)
 	quests.changed.connect(save.mark_dirty)
 	save.load_game()
+	_menu.setup_settings(settings)
+	_hud.set_ui_scale(settings.hud_scale)
+	settings.changed.connect(func() -> void:
+		_hud.set_ui_scale(settings.hud_scale)
+		save.mark_dirty())
 	_build_keeper()
 	stats.recompute()
 	_dress_hero()
@@ -298,6 +306,7 @@ func _process(delta: float) -> void:
 	if alive:
 		combat.tick(dt)
 		actives.tick(dt)
+		pets.fight()
 	_projectiles.tick(dt, _swarm)
 	var dead := _swarm.resolve_deaths()
 	camps.record_deaths(dead)

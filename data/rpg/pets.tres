@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="PetConfig" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="PetConfig" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/config/pet_def.gd" id="1_pet"]
 [ext_resource type="Script" path="res://scripts/config/pet_config.gd" id="2_config"]
+[ext_resource type="Resource" path="res://data/effects/lightning.tres" id="9_zap"]
 
 [sub_resource type="Resource" id="Pet_0"]
 script = ExtResource("1_pet")
@@ -65,6 +66,16 @@ follow_offset = Vector2(0.9, 1.4)
 follow_sharpness = 6.0
 fetch_speed = 18.0
 fetch_reach = 1.0
+attack_level = 25
+attack_interval = 0.8
+attack_radius = 3.0
+attack_damage_base = 4.0
+attack_damage_per_level = 0.6
+attack_effect = ExtResource("9_zap")
+aggro_level = 50
+aggro_interval = 1.0
+aggro_range_base = 6.0
+aggro_range_per_level = 0.5
 egg_rarity = 2
 keeper_offset = Vector2(9, 5)
 keeper_radius = 2.6

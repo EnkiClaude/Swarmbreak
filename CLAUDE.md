@@ -83,7 +83,9 @@ scripts/
   loot/             Ground loot: drops, magnet, pickup.
   ui/               Character screen: CHARACTER tab (path, skills, totals),
                     INVENTORY tab (backpack, details/compare/refine,
-                    equipped), ENCHANT tab (talismans), PET tab.
+                    equipped), ENCHANT tab (talismans, essence), PET tab,
+                    SETTINGS tab (HUD scale, controls list).
+  settings/         GameSettings: preferences saved with the character.
   save/             Save file: codec (Dictionary <-> progress), store, autosave.
   swarm/            Swarm state, flow field, spatial hash, steering, rendering.
   combat/           Damage queries, abilities, cooldowns, pooled bolts.
@@ -194,7 +196,9 @@ fixed pieces, and bonuses for wearing 2, 3 or 5 of a set, which
 `Inventory.talismans` counts them by id (`TalismanRules.id_of()`), outside
 the backpack. Applying one to worn gear (`TalismanRules.apply()`) fills
 one of the gear's sockets (by rarity) at a falling chance and adds its
-stats for good. A failure only destroys the talisman, never the gear.
+stats for good. A failure only destroys the talisman, never the gear. Talismans
+also dissolve into Arcane Essence (`essence_per_tier`), which binds Scrolls
+of Power (one attribute point each, `scroll_cost_base`, rising per scroll).
 `Inventory` wears items in twelve positions (`Inventory.Equip`: main hand,
 amulet, armor, off hand, belt, two rings, helm, gloves, pants, boots, pet);
 the first five equal their `AffixDef.Slot`, later slots are slot + 1.
@@ -237,7 +241,10 @@ feeds the pet XP and, once hatched, sets `LootSystem.collect_radius` so
 loot around the player is collected. Eggs come from the first quest
 (`data/rpg/quests.tres`, `QuestLog`: clear camps, then pick an egg on the
 PET tab) or, for testing, from the Egg Keeper in the town square, whose
-menu opens when the player walks up.
+menu opens when the player walks up. From `attack_level` (25) the pet zaps the enemies
+around it (`PetSystem.fight()`, in the damage window; damage grows slowly
+per level) and from `aggro_level` (50) it wakes camps around itself in a
+range that grows per level.
 
 Refining (`Refinery`): Geon (from drops and salvaging) buys an
 attempt to raise an item one level, +0 to +10, each level adding

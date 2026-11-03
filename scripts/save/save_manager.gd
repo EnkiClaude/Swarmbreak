@@ -17,6 +17,7 @@ var _upgrade_max: int
 var _zone_level := 1
 ## Quest progress travels in the same file, when set.
 var _quests: QuestLog
+var _settings: GameSettings
 var _dirty_for := -1.0
 var _since_periodic := 0.0
 
@@ -36,6 +37,11 @@ func set_quests(quests: QuestLog) -> void:
 	_quests = quests
 
 
+## Saves and loads the player's settings with the character.
+func set_settings(settings: GameSettings) -> void:
+	_settings = settings
+
+
 ## Loads the save into progress and inventory. Returns the zone level to
 ## start at (1 with no save), and status() says what happened.
 func load_game() -> int:
@@ -46,6 +52,8 @@ func load_game() -> int:
 			_upgrade_max)
 	if _quests != null:
 		SaveCodec.decode_quests(data.get("quests"), _quests)
+	if _settings != null:
+		_settings.from_dict(data.get("settings"))
 	print("Save loaded: level %d, zone %d" % [_progress.level, _zone_level])
 	return _zone_level
 
@@ -85,6 +93,8 @@ func save_now() -> bool:
 	var data := SaveCodec.encode(_progress, _inventory, _zone_level)
 	if _quests != null:
 		data["quests"] = SaveCodec.encode_quests(_quests)
+	if _settings != null:
+		data["settings"] = _settings.to_dict()
 	var ok := _store.write(data)
 	if ok:
 		saved.emit()

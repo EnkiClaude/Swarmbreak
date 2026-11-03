@@ -128,6 +128,43 @@ func apply(id: int, gear: ItemData, inventory: Inventory) -> Result:
 	return result
 
 
+## Essence one talisman of the id dissolves into.
+static func essence_of(config: LootConfig, id: int) -> int:
+	var tiers := config.essence_per_tier
+	return tiers[clampi(tier_of(id), 0, tiers.size() - 1)] if not tiers.is_empty() else 0
+
+
+## Dissolves up to count talismans of the id into essence. Returns the essence gained.
+func dissolve(id: int, count: int, inventory: Inventory) -> int:
+	var gained := 0
+	for _n in count:
+		if not inventory.take_talisman(id):
+			break
+		gained += essence_of(_config, id)
+	inventory.essence += gained
+	inventory.notify_changed()
+	return gained
+
+
+## Essence the next Scroll of Power costs.
+func scroll_cost(inventory: Inventory) -> int:
+	return roundi(_config.scroll_cost_base * (1.0 + _config.scroll_cost_growth
+			* inventory.scrolls_bought))
+
+
+## Binds a Scroll of Power: spends essence for one attribute point.
+func bind_scroll(inventory: Inventory, progress: PlayerProgress) -> bool:
+	var cost := scroll_cost(inventory)
+	if inventory.essence < cost:
+		return false
+	inventory.essence -= cost
+	inventory.scrolls_bought += 1
+	progress.attribute_points += 1
+	progress.attributes_changed.emit()
+	inventory.notify_changed()
+	return true
+
+
 ## A random talisman: any kind, a tier rolled like an item's rarity (at
 ## least min_tier, at most talisman_max_rarity).
 func roll(min_tier: int = 0) -> int:
