@@ -19,12 +19,12 @@ signal egg_taken(egg: ItemData)
 ## The player confirmed erasing their save and starting over.
 signal new_game_requested
 
-enum Tab { CHARACTER, INVENTORY, PET }
+enum Tab { CHARACTER, INVENTORY, ENCHANT, PET }
 
 const PANEL_MARGIN := 40.0
 ## Two picks of the same item within this many milliseconds toggle wearing it.
 const DOUBLE_PICK_MSEC := 450
-const TAB_NAMES: PackedStringArray = ["CHARACTER", "INVENTORY", "PET"]
+const TAB_NAMES: PackedStringArray = ["CHARACTER", "INVENTORY", "ENCHANT", "PET"]
 
 ## The open tab, a Tab value.
 var tab: int = Tab.CHARACTER
@@ -40,6 +40,7 @@ var _refinery: Refinery
 var talismans: TalismanRules
 var _character_page: CharacterPage
 var _inventory_page: InventoryPage
+var _enchant_page: EnchantPage
 ## Null until setup_pets(); the PET tab shows only then.
 var _pet_page: PetPage
 var _pets: PetConfig
@@ -100,9 +101,11 @@ func request_summon() -> void:
 	summon_requested.emit()
 
 
+## Adds the ENCHANT tab, where talismans are applied to worn gear.
 func setup_talismans(rules: TalismanRules) -> void:
 	talismans = rules
 	_inventory_page.talismans = rules
+	_enchant_page = EnchantPage.new(self, _inventory, _loot, rules)
 
 
 ## Adds the PET tab: the pet, the quest and egg choices.
@@ -151,6 +154,8 @@ func open(on_tab: int = -1) -> void:
 	visible = true
 	_confirm_new_game = false
 	_inventory_page.reset()
+	if _enchant_page != null:
+		_enchant_page.reset()
 	_inventory.sort_backpack()
 	get_tree().paused = true
 	Input.emulate_mouse_from_touch = true
@@ -381,7 +386,8 @@ func refine(item: ItemData, blessed: bool = false) -> Refinery.Result:
 
 ## Shows a talisman stack in the details.
 func select_talisman(id: int) -> void:
-	_inventory_page.select_talisman(id)
+	if _enchant_page != null:
+		_enchant_page.select(id)
 	_rebuild()
 
 
@@ -389,14 +395,11 @@ func select_talisman(id: int) -> void:
 ## gear only ever gains.
 func apply_talisman(id: int, gear: ItemData) -> TalismanRules.Result:
 	var result := talismans.apply(id, gear, _inventory)
-	var page := _inventory_page
+	var page := _enchant_page
 	match result:
 		TalismanRules.Result.SUCCESS:
 			page.result_text = "The talisman took! %s gained its power." % gear.display_name()
 			page.result_color = MenuWidgets.GOOD_COLOR
-			page.selected = gear
-			page.selected_talisman = -1
-			page.focus_item = gear
 		TalismanRules.Result.FAILED:
 			# The stack stays selected, to try again.
 			page.result_text = "The talisman crumbled. %s is unharmed." % gear.display_name()
@@ -442,6 +445,8 @@ func _rebuild() -> void:
 		focus = _character_page.build(_content, _confirm_new_game)
 	elif tab == Tab.PET and _pet_page != null:
 		focus = _pet_page.build(_content)
+	elif tab == Tab.ENCHANT and _enchant_page != null:
+		focus = _enchant_page.build(_content)
 	else:
 		focus = _inventory_page.build(_content)
 	_build_hints()
@@ -475,7 +480,7 @@ func _build_header() -> Control:
 	var current: Control = null
 	for index in _tab_count():
 		var b := MenuWidgets.button(TAB_NAMES[index], MenuWidgets.FONT_SIZE - 2)
-		b.custom_minimum_size.x = 190.0
+		b.custom_minimum_size.x = 150.0
 		b.toggle_mode = true
 		b.button_pressed = index == tab
 		b.pressed.connect(show_tab.bind(index))
