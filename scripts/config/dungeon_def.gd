@@ -3,7 +3,7 @@ extends Resource
 ## A dungeon (DungeonLayout), entered through a gate in the open world: a
 ## safe lobby, a corridor to a big open room with camps spread over it, and
 ## a corridor on to the boss room, whose camps are harder and drop more Geon
-## and better gear. Optional spawners refill at once.
+## and better gear. Monsters that die are replaced at once.
 
 @export var display_name: String = "Dungeon"
 ## Usually an indoor theme (walls, ceiling, lanterns).
@@ -41,8 +41,10 @@ extends Resource
 ## Seconds before a cleared camp (the boss's too) comes back; 0 brings it
 ## back at once, even right where the player stands.
 @export var camp_respawn_time: float = 0.0
-## Seconds between members a thinned-out camp gets back (0: none).
-@export var camp_refill_time: float = 2.0
+## Every monster that dies is replaced at once, nonstop (not the boss's
+## camp, which comes back whole once cleared). Their kills drop loot one at
+## a time (spawner_drop_chance, spawner_geon_chance).
+@export var instant_respawn: bool = true
 ## The boss room's monsters are this many levels above the arena's.
 @export var depth_level_step: int = 1
 ## A boss camp in the middle of the boss room.

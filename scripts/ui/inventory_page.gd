@@ -332,7 +332,7 @@ func _build_refine(parent: VBoxContainer, item: ItemData) -> Control:
 	blessed.add_theme_color_override("font_color", _loot.blessed_color)
 	blessed.pressed.connect(_menu.refine_blessed.bind(item))
 	parent.add_child(blessed)
-	var note := "Fails drop it one level; it never breaks."
+	var note := "Harder every level. A failure keeps its level; it never breaks."
 	if item.fail_streak > 0:
 		note += " Luck +%d%% from %d failures." % [
 				roundi(item.fail_streak * _loot.upgrade_pity_per_fail * 100.0), item.fail_streak]

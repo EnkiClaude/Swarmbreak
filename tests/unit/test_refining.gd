@@ -21,14 +21,14 @@ func test_refine_levels_scale_stats() -> void:
 	check_eq(item.display_name(), "+3 " + item.item_name, "name shows the level")
 
 
-func test_never_breaks_and_never_below_zero() -> void:
+func test_a_failure_never_lowers_the_level() -> void:
 	var config := _loot()
 	var refinery := Refinery.new(config, 123)
 	var inventory := Inventory.new(4)
 	var item := _item()
 	inventory.add(item)
 	inventory.stones = 100000
-	var seen_down := false
+	var seen_fail := false
 	var seen_up := false
 	for n in 400:
 		var before := item.upgrade_level
@@ -38,15 +38,15 @@ func test_never_breaks_and_never_below_zero() -> void:
 				seen_up = true
 				check_eq(item.upgrade_level, before + 1, "success adds one")
 			Refinery.Result.DOWNGRADED:
-				seen_down = true
-				check_eq(item.upgrade_level, before - 1, "failure drops exactly one")
+				check(false, "nothing is downgraded any more")
 			Refinery.Result.FAILED:
-				check_eq(before, 0, "plain failure only happens at +0")
+				seen_fail = true
+				check_eq(item.upgrade_level, before, "a failure keeps the level")
 			Refinery.Result.MAXED:
 				check_eq(before, config.upgrade_max, "maxed only at the cap")
 		check(item.upgrade_level >= 0 and item.upgrade_level <= config.upgrade_max,
 				"level stays in range (%d)" % item.upgrade_level)
-	check(seen_up and seen_down, "both outcomes happen over many tries")
+	check(seen_up and seen_fail, "both outcomes happen over many tries")
 	check(inventory.equipped[item.slot] == item, "the item is never destroyed")
 
 

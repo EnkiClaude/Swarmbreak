@@ -72,10 +72,10 @@ extends Resource
 @export var upgrade_bonus_per_level: float = 0.08
 ## Success chance to reach +1, +2, ... +upgrade_max.
 @export var upgrade_chances: PackedFloat32Array = [
-	0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42, 0.34, 0.27, 0.2,
+	0.9, 0.78, 0.65, 0.52, 0.4, 0.3, 0.21, 0.14, 0.09, 0.05,
 ]
 ## Each failure in a row on an item adds this to its next chance.
-@export var upgrade_pity_per_fail: float = 0.04
+@export var upgrade_pity_per_fail: float = 0.02
 ## Geon to attempt +1 is cost_base; each level adds cost_per_level.
 @export var upgrade_cost_base: int = 1
 @export var upgrade_cost_per_level: int = 1

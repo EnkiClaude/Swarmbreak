@@ -293,6 +293,7 @@ func _process(delta: float) -> void:
 	if alive:
 		_player.tick(dt, now)
 	var player_pos := _player.ground_position()
+	camps.player_level = progress.level
 	_swarm.simulate(dt, player_pos, _player.config.radius, _player.config.lure.speed_multiplier)
 	if alive:
 		combat.tick(dt)

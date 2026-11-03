@@ -122,9 +122,11 @@ sites past `despawn_radius` leave silently (`SwarmManager.remove_camp`, no
 XP or loot; a boss slot freed that way is flagged in
 `SwarmState.boss_despawned`). Camps wake when the player comes within aggro
 range, when any member is hit (`SwarmState.camp_alarm`), or when the lure
-reaches them, and come back `camp_respawn_time` after clearing; a camp
-thinned out but not cleared gets a member back every `camp_refill_time`
-(`CampSites.refill_time`) up to its size. Spawner sites
+reaches them, and come back `camp_respawn_time` after clearing. In
+dungeons every monster that dies is replaced at once, nonstop
+(`DungeonDef.instant_respawn`, `CampSites.respawn_on_death`; not the boss's
+camp), so those camps never clear and their kills drop loot one at a time
+(`spawner_drop_chance`). Spawner sites
 (dungeons only for now) never clear: near the player they add one awake
 monster every `spawn_interval` (0 in dungeons: one per frame), for builds
 that farm standing still. Dungeon camps, bosses included, also come back at
@@ -154,7 +156,9 @@ indices into `SwarmConfig.enemy_types`: goblin, ogre, warlord boss,
 skeleton, treant, wisp).
 
 Levels: monster health, contact damage and XP grow with the level where the
-player is (`WorldDirector.level()`); items roll at the camp's level, and
+player is (`WorldDirector.level()`), and monsters above the player's own
+level get more health and damage per level of the gap
+(`gap_health_per_level`, `gap_damage_per_level`, `CampDirector.gap_multiplier()`); items roll at the camp's level, and
 dungeons add drops, a minimum rarity and more Geon. Props never collide,
 so they stand clear of camps, gates and the town square. The art is original
 and generated in code. In the web build, `index.html?region=N` (row by row
@@ -237,9 +241,9 @@ menu opens when the player walks up.
 
 Refining (`Refinery`): Geon (from drops and salvaging) buys an
 attempt to raise an item one level, +0 to +10, each level adding
-`upgrade_bonus_per_level` to all its stats. Odds fall per level; a failure
-drops it one level, never below +0 and never destroying it, and adds pity
-to the next try. Keep it that way: no item loss. A Blessed Stone
+`upgrade_bonus_per_level` to all its stats. Odds fall steeply per level
+(`upgrade_chances`); a failure keeps the item's level (no downgrade), never
+destroys it, and adds pity to the next try. Keep it that way: no item loss. A Blessed Stone
 (`Inventory.blessed_stones`, a rare drop from any monster at
 `blessed_drop_chance` per kill) instead makes an attempt certain to succeed.
 

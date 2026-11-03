@@ -1,10 +1,11 @@
 class_name Refinery
 extends RefCounted
-## Risky item upgrades. Each attempt costs Geon; success raises the item
-## one level, failure drops it one level (never below +0, never destroyed).
-## Odds fall as the level rises, and each failure in a row adds a little
-## "pity" to the next chance, so bad streaks end. A Blessed Stone instead
-## of Geon makes an attempt certain to succeed.
+## Item upgrades that get harder every level. Each attempt costs Geon and
+## succeeds at the level's chance (upgrade_chances, falling steeply toward
+## +10); success raises the item one level, failure leaves it as it was
+## (never lower, never destroyed). Each failure in a row adds a little
+## "pity" to the next chance, so bad streaks end. A Blessed Stone instead of
+## Geon makes an attempt certain to succeed. DOWNGRADED is no longer used.
 
 enum Result { SUCCESS, DOWNGRADED, FAILED, NOT_ENOUGH_STONES, MAXED }
 
@@ -50,12 +51,9 @@ func attempt(item: ItemData, inventory: Inventory) -> Result:
 		item.fail_streak = 0
 		result = Result.SUCCESS
 	else:
+		# A failure keeps the level; it only costs the Geon (and adds pity).
 		item.fail_streak += 1
-		if item.upgrade_level > 0:
-			item.upgrade_level -= 1
-			result = Result.DOWNGRADED
-		else:
-			result = Result.FAILED
+		result = Result.FAILED
 	inventory.notify_changed()
 	return result
 

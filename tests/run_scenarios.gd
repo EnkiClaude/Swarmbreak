@@ -66,7 +66,7 @@ func _run() -> void:
 	await _scenario_async("a big break freezes, shakes, pops up and flings corpses", _break_feedback)
 	await _scenario_async("kills give XP and level-ups refill and grant points", _xp_and_levels)
 	await _scenario_async("Stormcaller novas send aftershocks", _stormcaller_aftershocks)
-	await _scenario_async("refining raises or lowers an item but never breaks it", _refining)
+	await _scenario_async("refining raises an item, a failure keeps it, it never breaks", _refining)
 	await _scenario_async("progress autosaves and loads back", _autosave_and_load)
 	await _scenario_async("bolts burst on enemies ahead", _bolts_hit)
 	await _scenario_async("touch move stick moves the player", _touch_move)
@@ -79,7 +79,7 @@ func _run() -> void:
 	await _scenario_async("a cleared camp comes back after its timer", _camp_respawns)
 	await _scenario_async("far camps leave the swarm, near ones come in", _camps_stream_out)
 	await _scenario_async("a gate leads into a dungeon and its exit back out", _dungeon_round_trip)
-	await _scenario_async("thinned dungeon camps get monsters back", _dungeon_refill)
+	await _scenario_async("dungeon monsters respawn the moment they die", _dungeon_refill)
 	await _scenario_async("dungeon walls stop the player", _dungeon_walls)
 	await _scenario_async("the Egg Keeper gives an egg that follows and levels", _keeper_and_pet)
 	await _scenario_async("double-clicking an item wears it, again takes it off", _double_click)
@@ -577,17 +577,12 @@ func _dungeon_refill() -> void:
 	if camp < 0:
 		return
 	var full := _members_of(camp)
-	var killed := 0
 	for i in _swarm.state.count:
-		if _swarm.state.camp_ids[i] == camp and killed * 2 < full:
+		if _swarm.state.camp_ids[i] == camp:
 			_swarm.state.health[i] = 0.0
-			killed += 1
-	await _frames(5)
-	var thinned := _members_of(camp)
-	_check(thinned < full, "the camp was thinned (%d of %d)" % [thinned, full])
-	await _frames(roundi(sites.refill_time[camp] * 60.0 * 3.5))
-	_check(_members_of(camp) > thinned, "monsters came back without clearing it (%d -> %d)" %
-			[thinned, _members_of(camp)])
+	await _frames(3)
+	_check(_members_of(camp) == full, "every one came straight back (%d of %d)" %
+			[_members_of(camp), full])
 	_world.return_to_town()
 	await _frames(2)
 

@@ -371,7 +371,7 @@ func refine(item: ItemData, blessed: bool = false) -> Refinery.Result:
 			page.result_text = "Failed - dropped to +%d. Try again!" % item.upgrade_level
 			page.result_color = MenuWidgets.BAD_COLOR
 		Refinery.Result.FAILED:
-			page.result_text = "Failed - still +0. Try again!"
+			page.result_text = "Failed - still +%d. Try again!" % item.upgrade_level
 			page.result_color = MenuWidgets.BAD_COLOR
 		Refinery.Result.NOT_ENOUGH_STONES:
 			page.result_text = "Not enough %s" % _loot.currency_name

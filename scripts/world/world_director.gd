@@ -159,7 +159,8 @@ func dungeon() -> DungeonDef:
 
 ## Monster contact damage multiplier where the player is.
 func damage_multiplier() -> float:
-	var mult := 1.0 + _config.damage_growth * (level() - 1)
+	var mult := (1.0 + _config.damage_growth * (level() - 1)) \
+			* camps.gap_multiplier(level(), _config.gap_damage_per_level)
 	var def := dungeon()
 	return mult * def.damage_multiplier if def != null else mult
 
