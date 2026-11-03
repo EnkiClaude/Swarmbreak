@@ -20,7 +20,7 @@ func _init(config: LootConfig, seed_value: int = 0) -> void:
 ## min_rarity forces at least that rarity (bosses drop rares).
 ## force_kind and force_rarity (>= 0) pick them instead of rolling.
 func roll(zone_level: int, min_rarity: int = 0, force_kind: int = -1,
-		force_rarity: int = -1) -> ItemData:
+		force_rarity: int = -1, max_rarity: int = -1) -> ItemData:
 	var item := ItemData.new()
 	var kind: ItemKindDef = null
 	if _config.item_kinds.is_empty():
@@ -38,6 +38,8 @@ func roll(zone_level: int, min_rarity: int = 0, force_kind: int = -1,
 		item.two_handed = kind.two_handed
 	item.rarity = force_rarity if force_rarity >= 0 \
 			else maxi(_pick_weighted(_config.rarity_weights), min_rarity)
+	if max_rarity >= 0 and force_rarity < 0:
+		item.rarity = mini(item.rarity, max_rarity)
 	item.upgrade_bonus = _config.upgrade_bonus_per_level
 	item.item_level = zone_level
 	var growth := _growth(zone_level) * _power(item.rarity)

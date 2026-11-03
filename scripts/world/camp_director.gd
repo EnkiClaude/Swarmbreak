@@ -149,14 +149,20 @@ func camps_left() -> int:
 
 ## Health multiplier for monsters of a camp level.
 func health_multiplier(level: int) -> float:
-	return (1.0 + _config.health_growth * (level - 1)) * gap_multiplier(level,
+	return (1.0 + _config.health_growth * (level - 1)) * toughness() * gap_multiplier(level,
 			_config.gap_health_per_level)
+
+
+## Open-world monsters are softer than dungeon ones (overworld_toughness).
+func toughness() -> float:
+	return 1.0 if speed_by_level else _config.overworld_toughness
 
 
 ## Extra toughness for a monster level above the player's: 1 at or below it.
 func gap_multiplier(level: int, per_level: float) -> float:
 	var gap := clampi(level - player_level, 0, _config.gap_max_levels)
-	return 1.0 + per_level * gap
+	var scale := 1.0 if speed_by_level else _config.overworld_gap_scale
+	return 1.0 + per_level * scale * gap
 
 
 ## Speed multiplier for a monster of a level: 1 in the open world; in

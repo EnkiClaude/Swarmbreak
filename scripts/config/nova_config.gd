@@ -8,7 +8,7 @@ extends Resource
 ## Meters per second added to each enemy hit, pointing away from the player.
 @export var knockback: float = 0.0
 ## Frost: enemies caught move at slow_factor of their speed for slow_duration.
-@export var slow_factor: float = 0.4
+@export var slow_factor: float = 0.25
 @export var slow_duration: float = 2.5
 @export var cooldown: float = 1.2
 @export var mana_cost: float = 35.0

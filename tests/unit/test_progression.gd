@@ -90,3 +90,16 @@ func test_stat_descriptions_keep_small_decimals() -> void:
 			"two decimals")
 	check_eq(PlayerStat.describe(PlayerStat.Id.MAX_HEALTH, 15.0), "+15 max health", "whole number")
 	check_eq(PlayerStat.describe(PlayerStat.Id.NOVA_DAMAGE, 0.12), "+12% nova damage", "percent")
+
+
+func test_deep_frost_raises_the_nova_slow() -> void:
+	var tree := _tree()
+	var k := _skill_index(tree, PlayerStat.Id.FROST_SLOW)
+	check(k >= 0, "a frost slow skill")
+	check(tree.skills[k].per_rank * tree.skills[k].max_rank > 0.0, "it adds slow")
+	var nova := load("res://data/abilities/nova.tres") as NovaConfig
+	var cap := PlayerStat.CAPS[PlayerStat.Id.FROST_SLOW]
+	check(nova.slow_factor * (1.0 - cap) > 0.0, "enemies still crawl at the cap")
+	check_eq(PlayerStat.NAMES.size(), PlayerStat.COUNT, "a name per stat")
+	check_eq(PlayerStat.IS_PERCENT.size(), PlayerStat.COUNT, "a kind per stat")
+	check_eq(PlayerStat.CAPS.size(), PlayerStat.COUNT, "a cap per stat")

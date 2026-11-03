@@ -7,7 +7,7 @@ const SCALE_BUTTON_WIDTH := 90.0
 ## Action, controller, keyboard / mouse: what the controls page lists.
 const CONTROLS: Array = [
 	["Move", "Left stick", "WASD / arrows"],
-	["Turn camera", "Right stick", "Mouse (click to capture, Esc frees)"],
+	["Turn camera", "Right stick", "Mouse (click, Esc frees)"],
 	["Fire bolts", "X or RT (hold)", "Left mouse (hold)"],
 	["Frost Nova", "RB", "Q / right mouse"],
 	["Lure", "LB", "E"],
@@ -43,7 +43,7 @@ func build(parent: Container) -> Control:
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 32)
 	parent.add_child(columns)
-	var left := MenuWidgets.column(columns, 420.0)
+	var left := MenuWidgets.column(columns, 300.0)
 	var right := MenuWidgets.column(columns)
 	var focus := _build_hud(left)
 	_build_controls(right)
@@ -77,14 +77,19 @@ func _build_controls(parent: VBoxContainer) -> void:
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 24)
-	grid.add_theme_constant_override("v_separation", 4)
+	grid.add_theme_constant_override("v_separation", 2)
 	parent.add_child(grid)
 	for heading in ["ACTION", "CONTROLLER", "KEYBOARD / MOUSE"]:
-		grid.add_child(MenuWidgets.label(heading, MenuWidgets.SMALL_FONT - 2,
-				MenuWidgets.TITLE_COLOR))
+		grid.add_child(_cell(heading, MenuWidgets.TITLE_COLOR))
 	for row: Array in CONTROLS:
-		grid.add_child(MenuWidgets.label(row[0], MenuWidgets.SMALL_FONT - 2))
-		grid.add_child(MenuWidgets.label(row[1], MenuWidgets.SMALL_FONT - 2,
-				Color(1.0, 0.85, 0.5)))
-		grid.add_child(MenuWidgets.label(row[2], MenuWidgets.SMALL_FONT - 2,
-				MenuWidgets.DIM_COLOR))
+		grid.add_child(_cell(row[0], MenuWidgets.TEXT_COLOR))
+		grid.add_child(_cell(row[1], Color(1.0, 0.85, 0.5)))
+		grid.add_child(_cell(row[2], MenuWidgets.DIM_COLOR))
+
+
+## One table cell on a single line. Wrapping labels have no minimum width,
+## so in a grid they squeeze into a column a word wide.
+static func _cell(text: String, color: Color) -> Label:
+	var l := MenuWidgets.label(text, MenuWidgets.SMALL_FONT - 2, color)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	return l

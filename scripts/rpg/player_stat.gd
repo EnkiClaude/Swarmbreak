@@ -18,19 +18,21 @@ enum Id {
 	DODGE_COOLDOWN,
 	ARMOR,
 	EVASION,
+	FROST_SLOW,
 }
 
-const COUNT := 14
+const COUNT := 15
 const NAMES: PackedStringArray = [
 	"max health", "max mana", "health per second", "mana regeneration", "move speed",
 	"bolt damage", "fire rate", "nova damage", "nova radius", "lure radius",
 	"mana per kill", "dodge cooldown reduction", "damage reduction", "evasion",
+	"frost slow",
 ]
 ## 1 where the stat is a percentage (stored as 0.12 for +12%).
-const IS_PERCENT: PackedByteArray = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1]
+const IS_PERCENT: PackedByteArray = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1]
 ## Highest total allowed, so stacking can't break the game.
 const CAPS: PackedFloat32Array = [
-	1e9, 1e9, 1e9, 1e9, 1.0, 1e9, 2.0, 1e9, 1.0, 1.5, 1e9, 0.6, 0.75, 0.85,
+	1e9, 1e9, 1e9, 1e9, 1.0, 1e9, 2.0, 1e9, 1.0, 1.5, 1e9, 0.6, 0.75, 0.85, 0.6,
 ]
 
 

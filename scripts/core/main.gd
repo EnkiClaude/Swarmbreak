@@ -380,7 +380,8 @@ func _on_camp_cleared(camp: int, at: Vector2, level: int, _had_boss: bool) -> vo
 		amount += dungeon.extra_drops
 		min_rarity = _dungeon_rarity(dungeon, camp)
 		multiplier = _dungeon_geon(dungeon, camp)
-	_loot.drop_rewards(at, amount, level, min_rarity, multiplier)
+	_loot.drop_rewards(at, amount, level, min_rarity, multiplier, -1.0, world.item_level(level),
+			world.max_rarity())
 
 
 ## A dungeon room's minimum item rarity: one better every deep_rarity_depth
@@ -420,7 +421,8 @@ func _on_boss_killed(slot: int, at: Vector2) -> void:
 		_summoned_boss_rewards(at)
 		return
 	var level := world.level()
-	_loot.drop_rewards(at, boss_config.extra_drops, level, boss_config.min_drop_rarity)
+	_loot.drop_rewards(at, boss_config.extra_drops, level, boss_config.min_drop_rarity, 1.0, -1.0,
+			world.item_level(level), world.max_rarity())
 	var growth := 1.0 + loot_config.geon_growth_per_level * (level - 1)
 	_loot.place_geon(roundi(boss_config.geon * growth), at)
 	var dungeon := world.dungeon()

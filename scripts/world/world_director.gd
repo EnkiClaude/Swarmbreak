@@ -160,9 +160,21 @@ func dungeon() -> DungeonDef:
 ## Monster contact damage multiplier where the player is.
 func damage_multiplier() -> float:
 	var mult := (1.0 + _config.damage_growth * (level() - 1)) \
-			* camps.gap_multiplier(level(), _config.gap_damage_per_level)
+			* camps.gap_multiplier(level(), _config.gap_damage_per_level) * camps.toughness()
 	var def := dungeon()
 	return mult * def.damage_multiplier if def != null else mult
+
+
+## The level gear drops at here: lower in the open world.
+func item_level(level: int) -> int:
+	if dungeon() != null:
+		return level
+	return maxi(1, roundi(level * _config.overworld_item_level_scale))
+
+
+## The best rarity that drops here (-1: no cap; dungeons have none).
+func max_rarity() -> int:
+	return -1 if dungeon() != null else _config.overworld_max_rarity
 
 
 ## XP multiplier for kills where the player is.

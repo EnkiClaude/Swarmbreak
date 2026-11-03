@@ -284,3 +284,10 @@ func _names(inventory: Inventory) -> Array:
 	for item in inventory.backpack:
 		names.append(item.item_name)
 	return names
+
+
+func test_a_rarity_cap_keeps_open_world_gear_lower() -> void:
+	var generator := ItemGenerator.new(_loot(), 9)
+	for n in 300:
+		check(generator.roll(40, 0, -1, -1, 3).rarity <= 3, "no better than epic")
+	check(generator.roll(40, 0, -1, 4, 3).rarity == 4, "a forced rarity is kept")
