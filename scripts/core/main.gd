@@ -207,8 +207,8 @@ func _max_sites() -> int:
 	for region in world_config.regions:
 		most += region.camp_count
 	for dungeon in world_config.dungeons:
-		most = maxi(most, dungeon.rooms_per_side * 2 * dungeon.camps_per_room + 1
-				+ dungeon.boss_room_camps + dungeon.boss_room_spawners)
+		most = maxi(most, dungeon.arena_camps + 1 + dungeon.boss_room_camps
+				+ dungeon.boss_room_spawners)
 	return most
 
 

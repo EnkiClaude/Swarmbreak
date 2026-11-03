@@ -126,6 +126,23 @@ func mark_within(center: Vector2, radius: float, duration: float) -> int:
 	return marked
 
 
+## Slows every enemy within radius to factor of its speed for duration
+## seconds (Frost Nova). Returns how many it slowed.
+func slow_within(center: Vector2, radius: float, factor: float, duration: float) -> int:
+	var positions := state.positions
+	var slows := state.slow_until
+	var factors := state.slow_factor
+	var until := _time + duration
+	var r_sq := radius * radius
+	var slowed := 0
+	for i in state.count:
+		if (positions[i] - center).length_squared() <= r_sq:
+			slows[i] = until
+			factors[i] = factor
+			slowed += 1
+	return slowed
+
+
 ## Holds an enemy still for duration seconds.
 func stun(index: int, duration: float) -> void:
 	state.stun_until[index] = maxf(state.stun_until[index], _time + duration)

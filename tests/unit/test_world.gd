@@ -85,7 +85,10 @@ func test_dungeons_have_a_boss_spawners_and_room_to_arrive() -> void:
 			check(sites.levels[s] >= def.level, "dungeon camps are at least the dungeon's level")
 			spawners += sites.is_spawner[s]
 			bosses += sites.has_boss[s]
-		check_eq(spawners, def.spawner_count + def.boss_room_spawners, "%s spawners" %
+		check_eq(spawners, def.arena_spawners + def.boss_room_spawners, "%s spawners" %
+				def.display_name)
+		check_eq(sites.size(), def.arena_camps + 1 + def.boss_room_camps
+				+ def.boss_room_spawners, "%s: arena camps, the boss and its room's" %
 				def.display_name)
 		check_eq(bosses, 1, "%s has a boss" % def.display_name)
 		# Arriving must not land on the way-out gate, or leaving bounce back in.
@@ -171,7 +174,9 @@ func test_a_cleared_camp_comes_back_after_its_timer() -> void:
 
 
 func test_spawners_refill_while_the_player_is_near() -> void:
-	var config := _config()
+	# A copy with a spawner in the arena (the shipped dungeons may have none).
+	var config := _config().duplicate(true) as WorldConfig
+	config.dungeons[0].arena_spawners = 1
 	var map := WorldMap.new(config)
 	var swarm := _swarm()
 	swarm.set_bounds(map.half_extent(0))
@@ -228,88 +233,72 @@ func test_dungeon_camps_come_back_at_once() -> void:
 	swarm.free()
 
 
-func test_dungeon_is_a_hallway_with_rooms_both_sides_getting_deeper() -> void:
+func test_dungeon_is_a_lobby_an_arena_and_a_boss_room() -> void:
 	var config := _config()
-	var def := config.dungeons[0]
-	var layout := DungeonLayout.new(def)
-	check_eq(layout.rooms.size(), def.rooms_per_side * 2 + 1, "side rooms plus the boss room")
 	var map := WorldMap.new(config)
-	check_eq(layout.room_at(map.arrival_point(0)), 0, "the player arrives in the hallway")
-	var left := 0
-	var right := 0
-	for room in layout.rooms.size():
-		var center := layout.room_center(room)
-		check_eq(layout.room_at(center), room + 1, "room %d's middle is in it" % room)
-		check_eq(layout.room_at(layout.doors[room]), 0, "room %d's door opens to the hallway" % room)
-		if room == layout.boss_room:
-			check(center.y < layout.hallway.position.y, "the boss room is past the hallway's end")
-			continue
-		if center.x < 0.0:
-			left += 1
-		else:
-			right += 1
-		# Deeper rooms lie further from the entrance (+Z).
-		for other in layout.rooms.size():
-			if other != layout.boss_room and layout.depths[other] > layout.depths[room]:
-				check(layout.room_center(other).y <= center.y, "deeper is never nearer the door")
-	check_eq(left, def.rooms_per_side, "rooms on the left")
-	check_eq(right, def.rooms_per_side, "rooms on the right")
-	# A wall stands between the hallway and a room away from its door.
-	var room0 := layout.rooms[0]
-	var beside := Vector2(layout.doors[0].x, room0.position.y + 1.0)
-	check_eq(layout.room_at(beside), -1, "wall beside the door")
-	check(layout.half_extent() <= 72.0, "fits the flow field's grid")
-	var seen := PackedInt32Array()
-	for room in layout.rooms.size():
-		check(not seen.has(layout.depths[room]), "room %d is a step of its own" % room)
-		seen.append(layout.depths[room])
+	for d in config.dungeons.size():
+		var layout := map.layouts[d]
+		check_eq(layout.rooms.size(), 3, "lobby, arena and boss room")
+		check_eq(layout.room_at(map.arrival_point(d)), DungeonLayout.LOBBY + 1,
+				"the player arrives in the lobby")
+		check_eq(layout.room_at(map.exit_position(d)), DungeonLayout.LOBBY + 1,
+				"the exit is in the lobby")
+		var lobby := layout.rooms[DungeonLayout.LOBBY]
+		var arena := layout.rooms[DungeonLayout.ARENA]
+		var boss := layout.rooms[layout.boss_room]
+		check(arena.get_center().y < lobby.get_center().y, "the arena lies past the lobby")
+		check(boss.get_center().y < arena.get_center().y, "and the boss room past the arena")
+		check(arena.get_area() > lobby.get_area() * 4.0, "the arena is big and open")
+		# Corridors join them: a straight walk north from the lobby stays on floor.
+		var z := lobby.get_center().y
+		while z > boss.get_center().y:
+			check(layout.room_at(Vector2(0.0, z)) >= 0, "floor all the way north (z %.1f)" % z)
+			z -= 1.0
+		check_eq(layout.room_at(Vector2(lobby.end.x + 1.0, lobby.get_center().y)), -1,
+				"walls beside the lobby")
+		check(layout.half_extent() <= 72.0, "fits the flow field's grid")
 
 
-func test_monsters_route_through_doors() -> void:
+func test_monsters_route_toward_their_rooms_door() -> void:
 	var config := _config()
 	var map := WorldMap.new(config)
 	var layout := map.layouts[0]
 	var flow := FlowField.new(72.0, 2.0)
 	flow.set_rooms(layout.rasterize(flow.origin, flow.cols, flow.rows, flow.cell_size),
 			layout.door_points())
-	# Player in room 0; a monster in room 2 heads for room 2's door first.
-	var player := layout.room_center(0)
+	# Player in the lobby; a monster in the arena heads for the arena's door.
+	var player := layout.room_center(DungeonLayout.LOBBY)
 	flow.update(player)
-	var monster := layout.room_center(2)
+	var monster := layout.room_center(DungeonLayout.ARENA) + Vector2(10.0, -8.0)
 	var dir := flow.directions[flow.cell_index(monster)]
-	var to_door := (layout.doors[2] - monster).normalized()
-	check(dir.dot(to_door) > 0.95, "a monster in another room heads for its door (%s)" % dir)
-	var in_hall := Vector2(0.0, layout.room_center(3).y)
-	var hall_dir := flow.directions[flow.cell_index(in_hall)]
-	check(hall_dir.dot((layout.doors[0] - in_hall).normalized()) > 0.95,
-			"in the hallway it heads for the player's room's door")
-	check(flow.is_wall(Vector2(layout.doors[0].x, layout.rooms[0].position.y + 1.0)),
+	var to_door := (layout.doors[DungeonLayout.ARENA] - monster).normalized()
+	check(dir.dot(to_door) > 0.9, "a monster in the arena heads for its door (%s)" % dir)
+	check(flow.is_wall(Vector2(layout.rooms[DungeonLayout.LOBBY].end.x + 1.0, player.y)),
 			"walls are blocked")
 	check(not flow.is_wall(player), "floor isn't")
 
 
-func test_deeper_rooms_hold_higher_level_camps() -> void:
+func test_the_boss_room_is_harder_and_the_lobby_empty() -> void:
 	var config := _config()
 	var map := WorldMap.new(config)
 	var sites := map.dungeon_sites[0]
 	var def := config.dungeons[0]
-	for s in sites.size():
-		check_eq(sites.levels[s], def.level + sites.depth[s] * def.depth_level_step,
-				"site %d's level grows with depth" % s)
-	var deepest := 0
-	for s in sites.size():
-		deepest = maxi(deepest, sites.depth[s])
-	check(deepest >= def.rooms_per_side * 2, "camps reach the boss room (%d)" % deepest)
 	var layout := map.layouts[0]
 	var homes := layout.homes_for(sites.centers)
-	for room in layout.rooms.size():
-		var in_room := 0
-		for s in sites.size():
-			if homes[s] == room + 1:
-				in_room += 1
-		var wanted := def.camps_per_room if room != layout.boss_room \
-				else 1 + def.boss_room_camps + def.boss_room_spawners
-		check_eq(in_room, wanted, "room %d holds its camps" % room)
+	for s in sites.size():
+		check(homes[s] != DungeonLayout.LOBBY + 1, "no camp in the lobby")
+		check(homes[s] > 0, "every camp is in a room")
+		var wanted := def.level + (def.depth_level_step if homes[s] == layout.boss_room + 1 else 0)
+		check_eq(sites.levels[s], wanted, "site %d's level" % s)
+	var in_arena := 0
+	var in_boss := 0
+	for s in sites.size():
+		if homes[s] == DungeonLayout.ARENA + 1:
+			in_arena += 1
+		elif homes[s] == layout.boss_room + 1:
+			in_boss += 1
+	check_eq(in_arena, def.arena_camps, "camps spread over the arena")
+	check_eq(in_boss, def.boss_room_camps + def.boss_room_spawners + 1, "and the boss room")
 
 
 func test_room_monsters_stay_in_their_room() -> void:
@@ -318,16 +307,17 @@ func test_room_monsters_stay_in_their_room() -> void:
 	var layout := map.layouts[0]
 	var swarm := _swarm()
 	swarm.set_bounds(layout.half_extent())
-	# Camp 0 lives in room 0; camp 1 roams.
-	var homes := PackedInt32Array([1, 0])
+	# Camp 0 lives in the arena; camp 1 roams.
+	var arena_id := DungeonLayout.ARENA + 1
+	var homes := PackedInt32Array([arena_id, 0])
 	swarm.set_layout(layout, 1.5, homes)
-	var door := layout.doors[0]
-	var inside := door + Vector2(4.0 if door.x > 0.0 else -4.0, 0.0)
+	var door := layout.doors[DungeonLayout.ARENA]
+	var inside := door + Vector2(0.0, -4.0)
 	var leashed := swarm.spawn_at(inside, 0, 0, true)
-	var free := swarm.spawn_at(inside + Vector2(0.0, 1.5), 0, 1, true)
-	check(leashed >= 0 and free >= 0, "spawned two monsters by room 0's door")
-	# The player waits in the hallway across the door: both chase.
-	var player := Vector2(0.0, door.y)
+	var free := swarm.spawn_at(inside + Vector2(1.5, 0.0), 0, 1, true)
+	check(leashed >= 0 and free >= 0, "spawned two monsters by the arena's door")
+	# The player waits in the corridor outside: both chase.
+	var player := door + Vector2(0.0, 8.0)
 	for _n in 240:
 		swarm.simulate(1.0 / 60.0, player, 0.5)
 		swarm.resolve_deaths()
@@ -338,17 +328,11 @@ func test_room_monsters_stay_in_their_room() -> void:
 		leashed_pos = free_pos
 		free_pos = swap
 	# Steering works on 2 m cells: judge by the cell each one stands in.
-	check_eq(layout.room_at(_cell_center(leashed_pos)), 1,
+	check_eq(layout.room_at(_cell_center(leashed_pos)), arena_id,
 			"the leashed one stays in its room (%s)" % leashed_pos)
-	check(layout.room_at(_cell_center(free_pos)) != 1,
+	check(layout.room_at(_cell_center(free_pos)) != arena_id,
 			"the free one walks out to the player (%s)" % free_pos)
 	swarm.free()
-
-
-## The center of the 2 m flow-field cell p is in (grid corner at -72, -72).
-func _cell_center(p: Vector2) -> Vector2:
-	var corner := Vector2(-72.0, -72.0)
-	return corner + (((p - corner) / 2.0).floor() + Vector2(0.5, 0.5)) * 2.0
 
 
 func test_higher_level_dungeon_monsters_are_a_little_faster() -> void:
@@ -371,4 +355,61 @@ func test_higher_level_dungeon_monsters_are_a_little_faster() -> void:
 		swarm.simulate(1.0 / 60.0, Vector2(15.0, -40.0), 0.5)
 	check(swarm.state.velocities[fast].length() > swarm.state.velocities[slow].length() * 1.2,
 			"a faster monster moves faster")
+	swarm.free()
+
+
+func test_a_thinned_camp_refills_without_being_cleared() -> void:
+	var config := _config()
+	var map := WorldMap.new(config)
+	var swarm := _swarm()
+	swarm.set_bounds(map.half_extent(0))
+	swarm.set_layout(map.layouts[0], config.dungeon_chase_distance)
+	var director := CampDirector.new(config, swarm)
+	var sites := map.dungeon_sites[0]
+	director.use_sites(sites)
+	var camp := -1
+	for s in sites.size():
+		if sites.is_spawner[s] == 0 and sites.has_boss[s] == 0:
+			camp = s
+			break
+	check(sites.refill_time[camp] > 0.0, "dungeon camps refill")
+	# Stand in the lobby, far enough not to wake it.
+	var spot := map.arrival_point(0)
+	_run(director, swarm, spot, 0.3)
+	var full := sites.alive[camp]
+	check(full > 4, "the camp is in (%d)" % full)
+	var killed := 0
+	for i in swarm.state.count:
+		if swarm.state.camp_ids[i] == camp and killed < full / 2:
+			swarm.state.health[i] = 0.0
+			killed += 1
+	_run(director, swarm, spot, 0.2)
+	var thinned := sites.alive[camp]
+	check_eq(thinned, full - killed, "half of it died")
+	check_eq(sites.state[camp], CampSites.State.SPAWNED, "not cleared")
+	_run(director, swarm, spot, sites.refill_time[camp] * 3.5)
+	check(sites.alive[camp] > thinned, "members come back on their own (%d -> %d)" %
+			[thinned, sites.alive[camp]])
+	check(sites.alive[camp] <= sites.sizes[camp], "never above its size")
+	var members := 0
+	for i in swarm.state.count:
+		if swarm.state.camp_ids[i] == camp:
+			members += 1
+	check_eq(members, sites.alive[camp], "the count matches the swarm")
+	swarm.free()
+
+
+func test_frost_slows_enemies_it_reaches() -> void:
+	var swarm := _swarm()
+	var near := swarm.spawn_at(Vector2(0.0, 10.0), 0, -1, true)
+	var far := swarm.spawn_at(Vector2(30.0, 10.0), 0, -1, true)
+	swarm.simulate(1.0 / 60.0, Vector2(15.0, -40.0), 0.5)
+	check_eq(swarm.slow_within(Vector2(0.0, 10.0), 3.0, 0.4, 2.0), 1, "only the near one is slowed")
+	for _n in 60:
+		swarm.simulate(1.0 / 60.0, Vector2(15.0, -40.0), 0.5)
+	check(swarm.state.velocities[near].length() < swarm.state.velocities[far].length() * 0.6,
+			"the slowed one moves slower")
+	var nova := load("res://data/abilities/nova.tres") as NovaConfig
+	check_eq(nova.knockback, 0.0, "the Frost Nova doesn't knock back")
+	check(nova.slow_factor < 1.0 and nova.slow_duration > 0.0, "it slows instead")
 	swarm.free()

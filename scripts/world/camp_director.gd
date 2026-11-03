@@ -88,6 +88,15 @@ func tick(player_pos: Vector2) -> void:
 			continue
 		if sites.awake[s] == 0 and (alarm[s] != 0 or d_sq <= aggro_sq):
 			_wake(s)
+		# A thinned-out camp gets its members back one by one.
+		if sites.refill_time[s] > 0.0 and sites.alive[s] < sites.sizes[s] \
+				and now >= sites.timer[s]:
+			var spread := _config.member_spacing * SPIRAL_DENSITY * sqrt(float(sites.sizes[s]))
+			var at := sites.centers[s] + Vector2.from_angle(_rng.randf() * TAU) \
+					* _rng.randf() * spread
+			if _spawn_member(s, sites.awake[s] != 0, at) >= 0 and sites.awake[s] == 0:
+				sites.alive[s] += 1
+			sites.timer[s] = now + sites.refill_time[s]
 
 
 ## Wakes every sleeping camp within radius of center. Returns how many woke.
@@ -118,7 +127,11 @@ func record_deaths(dead: int) -> void:
 		sites.alive[s] -= 1
 		if sites.is_spawner[s] != 0:
 			spawner_kill.emit(s, dead_positions[k], sites.levels[s])
-		elif sites.alive[s] <= 0:
+		elif sites.alive[s] > 0:
+			# Start the refill clock on the first loss.
+			if sites.timer[s] < now:
+				sites.timer[s] = now + sites.refill_time[s]
+		else:
 			sites.alive[s] = 0
 			sites.state[s] = CampSites.State.CLEARED
 			sites.awake[s] = 0

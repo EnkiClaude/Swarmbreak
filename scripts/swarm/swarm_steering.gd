@@ -85,6 +85,8 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 	var boost_until := _state.boost_until
 	var stun_until := _state.stun_until
 	var speed_scale := _state.speed_scale
+	var slow_until := _state.slow_until
+	var slow_factor := _state.slow_factor
 
 	var max_speed := _types.max_speed
 	var acceleration := _types.acceleration
@@ -173,6 +175,8 @@ func step(player_pos: Vector2, player_radius: float, delta: float, now: float = 
 					sep += away * ((r - d) / (r * d))
 
 		var top: float = max_speed[t] * speed_scale[i]
+		if slow_until[i] > now:
+			top *= slow_factor[i]
 		if boost_until[i] > now:
 			top *= boost_multiplier
 		var desired: Vector2 = (seek * top + sep * sep_strength[t]).limit_length(top)

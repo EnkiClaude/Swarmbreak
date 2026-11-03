@@ -1,7 +1,7 @@
 class_name PlayerCombat
 extends RefCounted
-## Turns attack input into abilities: aimed bolts, the nova pulse around the
-## player (costs mana) and the lure war cry (costs mana: wakes camps in range
+## Turns attack input into abilities: aimed bolts, the Frost Nova around the
+## player (costs mana; damages and slows) and the lure war cry (costs mana: wakes camps in range
 ## and hurries awake enemies toward the player). Kills give mana back.
 ## Owns only cooldowns and costs; damage goes through SwarmManager, bolts
 ## through ProjectileSystem and camp waking through CampDirector.
@@ -113,6 +113,7 @@ func _try_nova() -> void:
 	var radius := _nova.radius * _mult(PlayerStat.Id.NOVA_RADIUS)
 	var damage := _nova.damage * _mult(PlayerStat.Id.NOVA_DAMAGE)
 	_swarm.damage_circle(center, radius, damage, _nova.knockback)
+	_swarm.slow_within(center, radius, _nova.slow_factor, _nova.slow_duration)
 	_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), radius)
 	_strike(center, radius, _nova.strikes)
 	var perks := _perks()
@@ -177,6 +178,7 @@ func _run_aftershocks() -> void:
 		var center := _shock_center[k]
 		var radius := _shock_radius[k]
 		_swarm.damage_circle(center, radius, _shock_damage[k], _nova.knockback * 0.6)
+		_swarm.slow_within(center, radius, _nova.slow_factor, _nova.slow_duration)
 		_effects.spawn(_nova_effect, Vector3(center.x, 0.0, center.y), radius)
 		_strike(center, radius, _nova.strikes / 2)
 		aftershock.emit(center)

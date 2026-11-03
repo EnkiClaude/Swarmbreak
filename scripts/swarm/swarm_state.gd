@@ -31,6 +31,9 @@ var mark_until: PackedFloat32Array
 var stun_until: PackedFloat32Array
 ## Multiplies the enemy's type speed (higher-level dungeon monsters are faster).
 var speed_scale: PackedFloat32Array
+## Swarm time until which the enemy is slowed (Frost Nova), and how much.
+var slow_until: PackedFloat32Array
+var slow_factor: PackedFloat32Array
 ## Boss slot of the enemy, or -1. See boss_index.
 var boss_ids: PackedInt32Array
 ## Current enemy index of each boss slot, or -1 once dead. Kept up to date
@@ -75,6 +78,10 @@ func _init(p_capacity: int, max_camps: int = 1, max_bosses: int = 1) -> void:
 	stun_until.fill(0.0)
 	speed_scale.resize(capacity)
 	speed_scale.fill(1.0)
+	slow_until.resize(capacity)
+	slow_until.fill(0.0)
+	slow_factor.resize(capacity)
+	slow_factor.fill(1.0)
 	boss_ids.resize(capacity)
 	boss_ids.fill(-1)
 	boss_index.resize(maxi(max_bosses, 1))
@@ -111,6 +118,8 @@ func spawn(pos: Vector2, type_id: int, max_health: float = 1.0, camp_id: int = -
 	mark_until[i] = 0.0
 	stun_until[i] = 0.0
 	speed_scale[i] = 1.0
+	slow_until[i] = 0.0
+	slow_factor[i] = 1.0
 	boss_ids[i] = -1
 	count += 1
 	return i
@@ -196,6 +205,8 @@ func _move(from: int, to: int) -> void:
 	mark_until[to] = mark_until[from]
 	stun_until[to] = stun_until[from]
 	speed_scale[to] = speed_scale[from]
+	slow_until[to] = slow_until[from]
+	slow_factor[to] = slow_factor[from]
 	var boss := boss_ids[from]
 	boss_ids[to] = boss
 	if boss >= 0:

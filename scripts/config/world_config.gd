@@ -18,6 +18,9 @@ extends Resource
 @export var despawn_radius: float = 115.0
 ## Seconds before a cleared camp comes back.
 @export var camp_respawn_time: float = 60.0
+## A camp that's been thinned out but not cleared gets a member back every
+## this many seconds, up to its full size (0: only after clearing).
+@export var camp_refill_time: float = 6.0
 ## A camp never comes back with the player closer than this to its center.
 @export var respawn_min_distance: float = 30.0
 ## Spawners run while the player is within this distance.
