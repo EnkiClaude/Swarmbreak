@@ -207,4 +207,10 @@ func test_dreadforged_armor_is_its_own_red_rarity() -> void:
 		check_eq(item.rarity, dread, "the Dread Lord's drops are")
 		check(config.dread_slots.has(item.slot), "and armor (slot %d)" % item.slot)
 		check(item.item_name.begins_with(config.dread_prefix), "named %s" % item.item_name)
-		check(item.stats.size() >= config.rarity_affixes[4], "as many stats as a legendary")
+		# As many affixes as its slot's pool allows, up to the rarity's count.
+		var pool := 0
+		for affix in config.affixes:
+			if affix.slots.has(item.slot):
+				pool += 1
+		check(item.stats.size() >= mini(config.rarity_affixes[dread], pool),
+				"%s carries a full set of stats (%d)" % [item.item_name, item.stats.size()])
