@@ -415,3 +415,9 @@ func test_frost_slows_enemies_it_reaches() -> void:
 	check_eq(nova.knockback, 0.0, "the Frost Nova doesn't knock back")
 	check(nova.slow_factor < 1.0 and nova.slow_duration > 0.0, "it slows instead")
 	swarm.free()
+
+
+## The center of the 2 m flow-field cell p is in (grid corner at -72, -72).
+func _cell_center(p: Vector2) -> Vector2:
+	var corner := Vector2(-72.0, -72.0)
+	return corner + (((p - corner) / 2.0).floor() + Vector2(0.5, 0.5)) * 2.0
