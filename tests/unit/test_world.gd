@@ -288,7 +288,9 @@ func test_the_boss_room_is_harder_and_the_lobby_empty() -> void:
 	for s in sites.size():
 		check(homes[s] != DungeonLayout.LOBBY + 1, "no camp in the lobby")
 		check(homes[s] > 0, "every camp is in a room")
-		var wanted := def.level + (def.depth_level_step if homes[s] == layout.boss_room + 1 else 0)
+		var wanted: int = def.level
+		if homes[s] == layout.boss_room + 1:
+			wanted += def.depth_level_step
 		check_eq(sites.levels[s], wanted, "site %d's level" % s)
 	var in_arena := 0
 	var in_boss := 0
@@ -314,8 +316,8 @@ func test_room_monsters_stay_in_their_room() -> void:
 	var door := layout.doors[DungeonLayout.ARENA]
 	var inside := door + Vector2(0.0, -4.0)
 	var leashed := swarm.spawn_at(inside, 0, 0, true)
-	var free := swarm.spawn_at(inside + Vector2(1.5, 0.0), 0, 1, true)
-	check(leashed >= 0 and free >= 0, "spawned two monsters by the arena's door")
+	var roamer := swarm.spawn_at(inside + Vector2(1.5, 0.0), 0, 1, true)
+	check(leashed >= 0 and roamer >= 0, "spawned two monsters by the arena's door")
 	# The player waits in the corridor outside: both chase.
 	var player := door + Vector2(0.0, 8.0)
 	for _n in 240:
@@ -380,7 +382,7 @@ func test_a_thinned_camp_refills_without_being_cleared() -> void:
 	check(full > 4, "the camp is in (%d)" % full)
 	var killed := 0
 	for i in swarm.state.count:
-		if swarm.state.camp_ids[i] == camp and killed < full / 2:
+		if swarm.state.camp_ids[i] == camp and killed * 2 < full:
 			swarm.state.health[i] = 0.0
 			killed += 1
 	_run(director, swarm, spot, 0.2)

@@ -579,7 +579,7 @@ func _dungeon_refill() -> void:
 	var full := _members_of(camp)
 	var killed := 0
 	for i in _swarm.state.count:
-		if _swarm.state.camp_ids[i] == camp and killed < full / 2:
+		if _swarm.state.camp_ids[i] == camp and killed * 2 < full:
 			_swarm.state.health[i] = 0.0
 			killed += 1
 	await _frames(5)
