@@ -83,7 +83,9 @@ scripts/
   loot/             Ground loot: drops, magnet, pickup.
   ui/               Character screen: CHARACTER tab (path, skills, totals),
                     INVENTORY tab (backpack, details/compare/refine,
-                    equipped), ENCHANT tab (talismans), PET tab.
+                    equipped), ENCHANT tab (talismans, essence), PET tab,
+                    SETTINGS tab (HUD scale, controls list).
+  settings/         GameSettings: preferences saved with the character.
   save/             Save file: codec (Dictionary <-> progress), store, autosave.
   swarm/            Swarm state, flow field, spatial hash, steering, rendering.
   combat/           Damage queries, abilities, cooldowns, pooled bolts.
@@ -122,9 +124,11 @@ sites past `despawn_radius` leave silently (`SwarmManager.remove_camp`, no
 XP or loot; a boss slot freed that way is flagged in
 `SwarmState.boss_despawned`). Camps wake when the player comes within aggro
 range, when any member is hit (`SwarmState.camp_alarm`), or when the lure
-reaches them, and come back `camp_respawn_time` after clearing; a camp
-thinned out but not cleared gets a member back every `camp_refill_time`
-(`CampSites.refill_time`) up to its size. Spawner sites
+reaches them, and come back `camp_respawn_time` after clearing. In
+dungeons every monster that dies is replaced at once, nonstop
+(`DungeonDef.instant_respawn`, `CampSites.respawn_on_death`; not the boss's
+camp), so those camps never clear and their kills drop loot one at a time
+(`spawner_drop_chance`). Spawner sites
 (dungeons only for now) never clear: near the player they add one awake
 monster every `spawn_interval` (0 in dungeons: one per frame), for builds
 that farm standing still. Dungeon camps, bosses included, also come back at
@@ -154,7 +158,9 @@ indices into `SwarmConfig.enemy_types`: goblin, ogre, warlord boss,
 skeleton, treant, wisp).
 
 Levels: monster health, contact damage and XP grow with the level where the
-player is (`WorldDirector.level()`); items roll at the camp's level, and
+player is (`WorldDirector.level()`), and monsters above the player's own
+level get more health and damage per level of the gap
+(`gap_health_per_level`, `gap_damage_per_level`, `CampDirector.gap_multiplier()`); items roll at the camp's level, and
 dungeons add drops, a minimum rarity and more Geon. Props never collide,
 so they stand clear of camps, gates and the town square. The art is original
 and generated in code. In the web build, `index.html?region=N` (row by row
@@ -190,7 +196,9 @@ fixed pieces, and bonuses for wearing 2, 3 or 5 of a set, which
 `Inventory.talismans` counts them by id (`TalismanRules.id_of()`), outside
 the backpack. Applying one to worn gear (`TalismanRules.apply()`) fills
 one of the gear's sockets (by rarity) at a falling chance and adds its
-stats for good. A failure only destroys the talisman, never the gear.
+stats for good. A failure only destroys the talisman, never the gear. Talismans
+also dissolve into Arcane Essence (`essence_per_tier`), which binds Scrolls
+of Power (one attribute point each, `scroll_cost_base`, rising per scroll).
 `Inventory` wears items in twelve positions (`Inventory.Equip`: main hand,
 amulet, armor, off hand, belt, two rings, helm, gloves, pants, boots, pet);
 the first five equal their `AffixDef.Slot`, later slots are slot + 1.
@@ -233,13 +241,16 @@ feeds the pet XP and, once hatched, sets `LootSystem.collect_radius` so
 loot around the player is collected. Eggs come from the first quest
 (`data/rpg/quests.tres`, `QuestLog`: clear camps, then pick an egg on the
 PET tab) or, for testing, from the Egg Keeper in the town square, whose
-menu opens when the player walks up.
+menu opens when the player walks up. From `attack_level` (25) the pet zaps the enemies
+around it (`PetSystem.fight()`, in the damage window; damage grows slowly
+per level) and from `aggro_level` (50) it wakes camps around itself in a
+range that grows per level.
 
 Refining (`Refinery`): Geon (from drops and salvaging) buys an
 attempt to raise an item one level, +0 to +10, each level adding
-`upgrade_bonus_per_level` to all its stats. Odds fall per level; a failure
-drops it one level, never below +0 and never destroying it, and adds pity
-to the next try. Keep it that way: no item loss. A Blessed Stone
+`upgrade_bonus_per_level` to all its stats. Odds fall steeply per level
+(`upgrade_chances`); a failure keeps the item's level (no downgrade), never
+destroys it, and adds pity to the next try. Keep it that way: no item loss. A Blessed Stone
 (`Inventory.blessed_stones`, a rare drop from any monster at
 `blessed_drop_chance` per kill) instead makes an attempt certain to succeed.
 

@@ -32,6 +32,22 @@ extends Resource
 ## one up within fetch_reach of it.
 @export var fetch_speed: float = 18.0
 @export var fetch_reach: float = 1.0
+
+@export_group("Fighting")
+## From attack_level the pet zaps the enemies around it every
+## attack_interval: attack_damage_base plus attack_damage_per_level for each
+## level above attack_level, within attack_radius of the pet.
+@export var attack_level: int = 25
+@export var attack_interval: float = 0.8
+@export var attack_radius: float = 3.0
+@export var attack_damage_base: float = 4.0
+@export var attack_damage_per_level: float = 0.6
+@export var attack_effect: EffectType
+## From aggro_level it wakes camps around itself, in a range growing per level.
+@export var aggro_level: int = 50
+@export var aggro_interval: float = 1.0
+@export var aggro_range_base: float = 6.0
+@export var aggro_range_per_level: float = 0.5
 ## Rarity color an egg item shows in (LootConfig.rarity_colors).
 @export var egg_rarity: int = 2
 

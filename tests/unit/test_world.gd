@@ -212,9 +212,10 @@ func test_dungeon_camps_come_back_at_once() -> void:
 	var director := CampDirector.new(config, swarm)
 	var sites := map.dungeon_sites[0]
 	director.use_sites(sites)
+	# The boss's camp clears and comes back whole (the others never clear).
 	var camp := -1
 	for s in sites.size():
-		if sites.is_spawner[s] == 0:
+		if sites.has_boss[s] != 0:
 			camp = s
 			break
 	check_near(sites.respawn_time[camp], 0.0, 0.0001, "dungeon camps respawn instantly")
@@ -360,7 +361,7 @@ func test_higher_level_dungeon_monsters_are_a_little_faster() -> void:
 	swarm.free()
 
 
-func test_a_thinned_camp_refills_without_being_cleared() -> void:
+func test_dungeon_monsters_are_replaced_the_moment_they_die() -> void:
 	var config := _config()
 	var map := WorldMap.new(config)
 	var swarm := _swarm()
@@ -374,30 +375,28 @@ func test_a_thinned_camp_refills_without_being_cleared() -> void:
 		if sites.is_spawner[s] == 0 and sites.has_boss[s] == 0:
 			camp = s
 			break
-	check(sites.refill_time[camp] > 0.0, "dungeon camps refill")
-	# Stand in the lobby, far enough not to wake it.
+	check_eq(sites.respawn_on_death[camp], 1, "dungeon camps replace their dead")
+	var kills: Array[int] = []
+	director.spawner_kill.connect(func(s: int, _at: Vector2, _level: int) -> void:
+		kills.append(s))
 	var spot := map.arrival_point(0)
 	_run(director, swarm, spot, 0.3)
 	var full := sites.alive[camp]
 	check(full > 4, "the camp is in (%d)" % full)
-	var killed := 0
+	# Kill every member: none of them stays dead.
 	for i in swarm.state.count:
-		if swarm.state.camp_ids[i] == camp and killed * 2 < full:
+		if swarm.state.camp_ids[i] == camp:
 			swarm.state.health[i] = 0.0
-			killed += 1
-	_run(director, swarm, spot, 0.2)
-	var thinned := sites.alive[camp]
-	check_eq(thinned, full - killed, "half of it died")
-	check_eq(sites.state[camp], CampSites.State.SPAWNED, "not cleared")
-	_run(director, swarm, spot, sites.refill_time[camp] * 3.5)
-	check(sites.alive[camp] > thinned, "members come back on their own (%d -> %d)" %
-			[thinned, sites.alive[camp]])
-	check(sites.alive[camp] <= sites.sizes[camp], "never above its size")
+	swarm.simulate(0.016, spot, 0.5)
+	director.record_deaths(swarm.resolve_deaths())
+	check_eq(sites.alive[camp], full, "every death was replaced at once")
+	check_eq(sites.state[camp], CampSites.State.SPAWNED, "so the camp never clears")
+	check_eq(kills.size(), full, "and each kill can drop loot")
 	var members := 0
 	for i in swarm.state.count:
 		if swarm.state.camp_ids[i] == camp:
 			members += 1
-	check_eq(members, sites.alive[camp], "the count matches the swarm")
+	check_eq(members, full, "the swarm holds the replacements")
 	swarm.free()
 
 
@@ -421,3 +420,20 @@ func test_frost_slows_enemies_it_reaches() -> void:
 func _cell_center(p: Vector2) -> Vector2:
 	var corner := Vector2(-72.0, -72.0)
 	return corner + (((p - corner) / 2.0).floor() + Vector2(0.5, 0.5)) * 2.0
+
+
+func test_monsters_above_the_players_level_are_tougher() -> void:
+	var config := _config()
+	var swarm := _swarm()
+	var director := CampDirector.new(config, swarm)
+	director.player_level = 34
+	var even := director.health_multiplier(34)
+	check_near(director.gap_multiplier(34, 0.5), 1.0, 0.0001, "no gap, no extra")
+	check_near(director.gap_multiplier(20, 0.5), 1.0, 0.0001, "lower monsters get no extra")
+	var far_above := director.health_multiplier(80)
+	var plain := 1.0 + config.health_growth * 79
+	check(far_above > plain * 4.0, "a level-80 monster against level 34 is much tougher (%.0fx)" %
+			(far_above / even))
+	check_near(director.gap_multiplier(500, 0.1), 1.0 + 0.1 * config.gap_max_levels, 0.0001,
+			"capped")
+	swarm.free()

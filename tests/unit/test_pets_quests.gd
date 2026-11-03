@@ -124,3 +124,17 @@ func test_pickup_range_grows_a_metre_every_level() -> void:
 	check(hatched > 0.0, "a hatched pet collects (%.1f m)" % hatched)
 	check_near(PetRules.pickup_radius(config, 11) - hatched, 1.0, 0.001, "+1 m at the next level")
 	check_near(PetRules.pickup_radius(config, 30) - hatched, 20.0, 0.001, "+20 m twenty levels on")
+
+
+func test_pets_fight_from_25_and_aggro_from_50() -> void:
+	var config := _pets()
+	check_eq(PetRules.attack_damage(config, config.attack_level - 1), 0.0, "no damage before 25")
+	var first := PetRules.attack_damage(config, config.attack_level)
+	check(first > 0.0, "it starts zapping at %d (%.1f)" % [config.attack_level, first])
+	check(PetRules.attack_damage(config, config.attack_level + 1) > first, "a little more per level")
+	check(PetRules.attack_damage(config, config.attack_level + 1) - first < first * 0.5,
+			"growing slowly")
+	check_eq(PetRules.aggro_range(config, config.aggro_level - 1), 0.0, "no aggro before 50")
+	var reach := PetRules.aggro_range(config, config.aggro_level)
+	check(reach > 0.0, "it draws monsters at %d (%.1f m)" % [config.aggro_level, reach])
+	check(PetRules.aggro_range(config, config.aggro_level + 10) > reach, "farther every level")

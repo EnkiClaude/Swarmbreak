@@ -72,10 +72,10 @@ extends Resource
 @export var upgrade_bonus_per_level: float = 0.08
 ## Success chance to reach +1, +2, ... +upgrade_max.
 @export var upgrade_chances: PackedFloat32Array = [
-	0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42, 0.34, 0.27, 0.2,
+	0.9, 0.78, 0.65, 0.52, 0.4, 0.3, 0.21, 0.14, 0.09, 0.05,
 ]
 ## Each failure in a row on an item adds this to its next chance.
-@export var upgrade_pity_per_fail: float = 0.04
+@export var upgrade_pity_per_fail: float = 0.02
 ## Geon to attempt +1 is cost_base; each level adds cost_per_level.
 @export var upgrade_cost_base: int = 1
 @export var upgrade_cost_per_level: int = 1
@@ -98,5 +98,14 @@ extends Resource
 @export var talisman_tier_power: PackedFloat32Array = [1.0, 1.6, 2.4, 3.5, 5.0]
 ## Sockets an item has for talismans, per rarity.
 @export var talisman_sockets: PackedInt32Array = [1, 1, 2, 2, 3, 3, 4]
+## Talismans dissolve into essence (per tier); essence binds a scroll that
+## gives one attribute point, each scroll costing more than the last.
+@export var essence_name: String = "Arcane Essence"
+@export var essence_per_tier: PackedInt32Array = [1, 2, 4, 8, 16]
+@export var scroll_name: String = "Scroll of Power"
+@export var scroll_cost_base: int = 20
+## Each scroll bound adds this fraction of the base to the next one's cost.
+@export var scroll_cost_growth: float = 0.25
+@export var essence_color: Color = Color(0.55, 0.75, 1.0)
 ## Success chance for the first, second, third talisman on an item.
 @export var talisman_chances: PackedFloat32Array = [0.75, 0.55, 0.4]

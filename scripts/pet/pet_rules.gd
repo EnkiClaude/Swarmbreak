@@ -14,6 +14,20 @@ static func is_hatched(config: PetConfig, level: int) -> bool:
 	return stage(config, level) >= 1
 
 
+## Damage per zap at a pet level (0 below attack_level): small, growing slowly.
+static func attack_damage(config: PetConfig, level: int) -> float:
+	if level < config.attack_level:
+		return 0.0
+	return config.attack_damage_base + config.attack_damage_per_level * (level - config.attack_level)
+
+
+## How far around itself the pet wakes camps (0 below aggro_level).
+static func aggro_range(config: PetConfig, level: int) -> float:
+	if level < config.aggro_level:
+		return 0.0
+	return config.aggro_range_base + config.aggro_range_per_level * (level - config.aggro_level)
+
+
 ## How far around the player the pet collects loot: nothing as an egg, then
 ## a metre more every level.
 static func pickup_radius(config: PetConfig, level: int) -> float:

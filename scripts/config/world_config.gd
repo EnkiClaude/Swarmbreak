@@ -18,9 +18,6 @@ extends Resource
 @export var despawn_radius: float = 115.0
 ## Seconds before a cleared camp comes back.
 @export var camp_respawn_time: float = 60.0
-## A camp that's been thinned out but not cleared gets a member back every
-## this many seconds, up to its full size (0: only after clearing).
-@export var camp_refill_time: float = 6.0
 ## A camp never comes back with the player closer than this to its center.
 @export var respawn_min_distance: float = 30.0
 ## Spawners run while the player is within this distance.
@@ -45,6 +42,11 @@ extends Resource
 ## In dungeons, enemies only chase straight at the player inside this
 ## distance; further out they follow the hallway and doors.
 @export var dungeon_chase_distance: float = 1.5
+## Monsters above the player's level are tougher still: per level of the
+## gap, this much more health and contact damage, up to gap_max_levels.
+@export var gap_health_per_level: float = 0.12
+@export var gap_damage_per_level: float = 0.08
+@export var gap_max_levels: int = 40
 ## Dungeon monsters move this much faster per level above 1, up to the max.
 @export var dungeon_speed_per_level: float = 0.008
 @export var dungeon_speed_max: float = 1.35

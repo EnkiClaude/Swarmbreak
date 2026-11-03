@@ -33,6 +33,8 @@ const SPAWNER_SCATTER := 3.0
 var sites: CampSites
 ## True in dungeons: monsters spawn faster the higher their level.
 var speed_by_level := false
+## The player's level (set by main): monsters above it get tougher.
+var player_level := 1
 
 var _config: WorldConfig
 var _swarm: SwarmManager
@@ -88,15 +90,6 @@ func tick(player_pos: Vector2) -> void:
 			continue
 		if sites.awake[s] == 0 and (alarm[s] != 0 or d_sq <= aggro_sq):
 			_wake(s)
-		# A thinned-out camp gets its members back one by one.
-		if sites.refill_time[s] > 0.0 and sites.alive[s] < sites.sizes[s] \
-				and now >= sites.timer[s]:
-			var spread := _config.member_spacing * SPIRAL_DENSITY * sqrt(float(sites.sizes[s]))
-			var at := sites.centers[s] + Vector2.from_angle(_rng.randf() * TAU) \
-					* _rng.randf() * spread
-			if _spawn_member(s, sites.awake[s] != 0, at) >= 0 and sites.awake[s] == 0:
-				sites.alive[s] += 1
-			sites.timer[s] = now + sites.refill_time[s]
 
 
 ## Wakes every sleeping camp within radius of center. Returns how many woke.
@@ -127,11 +120,15 @@ func record_deaths(dead: int) -> void:
 		sites.alive[s] -= 1
 		if sites.is_spawner[s] != 0:
 			spawner_kill.emit(s, dead_positions[k], sites.levels[s])
-		elif sites.alive[s] > 0:
-			# Start the refill clock on the first loss.
-			if sites.timer[s] < now:
-				sites.timer[s] = now + sites.refill_time[s]
-		else:
+		elif sites.respawn_on_death[s] != 0:
+			# Replaced at once, somewhere in the camp; the kill drops its own loot.
+			spawner_kill.emit(s, dead_positions[k], sites.levels[s])
+			var spread := _config.member_spacing * SPIRAL_DENSITY * sqrt(float(sites.sizes[s]))
+			var at := sites.centers[s] + Vector2.from_angle(_rng.randf() * TAU) \
+					* sqrt(_rng.randf()) * spread
+			if _spawn_member(s, sites.awake[s] != 0, at) >= 0 and sites.awake[s] == 0:
+				sites.alive[s] += 1
+		elif sites.alive[s] <= 0:
 			sites.alive[s] = 0
 			sites.state[s] = CampSites.State.CLEARED
 			sites.awake[s] = 0
@@ -152,7 +149,14 @@ func camps_left() -> int:
 
 ## Health multiplier for monsters of a camp level.
 func health_multiplier(level: int) -> float:
-	return 1.0 + _config.health_growth * (level - 1)
+	return (1.0 + _config.health_growth * (level - 1)) * gap_multiplier(level,
+			_config.gap_health_per_level)
+
+
+## Extra toughness for a monster level above the player's: 1 at or below it.
+func gap_multiplier(level: int, per_level: float) -> float:
+	var gap := clampi(level - player_level, 0, _config.gap_max_levels)
+	return 1.0 + per_level * gap
 
 
 ## Speed multiplier for a monster of a level: 1 in the open world; in
@@ -244,7 +248,8 @@ func _spawn_boss(s: int) -> bool:
 	if i < 0:
 		return false
 	var health := _swarm.type_max_health(type_id) \
-			* (1.0 + _boss_config.health_growth * (sites.levels[s] - 1))
+			* (1.0 + _boss_config.health_growth * (sites.levels[s] - 1)) \
+			* gap_multiplier(sites.levels[s], _config.gap_health_per_level)
 	if _bosses.add(i, health) < 0:
 		# No free boss slot: it stays an ordinary, if sturdy, camp member.
 		_swarm.state.health[i] = health

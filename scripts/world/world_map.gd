@@ -133,7 +133,7 @@ func _place_region_camps(region: int, rng: RandomNumberGenerator,
 	var bosses := _biggest(sizes, def.boss_camps)
 	for k in placed.size():
 		var s := overworld_sites.add(placed[k], sizes[k], def.level, def.heavy_chance,
-				bosses.has(k), false, 0.0, config.camp_respawn_time, config.camp_refill_time)
+				bosses.has(k), false, 0.0, config.camp_respawn_time)
 		overworld_sites.set_types(s, def.enemy_type, def.heavy_type)
 
 
@@ -185,7 +185,7 @@ func _dungeon_site(sites: CampSites, def: DungeonDef, at: Vector2, size: int, le
 		depth: int, boss: bool, spawner: bool) -> void:
 	var s := sites.add(at, size, level, def.heavy_chance, boss, spawner,
 			def.spawner_interval if spawner else 0.0, def.camp_respawn_time,
-			0.0 if spawner else def.camp_refill_time)
+			def.instant_respawn and not spawner and not boss)
 	sites.set_types(s, def.enemy_type, def.heavy_type)
 	sites.depth[s] = depth
 
