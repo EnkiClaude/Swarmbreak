@@ -18,20 +18,26 @@ func _init(config: LootConfig, seed_value: int = 0) -> void:
 
 
 ## min_rarity forces at least that rarity (bosses drop rares).
-func roll(zone_level: int, min_rarity: int = 0) -> ItemData:
+## force_kind and force_rarity (>= 0) pick them instead of rolling.
+func roll(zone_level: int, min_rarity: int = 0, force_kind: int = -1,
+		force_rarity: int = -1) -> ItemData:
 	var item := ItemData.new()
 	var kind: ItemKindDef = null
 	if _config.item_kinds.is_empty():
 		item.slot = _rng.randi_range(0, AffixDef.Slot.PET - 1)
 	else:
-		var kind_weights := PackedFloat32Array()
-		for def in _config.item_kinds:
-			kind_weights.append(def.weight)
-		item.kind = _pick_weighted(kind_weights)
+		if force_kind >= 0:
+			item.kind = clampi(force_kind, 0, _config.item_kinds.size() - 1)
+		else:
+			var kind_weights := PackedFloat32Array()
+			for def in _config.item_kinds:
+				kind_weights.append(def.weight)
+			item.kind = _pick_weighted(kind_weights)
 		kind = _config.item_kinds[item.kind]
 		item.slot = kind.slot
 		item.two_handed = kind.two_handed
-	item.rarity = maxi(_pick_weighted(_config.rarity_weights), min_rarity)
+	item.rarity = force_rarity if force_rarity >= 0 \
+			else maxi(_pick_weighted(_config.rarity_weights), min_rarity)
 	item.upgrade_bonus = _config.upgrade_bonus_per_level
 	item.item_level = zone_level
 	var growth := _growth(zone_level) * _power(item.rarity)
@@ -54,6 +60,21 @@ func roll(zone_level: int, min_rarity: int = 0) -> ItemData:
 		item.stats.append(picked.stat)
 		item.values.append(_round_value(picked.stat, value))
 	item.item_name = _name_for(item, kind)
+	return item
+
+
+## A piece of Dreadforged armor (LootConfig.dread_rarity), which only the
+## Dread Lord drops: an armor kind (armor, helm, gloves, pants, boots, belt
+## or shield) rolled at that rarity, named "Dreadforged <kind>".
+func roll_dread(zone_level: int) -> ItemData:
+	var armor := PackedInt32Array()
+	for k in _config.item_kinds.size():
+		if _config.dread_slots.has(int(_config.item_kinds[k].slot)):
+			armor.append(k)
+	var kind := armor[_rng.randi() % armor.size()] if not armor.is_empty() else -1
+	var item := roll(zone_level, 0, kind, _config.dread_rarity)
+	var base := _config.item_kinds[item.kind].display_name if item.kind >= 0 else "Armor"
+	item.item_name = "%s %s" % [_config.dread_prefix, base]
 	return item
 
 
@@ -90,6 +111,8 @@ func _power(rarity: int) -> float:
 
 func _name_for(item: ItemData, kind: ItemKindDef) -> String:
 	var base := kind.display_name if kind != null else _config.slot_names[item.slot]
+	if item.rarity == _config.dread_rarity:
+		return "%s %s" % [_config.dread_prefix, base]
 	if item.rarity >= 4 and not _config.legendary_prefixes.is_empty():
 		return "%s %s" % [_config.legendary_prefixes[_rng.randi() %
 				_config.legendary_prefixes.size()], base]

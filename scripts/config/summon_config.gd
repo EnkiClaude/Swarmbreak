@@ -26,4 +26,7 @@ extends Resource
 @export var item_chance: float = 0.6
 @export var geon_multiplier: float = 6.0
 @export var legendary_chance: float = 0.5
+## Pieces of Dreadforged armor (its own red rarity, LootConfig.dread_rarity)
+## it always drops; nothing else drops them.
+@export var dread_drops: int = 2
 @export var color: Color = Color(0.85, 0.2, 0.9)

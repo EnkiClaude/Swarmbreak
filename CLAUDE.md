@@ -273,7 +273,10 @@ The summonable boss (`data/zones/summon.tres`, `SummonConfig`, run by
 SUMMON button calls the Dread Lord and an awake escort ahead of the player
 (not in town, one at a time), at the higher of the place's and the
 player's level, far tougher than a camp boss. Its kill pays out epic-or-
-better drops, a big pile of Geon and a chance at a legendary.
+better drops, a big pile of Geon, a chance at a legendary and
+`dread_drops` pieces of Dreadforged armor: a red rarity of its own
+(`LootConfig.dread_rarity`, `ItemGenerator.roll_dread()`) that nothing
+else drops.
 
 ## Frame order
 

@@ -118,6 +118,12 @@ func geon_pile(level: int, multiplier: float = 1.0) -> int:
 			* growth * multiplier))
 
 
+## Drops pieces of Dreadforged armor (the Dread Lord's).
+func drop_dread(at: Vector2, amount: int, level: int) -> void:
+	for _n in amount:
+		place(_generator.roll_dread(level), _scatter(at))
+
+
 ## Drops one piece of a set (dungeon bosses).
 func drop_set_piece(at: Vector2, sets: SetList, set_index: int, level: int) -> void:
 	place(_generator.roll_set_piece(sets, set_index, level), _scatter(at))

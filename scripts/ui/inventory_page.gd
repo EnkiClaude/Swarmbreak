@@ -35,7 +35,7 @@ const EMPTY_GLYPHS: PackedInt32Array = [
 ]
 ## Salvage All buttons: one per rarity, then -1 for everything. All but
 ## commons need a second press to confirm.
-const SALVAGE_ALL_CHOICES: PackedInt32Array = [0, 1, 2, 3, 4, 5, -1]
+const SALVAGE_ALL_CHOICES: PackedInt32Array = [0, 1, 2, 3, 4, 5, 6, -1]
 const NO_CONFIRM := -2
 
 ## The selected item (equipped or in the backpack), or null.
