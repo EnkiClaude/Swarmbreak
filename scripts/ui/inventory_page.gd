@@ -1,25 +1,23 @@
 class_name InventoryPage
 extends RefCounted
-## The INVENTORY tab, in three columns:
-##   EQUIPPED - a card per position (main and off hand, armor, amulet, two
-##              rings, belt) with the item's icon.
+## The INVENTORY tab, in three columns, left to right:
 ##   BACKPACK - a grid of icon tiles bordered in rarity color, plus Salvage
 ##              All for each rarity and for everything.
 ##   DETAILS  - the selected item, compared stat by stat against what wearing
 ##              it would take off, with Equip (left or right for rings),
-##              Unequip, Salvage and Upgrade; a selected talisman stack
-##              lists the worn gear it can be applied to.
-## Talismans stack in a list under the backpack grid (one row per kind and
-## tier, with how many).
+##              Unequip, Salvage and Upgrade.
+##   EQUIPPED - a card per position (hands, armor, helm... pet) with the
+##              item's icon.
+## Talismans live on the ENCHANT tab (EnchantPage).
 ## Hovering or focusing an item shows its tooltip (ItemTooltip) beside it.
 ## After any action, focus goes back to the item the player was on, so a
 ## controller's A never lands on a button by itself.
 
-const TILE_SIZE := Vector2(60, 60)
+const TILE_SIZE := Vector2(56, 56)
 const GRID_COLUMNS := 8
-const CARD_SIZE := Vector2(170, 58)
-const EQUIPPED_WIDTH := 350.0
-const DETAILS_WIDTH := 330.0
+const CARD_SIZE := Vector2(150, 54)
+const EQUIPPED_WIDTH := 308.0
+const DETAILS_WIDTH := 300.0
 ## Equipment positions in the order the cards show, two per row.
 const CARD_ORDER: PackedInt32Array = [
 	Inventory.Equip.HELM, Inventory.Equip.AMULET, Inventory.Equip.MAIN_HAND,
@@ -35,7 +33,7 @@ const EMPTY_GLYPHS: PackedInt32Array = [
 ]
 ## Salvage All buttons: one per rarity, then -1 for everything. All but
 ## commons need a second press to confirm.
-const SALVAGE_ALL_CHOICES: PackedInt32Array = [0, 1, 2, 3, 4, 5, -1]
+const SALVAGE_ALL_CHOICES: PackedInt32Array = [0, 1, 2, 3, 4, 5, 6, -1]
 const NO_CONFIRM := -2
 
 ## The selected item (equipped or in the backpack), or null.
@@ -46,8 +44,6 @@ var focus_item: ItemData
 var talismans: TalismanRules
 ## The summonable boss, for the shard count and SUMMON (null hides them).
 var summon_config: SummonConfig
-## The talisman stack (id) shown in the details, or -1.
-var selected_talisman := -1
 ## Result line under the details, e.g. after refining.
 var result_text := ""
 var result_color := Color.WHITE
@@ -71,7 +67,6 @@ func _init(menu: CharacterMenu, inventory: Inventory, loot: LootConfig,
 ## Clears selection and messages (when the menu opens).
 func reset() -> void:
 	selected = null
-	selected_talisman = -1
 	focus_item = null
 	result_text = ""
 	_confirm_rarity = NO_CONFIRM
@@ -79,15 +74,6 @@ func reset() -> void:
 
 func select(item: ItemData) -> void:
 	selected = null if selected == item else item
-	selected_talisman = -1
-	result_text = ""
-	_confirm_rarity = NO_CONFIRM
-
-
-## Shows a talisman stack in the details (again: hides it).
-func select_talisman(id: int) -> void:
-	selected_talisman = -1 if selected_talisman == id else id
-	selected = null
 	result_text = ""
 	_confirm_rarity = NO_CONFIRM
 
@@ -126,9 +112,11 @@ func build(parent: Container) -> Control:
 	columns.add_theme_constant_override("separation", 22)
 	parent.add_child(columns)
 	_focus_tile = null
-	_build_equipped(MenuWidgets.column(columns, EQUIPPED_WIDTH))
+	# Backpack on the left, the chosen item in the middle, what's worn on the
+	# right, so comparing reads left to right.
 	_build_backpack(MenuWidgets.column(columns))
 	var detail_focus := _build_details(MenuWidgets.column(columns, DETAILS_WIDTH))
+	_build_equipped(MenuWidgets.column(columns, EQUIPPED_WIDTH))
 	# Back to the item the player was on; with none (just opened), focus stays
 	# on the tab header, so nothing looks picked until the player moves.
 	return _focus_tile if _focus_tile != null else detail_focus
@@ -201,7 +189,7 @@ func _build_backpack(parent: VBoxContainer) -> Control:
 		grid.add_child(tile)
 		if first == null:
 			first = tile
-	_build_talisman_list(parent)
+	_build_talisman_note(parent)
 	_build_summon(parent)
 	_build_salvage_all(parent)
 	return first
@@ -227,41 +215,15 @@ func _build_summon(parent: VBoxContainer) -> void:
 	row.add_child(b)
 
 
-## One row per talisman stack: count, name and what it gives.
-func _build_talisman_list(parent: VBoxContainer) -> void:
+## A pointer to the ENCHANT tab, where talismans are applied.
+func _build_talisman_note(parent: VBoxContainer) -> void:
 	if talismans == null:
 		return
-	var ids := _inventory.talisman_ids()
 	var total := 0
-	for id in ids:
+	for id in _inventory.talisman_ids():
 		total += _inventory.talisman_count(id)
-	parent.add_child(MenuWidgets.label("TALISMANS  %d" % total, MenuWidgets.SMALL_FONT,
-			MenuWidgets.TITLE_COLOR))
-	if ids.is_empty():
-		parent.add_child(MenuWidgets.label("None yet. They drop from camps; apply them to " +
-				"worn gear for extra stats.", MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
-		return
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 4)
-	parent.add_child(grid)
-	for id: int in ids:
-		if not TalismanRules.is_valid(_loot, id):
-			continue
-		var color := _loot.rarity_colors[TalismanRules.tier_of(id)]
-		var text := "x%d  %s\n%s" % [_inventory.talisman_count(id),
-				TalismanRules.display_name(_loot, id),
-				", ".join(TalismanRules.describe_lines(_loot, id))]
-		var b := MenuWidgets.button(text, MenuWidgets.SMALL_FONT - 4)
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.clip_text = true
-		MenuWidgets.style_item(b, color, id == selected_talisman)
-		b.pressed.connect(_menu.select_talisman.bind(id))
-		grid.add_child(b)
-		if id == selected_talisman:
-			_focus_tile = b
+	parent.add_child(MenuWidgets.label("TALISMANS  %d   -   apply them on the ENCHANT tab" % total,
+			MenuWidgets.SMALL_FONT - 2, MenuWidgets.DIM_COLOR))
 
 
 func _build_salvage_all(parent: VBoxContainer) -> void:
@@ -292,10 +254,6 @@ func _build_salvage_all(parent: VBoxContainer) -> void:
 func _build_details(parent: VBoxContainer) -> Control:
 	parent.add_child(MenuWidgets.title("DETAILS   (%s: %d)" % [_loot.currency_name,
 			_inventory.stones]))
-	if selected_talisman >= 0 and _inventory.talisman_count(selected_talisman) > 0:
-		var first := _build_talisman(parent, selected_talisman)
-		_add_result(parent)
-		return first
 	if selected == null:
 		parent.add_child(MenuWidgets.label("Tap an item to see it here and compare it with " +
 				"what you're wearing. Double-click (or double-tap) to wear it or take it off.",
@@ -351,51 +309,6 @@ func _build_details(parent: VBoxContainer) -> Control:
 	var upgrade := _build_refine(parent, item)
 	_add_result(parent)
 	return focus if focus != null else upgrade
-
-
-## A talisman stack: its name, build, stats, and a button per worn item
-## with a free socket (with its chance).
-func _build_talisman(parent: VBoxContainer, id: int) -> Control:
-	var color := _loot.rarity_colors[TalismanRules.tier_of(id)]
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
-	parent.add_child(head)
-	var icon := ItemIcon.make(ItemKindDef.Icon.TALISMAN, color)
-	icon.custom_minimum_size = Vector2(56, 56)
-	head.add_child(icon)
-	var names := VBoxContainer.new()
-	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(names)
-	names.add_child(MenuWidgets.label(TalismanRules.display_name(_loot, id),
-			MenuWidgets.FONT_SIZE - 2, color))
-	names.add_child(MenuWidgets.label("%s   -   you have %d" % [TalismanRules.build_hint(_loot, id),
-			_inventory.talisman_count(id)], MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
-	parent.add_child(MenuWidgets.label("  " + "\n  ".join(TalismanRules.describe_lines(_loot, id))))
-	parent.add_child(MenuWidgets.label("APPLY TO WORN GEAR (uses one; if it fails it crumbles, " +
-			"the gear is never harmed)", MenuWidgets.SMALL_FONT - 3, MenuWidgets.DIM_COLOR))
-	var first: Control = null
-	var any := false
-	for position in CARD_ORDER:
-		var gear := _inventory.equipped[position]
-		if gear == null or talismans.sockets(gear) == 0:
-			continue
-		any = true
-		var free := talismans.free_sockets(gear)
-		var text := "%s: %s   %s" % [Inventory.EQUIP_NAMES[position], gear.display_name(),
-				("%d%%  (%d free)" % [roundi(talismans.chance_for(gear) * 100.0), free])
-				if free > 0 else "no free socket"]
-		var b := MenuWidgets.button(text, MenuWidgets.SMALL_FONT - 2)
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.disabled = free <= 0
-		b.add_theme_color_override("font_color", _loot.rarity_colors[gear.rarity])
-		b.pressed.connect(_menu.apply_talisman.bind(id, gear))
-		parent.add_child(b)
-		if first == null and not b.disabled:
-			first = b
-	if not any:
-		parent.add_child(MenuWidgets.label("Wear some gear first.", MenuWidgets.SMALL_FONT,
-				MenuWidgets.DIM_COLOR))
-	return first
 
 
 func _build_refine(parent: VBoxContainer, item: ItemData) -> Control:

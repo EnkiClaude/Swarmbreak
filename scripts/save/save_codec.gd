@@ -6,7 +6,7 @@ extends RefCounted
 ## or hand-edited save still loads.
 
 const VERSION := 1
-const MAX_RARITY := 5
+const MAX_RARITY := 6
 
 
 static func encode(progress: PlayerProgress, inventory: Inventory, zone_level: int) -> Dictionary:

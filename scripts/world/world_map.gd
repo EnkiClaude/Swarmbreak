@@ -9,8 +9,7 @@ const OVERWORLD := -1
 ## In a dungeon the exit gate stands this far up the hallway from its south
 ## end (+Z), and the player arrives further up, facing north: far enough
 ## that the camera behind the player is clear of the gate.
-const EXIT_INSET := 4.0
-const ARRIVAL_INSET := 17.0
+const EXIT_INSET := 3.0
 ## Coming out of a dungeon, the player stands this far south of its gate.
 const GATE_STEP_OUT := 5.0
 const TOWN_GATE_SPACING := 7.0
@@ -87,7 +86,7 @@ func exit_position(d: int) -> Vector2:
 
 ## Where the player lands inside dungeon d.
 func arrival_point(d: int) -> Vector2:
-	return Vector2(0.0, layouts[d].south_end() - ARRIVAL_INSET)
+	return layouts[d].arrival()
 
 
 func _generate() -> void:
@@ -134,75 +133,62 @@ func _place_region_camps(region: int, rng: RandomNumberGenerator,
 	var bosses := _biggest(sizes, def.boss_camps)
 	for k in placed.size():
 		var s := overworld_sites.add(placed[k], sizes[k], def.level, def.heavy_chance,
-				bosses.has(k), false, 0.0, config.camp_respawn_time)
+				bosses.has(k), false, 0.0, config.camp_respawn_time, config.camp_refill_time)
 		overworld_sites.set_types(s, def.enemy_type, def.heavy_type)
 
 
-## Several camps per side room, spread over it (in the room at spawner_depth,
-## spawner_count of them are spawners); the boss room holds the boss at its
-## center, more camps around it and spawners near its walls. Each room is a
-## level harder than the one before (depth_level_step).
+## The arena holds arena_camps camps spread over it (the first
+## arena_spawners of them spawners); the boss room holds the boss in its
+## middle and boss_room_camps camps in a ring around it (plus spawners), a
+## level step harder. The lobby holds nothing: it's safe.
 func _dungeon_camps(d: int, rng: RandomNumberGenerator) -> CampSites:
 	var def := config.dungeons[d]
 	var layout := layouts[d]
 	var sites := CampSites.new()
-	for room in layout.rooms.size():
-		var depth := layout.depths[room]
-		var level := def.level + depth * def.depth_level_step
-		var rect := layout.rooms[room]
-		if room == layout.boss_room:
-			if def.has_boss:
-				_dungeon_site(sites, def, rect.get_center(), def.boss_camp_size, level, depth,
-						true, false)
-			for k in def.boss_room_camps:
-				# A ring around the boss, halfway to the walls.
-				var a := TAU * (k + 0.5) / maxf(def.boss_room_camps, 1)
-				var at := rect.get_center() + Vector2(cos(a) * rect.size.x * 0.3,
-						sin(a) * rect.size.y * 0.3)
-				_dungeon_site(sites, def, at, rng.randi_range(def.camp_size_min,
-						def.camp_size_max), level, depth, false, false)
-			for k in def.boss_room_spawners:
-				var side := -1.0 if k % 2 == 0 else 1.0
-				var at := rect.get_center() + Vector2(side * rect.size.x * 0.38,
-						(0.25 if k < 2 else -0.25) * rect.size.y)
-				_dungeon_site(sites, def, at, def.spawner_population, level, depth, false, true)
-			continue
-		var spawners := def.spawner_count if depth == def.spawner_depth else 0
-		var grid := _camp_grid(rect, def.camps_per_room)
-		for k in grid.size():
-			if k < spawners:
-				_dungeon_site(sites, def, grid[k], def.spawner_population, level, depth, false,
-						true)
-			else:
-				_dungeon_site(sites, def, grid[k], rng.randi_range(def.camp_size_min,
-						def.camp_size_max), level, depth, false, false)
+	var arena := layout.rooms[DungeonLayout.ARENA]
+	var spots := _spread(arena, def.arena_camps)
+	for k in spots.size():
+		var spawner := k < def.arena_spawners
+		_dungeon_site(sites, def, spots[k], def.spawner_population if spawner
+				else rng.randi_range(def.camp_size_min, def.camp_size_max), def.level, 0, false,
+				spawner)
+	var boss := layout.rooms[layout.boss_room]
+	var level := def.level + def.depth_level_step
+	if def.has_boss:
+		_dungeon_site(sites, def, boss.get_center(), def.boss_camp_size, level, 1, true, false)
+	var count := def.boss_room_camps + def.boss_room_spawners
+	for k in count:
+		var a := TAU * (k + 0.5) / maxf(count, 1)
+		var at := boss.get_center() + Vector2(cos(a) * boss.size.x * 0.36,
+				sin(a) * boss.size.y * 0.36)
+		var spawner := k < def.boss_room_spawners
+		_dungeon_site(sites, def, at, def.spawner_population if spawner
+				else rng.randi_range(def.camp_size_min, def.camp_size_max), level, 1, false, spawner)
 	return sites
+
+
+## count points spread over a room: one in the middle, the rest in a ring.
+static func _spread(rect: Rect2, count: int) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	if count <= 0:
+		return points
+	points.append(rect.get_center())
+	var ring := count - 1
+	for k in ring:
+		var a := TAU * (k + 0.5) / maxf(ring, 1)
+		points.append(rect.get_center() + Vector2(cos(a) * rect.size.x * 0.33,
+				sin(a) * rect.size.y * 0.33))
+	return points
 
 
 func _dungeon_site(sites: CampSites, def: DungeonDef, at: Vector2, size: int, level: int,
 		depth: int, boss: bool, spawner: bool) -> void:
 	var s := sites.add(at, size, level, def.heavy_chance, boss, spawner,
-			def.spawner_interval if spawner else 0.0, def.camp_respawn_time)
+			def.spawner_interval if spawner else 0.0, def.camp_respawn_time,
+			0.0 if spawner else def.camp_refill_time)
 	sites.set_types(s, def.enemy_type, def.heavy_type)
 	sites.depth[s] = depth
 
-
-## count camp centers spread over a room: a grid two wide along its short side.
-static func _camp_grid(rect: Rect2, count: int) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	if count <= 0:
-		return points
-	var across := 2 if count > 1 else 1
-	var rows := ceili(float(count) / across)
-	var wide := rect.size.x >= rect.size.y
-	for k in count:
-		var row := floori(float(k) / across)
-		var col := k % across
-		var along := (row + 0.5) / rows
-		var side := (col + 0.5) / across
-		var f := Vector2(along, side) if wide else Vector2(side, along)
-		points.append(rect.position + rect.size * f)
-	return points
 
 
 static func too_close(at: Vector2, others: PackedVector2Array, distance: float) -> bool:

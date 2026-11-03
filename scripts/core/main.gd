@@ -207,8 +207,8 @@ func _max_sites() -> int:
 	for region in world_config.regions:
 		most += region.camp_count
 	for dungeon in world_config.dungeons:
-		most = maxi(most, dungeon.rooms_per_side * 2 * dungeon.camps_per_room + 1
-				+ dungeon.boss_room_camps + dungeon.boss_room_spawners)
+		most = maxi(most, dungeon.arena_camps + 1 + dungeon.boss_room_camps
+				+ dungeon.boss_room_spawners)
 	return most
 
 
@@ -496,6 +496,7 @@ func _summoned_boss_rewards(at: Vector2) -> void:
 	var level := summons.level()
 	_loot.drop_rewards(at, summon_config.reward_drops, level, summon_config.min_rarity, 2.0,
 			summon_config.item_chance)
+	_loot.drop_dread(at, summon_config.dread_drops, level)
 	if _loot_rng.randf() < summon_config.legendary_chance:
 		_loot.drop(at, 1, level, mini(4, loot_config.talisman_max_rarity))
 	var growth := 1.0 + loot_config.geon_growth_per_level * (level - 1)

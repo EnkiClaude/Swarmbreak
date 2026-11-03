@@ -176,7 +176,7 @@ func _screen(fraction: Vector2) -> Vector2:
 func _draw() -> void:
 	_draw_stick(_move, _screen(config.move_hint_position), "MOVE")
 	_draw_fire_stick()
-	_draw_button(config.nova_button_position, config.nova_button_radius, "NOVA",
+	_draw_button(config.nova_button_position, config.nova_button_radius, "FROST",
 			"attack_nova", config.nova_color)
 	_draw_button(config.lure_button_position, config.lure_button_radius, "LURE",
 			"skill_lure", config.lure_color)

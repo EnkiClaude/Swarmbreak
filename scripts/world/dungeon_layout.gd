@@ -1,20 +1,24 @@
 class_name DungeonLayout
 extends RefCounted
-## A dungeon's floor plan: a hallway running north from the entrance (+Z
-## end), rooms on both sides opening onto it through doorways, and the boss
-## room across its far end. Every room is one step deeper (harder, richer)
-## than the one before: left then right, pair by pair, toward the boss. Rasterized onto the flow field's grid as a room id per cell (-1
-## wall, 0 hallway and doorways, 1.. rooms), with each room's door, which
-## FlowField uses to route monsters through doors and to stop movement at
-## walls.
+## A dungeon's floor plan, running north from the portal (+Z end): a small
+## safe lobby where the player arrives, a corridor, a big open room (the
+## arena), another corridor, and the boss room. Rasterized onto the flow
+## field's grid as a room id per cell (-1 wall, 0 corridor, 1 + index for
+## rooms), with a door point per room, which FlowField uses to route
+## monsters and to stop movement at walls. No camp lives in the lobby, and
+## every camp is held in its own room, so the lobby is safe.
 
-## A side room: its rect (XZ), door point, and how deep it is (0 nearest the entrance).
+## The lobby, the arena and the boss room, south to north.
 var rooms: Array[Rect2] = []
+## Where each room meets its corridor (its south edge; the lobby's north).
 var doors := PackedVector2Array()
+## How deep each room is: the lobby -1, the arena 0, the boss room 1.
 var depths := PackedInt32Array()
-## The boss room's index in rooms, or -1.
-var boss_room := -1
-var hallway: Rect2
+var corridors: Array[Rect2] = []
+const LOBBY := 0
+const ARENA := 1
+## The boss room's index in rooms.
+var boss_room := 2
 ## Half the hall's size on X and Z, walls included.
 var half_x := 0.0
 var half_z := 0.0
@@ -23,33 +27,31 @@ const WALL := 2.0
 
 
 func _init(def: DungeonDef) -> void:
-	var corridor := def.corridor_width * 0.5
-	var length := def.entry_length + def.rooms_per_side * def.room_length + def.boss_room_length
+	var length := def.lobby_length + def.corridor_length * 2.0 + def.arena_length \
+			+ def.boss_room_length
 	half_z = length * 0.5 + WALL
-	half_x = corridor + WALL + def.room_width + WALL
-	var south := length * 0.5
-	var north := -length * 0.5
-	var boss_south := north + def.boss_room_length
-	hallway = Rect2(-corridor, boss_south, def.corridor_width, south - boss_south)
-	for i in def.rooms_per_side:
-		var room_south := south - def.entry_length - i * def.room_length
-		var room_north := room_south - def.room_length
-		var center_z := (room_south + room_north) * 0.5
-		for side_index in 2:
-			var side := -1.0 if side_index == 0 else 1.0
-			var inner := corridor + WALL
-			var x0 := inner if side > 0.0 else -inner - def.room_width
-			# Rooms share a wall between them: shrink each by half of it.
-			rooms.append(Rect2(x0, room_north + WALL * 0.5, def.room_width,
-					def.room_length - WALL))
-			doors.append(Vector2(side * (corridor + WALL * 0.5), center_z))
-			depths.append(i * 2 + side_index)
-	boss_room = rooms.size()
-	var boss_half := def.boss_room_width * 0.5
-	rooms.append(Rect2(-boss_half, north, def.boss_room_width, def.boss_room_length))
-	doors.append(Vector2(0.0, boss_south))
-	depths.append(def.rooms_per_side * 2)
-	_door_width = def.door_width
+	half_x = maxf(maxf(def.lobby_width, def.arena_width), maxf(def.boss_room_width,
+			def.corridor_width)) * 0.5 + WALL
+	var z := length * 0.5
+	z = _add_room(def.lobby_width, def.lobby_length, z, -1, true)
+	z = _add_corridor(def.corridor_width, def.corridor_length, z)
+	z = _add_room(def.arena_width, def.arena_length, z, 0, false)
+	z = _add_corridor(def.corridor_width, def.corridor_length, z)
+	_add_room(def.boss_room_width, def.boss_room_length, z, 1, false)
+
+
+## A room whose south edge is at south (z); returns its north edge.
+func _add_room(width: float, length: float, south: float, depth: int, door_north: bool) -> float:
+	var north := south - length
+	rooms.append(Rect2(-width * 0.5, north, width, length))
+	doors.append(Vector2(0.0, north if door_north else south))
+	depths.append(depth)
+	return north
+
+
+func _add_corridor(width: float, length: float, south: float) -> float:
+	corridors.append(Rect2(-width * 0.5, south - length, width, length))
+	return south - length
 
 
 ## Bounds for the swarm, player and camera: the larger half size.
@@ -57,20 +59,25 @@ func half_extent() -> float:
 	return maxf(half_x, half_z)
 
 
-## Where the player arrives and the exit gate stands: the hallway's south end.
+## The lobby's south edge: the exit gate stands just inside it.
 func south_end() -> float:
-	return hallway.end.y
+	return rooms[LOBBY].end.y
+
+
+## Where the player arrives: the middle of the lobby.
+func arrival() -> Vector2:
+	return rooms[LOBBY].get_center()
 
 
 func room_center(room: int) -> Vector2:
 	return rooms[room].get_center()
 
 
-## Room id at a ground point: 0 hallway or doorway, 1 + index for rooms,
-## -1 inside a wall.
+## Room id at a ground point: 0 in a corridor, 1 + index for rooms, -1 in a wall.
 func room_at(p: Vector2) -> int:
-	if hallway.has_point(p) or _in_doorway(p):
-		return 0
+	for corridor in corridors:
+		if corridor.has_point(p):
+			return 0
 	for k in rooms.size():
 		if rooms[k].has_point(p):
 			return k + 1
@@ -96,24 +103,8 @@ func homes_for(points: PackedVector2Array) -> PackedInt32Array:
 	return homes
 
 
-## Door points indexed by room id (0, the hallway, has none: zero).
+## Door points indexed by room id (0, the corridors, has none: zero).
 func door_points() -> PackedVector2Array:
 	var points := PackedVector2Array([Vector2.ZERO])
 	points.append_array(doors)
 	return points
-
-
-var _door_width := 6.0
-
-
-func _in_doorway(p: Vector2) -> bool:
-	var half := _door_width * 0.5
-	for k in doors.size():
-		var d := doors[k]
-		if k == boss_room:
-			# The boss room's door spans the hallway's end.
-			if absf(p.x) <= hallway.size.x * 0.5 and absf(p.y - d.y) <= WALL * 0.5 + 0.01:
-				return true
-		elif absf(p.x - d.x) <= WALL * 0.5 + 0.01 and absf(p.y - d.y) <= half:
-			return true
-	return false

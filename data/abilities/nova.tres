@@ -2,13 +2,15 @@
 
 [ext_resource type="Script" path="res://scripts/config/nova_config.gd" id="1_nova"]
 [ext_resource type="Resource" path="res://data/effects/nova_ring.tres" id="2_ring"]
-[ext_resource type="Resource" path="res://data/effects/lightning.tres" id="3_strike"]
+[ext_resource type="Resource" path="res://data/effects/frost_shard.tres" id="3_strike"]
 
 [resource]
 script = ExtResource("1_nova")
 radius = 6.0
 damage = 25.0
-knockback = 14.0
+knockback = 0.0
+slow_factor = 0.4
+slow_duration = 2.5
 cooldown = 1.2
 mana_cost = 35.0
 effect = ExtResource("2_ring")

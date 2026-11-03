@@ -191,3 +191,26 @@ func test_set_and_talisman_fields_save() -> void:
 	var loaded := Inventory.new(8)
 	SaveCodec.decode(data, progress, loaded, null, 99, 10)
 	check_eq(loaded.talisman_count(TalismanRules.id_of(3, 2)), 4, "talisman stacks survive")
+
+
+func test_dreadforged_armor_is_its_own_red_rarity() -> void:
+	var config := _loot()
+	var generator := ItemGenerator.new(config, 13)
+	var dread := config.dread_rarity
+	check(config.rarity_colors[dread].r > 0.8 and config.rarity_colors[dread].g < 0.3,
+			"Dreadforged shows red")
+	check_eq(config.rarity_weights[dread], 0.0, "never rolled at random")
+	for n in 2000:
+		check(generator.roll(80, 4).rarity != dread, "random drops are never Dreadforged")
+	for n in 40:
+		var item := generator.roll_dread(60)
+		check_eq(item.rarity, dread, "the Dread Lord's drops are")
+		check(config.dread_slots.has(item.slot), "and armor (slot %d)" % item.slot)
+		check(item.item_name.begins_with(config.dread_prefix), "named %s" % item.item_name)
+		# As many affixes as its slot's pool allows, up to the rarity's count.
+		var pool := 0
+		for affix in config.affixes:
+			if affix.slots.has(item.slot):
+				pool += 1
+		check(item.stats.size() >= mini(config.rarity_affixes[dread], pool),
+				"%s carries a full set of stats (%d)" % [item.item_name, item.stats.size()])

@@ -79,7 +79,7 @@ func _run() -> void:
 	await _scenario_async("a cleared camp comes back after its timer", _camp_respawns)
 	await _scenario_async("far camps leave the swarm, near ones come in", _camps_stream_out)
 	await _scenario_async("a gate leads into a dungeon and its exit back out", _dungeon_round_trip)
-	await _scenario_async("dungeon spawners keep monsters coming", _dungeon_spawners)
+	await _scenario_async("thinned dungeon camps get monsters back", _dungeon_refill)
 	await _scenario_async("dungeon walls stop the player", _dungeon_walls)
 	await _scenario_async("the Egg Keeper gives an egg that follows and levels", _keeper_and_pet)
 	await _scenario_async("double-clicking an item wears it, again takes it off", _double_click)
@@ -563,28 +563,31 @@ func _dungeon_round_trip() -> void:
 			"standing outside the gate")
 
 
-func _dungeon_spawners() -> void:
+func _dungeon_refill() -> void:
 	var map := _world.map
 	_world.enter(0, map.arrival_point(0))
 	await _frames(5)
 	var sites := _camps.sites
-	var spawner := -1
+	var camp := -1
 	for s in sites.size():
-		if sites.is_spawner[s] != 0:
-			spawner = s
+		if sites.is_spawner[s] == 0 and sites.has_boss[s] == 0:
+			camp = s
 			break
-	_check(spawner >= 0, "the dungeon has a spawner")
-	if spawner < 0:
+	_check(camp >= 0, "the dungeon has a camp")
+	if camp < 0:
 		return
-	_teleport(sites.centers[spawner] + Vector2(signf(-sites.centers[spawner].x) * 6.0, 0.0))
-	await _frames(120)
-	var count := _members_of(spawner)
-	_check(count >= 4, "the spawner filled up (%d)" % count)
+	var full := _members_of(camp)
+	var killed := 0
 	for i in _swarm.state.count:
-		if _swarm.state.camp_ids[i] == spawner:
+		if _swarm.state.camp_ids[i] == camp and killed * 2 < full:
 			_swarm.state.health[i] = 0.0
-	await _frames(60)
-	_check(_members_of(spawner) >= 1, "and new ones came at once (%d)" % _members_of(spawner))
+			killed += 1
+	await _frames(5)
+	var thinned := _members_of(camp)
+	_check(thinned < full, "the camp was thinned (%d of %d)" % [thinned, full])
+	await _frames(roundi(sites.refill_time[camp] * 60.0 * 3.5))
+	_check(_members_of(camp) > thinned, "monsters came back without clearing it (%d -> %d)" %
+			[thinned, _members_of(camp)])
 	_world.return_to_town()
 	await _frames(2)
 
@@ -594,13 +597,14 @@ func _dungeon_walls() -> void:
 	_world.enter(0, map.arrival_point(0))
 	await _frames(3)
 	var layout := map.layouts[0]
-	var wall_z := layout.rooms[0].position.y + 1.0
-	_teleport(Vector2(-2.5, wall_z))
+	# In the corridor past the lobby, walking into its west wall.
+	var corridor := layout.corridors[0]
+	_teleport(Vector2(corridor.position.x + 1.5, corridor.get_center().y))
 	Input.action_press("move_left")
 	await _frames(40)
 	Input.action_release("move_left")
-	_check(_player.position.x > -4.05, "the hallway wall stopped the player (x %.2f)" %
-			_player.position.x)
+	_check(_player.position.x > corridor.position.x - 0.05,
+			"the corridor wall stopped the player (x %.2f)" % _player.position.x)
 	_check(not _swarm.is_wall(_player.ground_position()), "never inside a wall")
 	_world.return_to_town()
 	await _frames(2)
@@ -1215,14 +1219,15 @@ func _room_leash() -> void:
 	var sites := _camps.sites
 	var camp := -1
 	for s in sites.size():
-		if layout.room_at(sites.centers[s]) == 1 and sites.is_spawner[s] == 0:
+		if layout.room_at(sites.centers[s]) == DungeonLayout.ARENA + 1 \
+				and sites.is_spawner[s] == 0:
 			camp = s
 			break
-	_check(camp >= 0, "room 0 has a camp")
+	_check(camp >= 0, "the arena has a camp")
 	if camp < 0:
 		return
-	# Wake it from the hallway, right outside its door, and wait.
-	_teleport(Vector2(0.0, layout.doors[0].y))
+	# Wake it from the corridor, right outside the arena's door, and wait.
+	_teleport(layout.doors[DungeonLayout.ARENA] + Vector2(0.0, 6.0))
 	_camps.lure(sites.centers[camp], 4.0)
 	await _frames(240)
 	var outside := 0
@@ -1234,7 +1239,7 @@ func _room_leash() -> void:
 			var p: Vector2 = _swarm.state.positions[i]
 			var cell := Vector2(-72.0, -72.0) + (((p + Vector2(72.0, 72.0)) / 2.0).floor()
 					+ Vector2(0.5, 0.5)) * 2.0
-			if layout.room_at(cell) != 1:
+			if layout.room_at(cell) != DungeonLayout.ARENA + 1:
 				outside += 1
 	_check(members > 0, "the camp is there (%d)" % members)
 	_check(outside == 0, "none of it left its room (%d outside)" % outside)

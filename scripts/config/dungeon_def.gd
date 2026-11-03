@@ -1,10 +1,9 @@
 class_name DungeonDef
 extends Resource
-## A dungeon: a hallway with rooms down both sides (DungeonLayout), entered
-## through a gate in the open world. Each room holds a camp; rooms get
-## deeper toward the boss room at the far end, and deeper rooms hold harder
-## monsters that drop more Geon and better gear. Some rooms are spawners
-## that refill at once.
+## A dungeon (DungeonLayout), entered through a gate in the open world: a
+## safe lobby, a corridor to a big open room with camps spread over it, and
+## a corridor on to the boss room, whose camps are harder and drop more Geon
+## and better gear. Optional spawners refill at once.
 
 @export var display_name: String = "Dungeon"
 ## Usually an indoor theme (walls, ceiling, lanterns).
@@ -18,17 +17,16 @@ extends Resource
 @export var gate_color: Color = Color(0.9, 0.3, 0.25)
 
 @export_group("Layout")
-## Rooms on each side of the hallway, from the entrance toward the boss.
-@export var rooms_per_side: int = 4
-@export var room_width: float = 20.0
-## A room's length along the hallway.
-@export var room_length: float = 18.0
+## From the portal north: a safe lobby, a corridor, a big open room (the
+## arena), another corridor, and the boss room.
+@export var lobby_width: float = 16.0
+@export var lobby_length: float = 18.0
 @export var corridor_width: float = 8.0
-@export var door_width: float = 6.0
-## Hallway before the first rooms, where the player arrives.
-@export var entry_length: float = 18.0
-@export var boss_room_width: float = 28.0
-@export var boss_room_length: float = 22.0
+@export var corridor_length: float = 14.0
+@export var arena_width: float = 56.0
+@export var arena_length: float = 44.0
+@export var boss_room_width: float = 64.0
+@export var boss_room_length: float = 50.0
 
 @export_group("Monsters")
 ## Members per room's camp.
@@ -43,25 +41,24 @@ extends Resource
 ## Seconds before a cleared camp (the boss's too) comes back; 0 brings it
 ## back at once, even right where the player stands.
 @export var camp_respawn_time: float = 0.0
-## Each room deeper adds this many levels to its monsters (and their loot).
+## Seconds between members a thinned-out camp gets back (0: none).
+@export var camp_refill_time: float = 2.0
+## The boss room's monsters are this many levels above the arena's.
 @export var depth_level_step: int = 1
-## A boss camp in the room across the hallway's far end.
+## A boss camp in the middle of the boss room.
 @export var has_boss: bool = true
 @export var boss_camp_size: int = 24
-## Camps in each side room, spread over it.
-@export var camps_per_room: int = 4
-## Camps around the boss in its room, plus spawners there that keep adding
-## awake monsters (boss_room_spawners, spawner_population each).
-@export var boss_room_camps: int = 4
-@export var boss_room_spawners: int = 2
+## Camps spread over the arena (the first of them spawners, up to
+## arena_spawners) and around the boss in its room (plus boss_room_spawners).
+@export var arena_camps: int = 5
+@export var arena_spawners: int = 0
+@export var boss_room_camps: int = 10
+@export var boss_room_spawners: int = 0
 
 @export_group("Spawners")
 ## Spawners keep `spawner_population` monsters alive near them, one more every
 ## `spawner_interval` seconds (0: one per frame, so instant) while the player
-## is close: a farming spot. The rooms at spawner_depth are spawners, up to
-## spawner_count of them.
-@export var spawner_count: int = 2
-@export var spawner_depth: int = 1
+## is close: a farming spot (arena_spawners, boss_room_spawners).
 @export var spawner_population: int = 30
 @export var spawner_interval: float = 0.0
 ## Per spawner kill: chance of a drop (an item at LootConfig.item_drop_chance,
